@@ -1,6 +1,11 @@
+/** @format */
 
-import { message } from "antd";
-import Router from "./routers/Router";
+import { ConfigProvider, message } from 'antd';
+import Routers from './routers/Router';
+import { Provider } from 'react-redux';
+import store from './redux/store';
+import './App.css';
+
 message.config({
 	top: 20,
 	duration: 2,
@@ -9,12 +14,20 @@ message.config({
 	prefixCls: 'my-message',
 });
 
-const App = () => {
-  return (
-    <div>
-      <Router />
-    </div>
-  )
+function App() {
+	return (
+		<>
+			<ConfigProvider
+				theme={{
+					token: {},
+					components: {},
+				}}>
+				<Provider store={store}>
+					<Routers />
+				</Provider>
+			</ConfigProvider>
+		</>
+	);
 }
 
-export default App
+export default App;

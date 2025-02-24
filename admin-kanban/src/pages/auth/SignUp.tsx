@@ -2,22 +2,29 @@
 
 import { Button, Card, Form, Input, message, Space, Typography } from 'antd';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-
+import { Link, useNavigate } from 'react-router-dom';
+import handleAPI from '../../apis/handleAPI';
+import { addAuth } from '../../redux/reducers/authReducer';
+import { useDispatch } from 'react-redux';
 
 const { Title, Text, Paragraph } = Typography;
 const SignUp = () => {
+	const dispatch = useDispatch();
+	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
 
 
 	const [form] = Form.useForm();
 
-	const handleLogin = async (values: { email: string; password: string }) => {
-		// const api = `/auth/register`;
+	const handleLogin = async (values: {username: string; email: string; password: string }) => {
+		const api = `/users`;
 
 		setIsLoading(true);
 		try {
-			console.log(values);
+			const res: any = await handleAPI(api, values, 'post');
+			dispatch(addAuth(res.result));
+			navigate('/login');
+
 		} catch (error: any) {
 			console.log(error);
 			message.error(error.message);
@@ -44,7 +51,7 @@ const SignUp = () => {
 					disabled={isLoading}
 					size='large'>
 					<Form.Item
-						name={'name'}
+						name={'username'}
 						label='Name'
 						rules={[
 							{
@@ -117,7 +124,7 @@ const SignUp = () => {
 				<div className='mt-3 text-center'>
 					<Space>
 						<Text type='secondary'>Already an acount? </Text>
-						<Link to={'/'}>Login</Link>
+						<Link to={'/login'}>Login</Link>
 					</Space>
 				</div>
 			</Card>

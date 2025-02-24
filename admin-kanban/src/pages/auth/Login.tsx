@@ -11,8 +11,11 @@ import {
 	Typography,
 } from 'antd';
 import { useState } from 'react';
-import { appInfo } from '../../constants/appInfos';
+import { appInfo, localDataNames } from '../../constants/appInfos';
 import { Link } from 'react-router-dom';
+import handleAPI from '../../apis/handleAPI';
+
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -20,12 +23,19 @@ const Login = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [isRemember, setIsRemember] = useState(false);
 
+	 const navigate = useNavigate();
+	 
+	
 	const [form] = Form.useForm();
 
-	const handleLogin = async (values: { email: string; password: string }) => {
+	const handleLogin = async (values: { email: string;  password: string }) => {
 		setIsLoading(true);
 		try {
-			console.log(values);
+			const res: any = await handleAPI('/auth/token', values, 'post');
+
+			localStorage.setItem(localDataNames.token, JSON.stringify(res.result?.token));
+			navigate('/home');
+
 		} catch (error: any) {
 			message.error(error.message);
 		} finally {
