@@ -11,37 +11,54 @@ import {
 	Typography,
 } from 'antd';
 import { useState } from 'react';
-import { appInfo, localDataNames } from '../../constants/appInfos';
 import { Link } from 'react-router-dom';
 import handleAPI from '../../apis/handleAPI';
+import { appInfo, localDataNames } from '../../constants/appInfos';
 
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-
+import { addAuth } from '../../redux/reducers/authReducer';
 const { Title, Paragraph, Text } = Typography;
 
 const Login = () => {
+
+const dispatch = useDispatch();
+
 	const [isLoading, setIsLoading] = useState(false);
 	const [isRemember, setIsRemember] = useState(false);
 
 	 const navigate = useNavigate();
-	 
 	
 	const [form] = Form.useForm();
 
-	const handleLogin = async (values: { email: string;  password: string }) => {
-		setIsLoading(true);
-		try {
-			const res: any = await handleAPI('/auth/token', values, 'post');
+	const handleLogin = async (values: { email: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      // Bước 1: Gọi API để lấy token
+      const tokenResponse: any = await handleAPI("/auth/token", values, "post");
+	  localStorage.setItem(localDataNames.authData, JSON.stringify(tokenResponse.result));
 
-			localStorage.setItem(localDataNames.token, JSON.stringify(res.result?.token));
-			navigate('/home');
+      const token = tokenResponse.result.token;
 
-		} catch (error: any) {
-			message.error(error.message);
-		} finally {
-			setIsLoading(false);
-		}
-	};
+
+      const userInfoResponse: any = await handleAPI("/users/my-info");
+
+      dispatch(
+        addAuth({
+          id: userInfoResponse.result.id,
+          name: userInfoResponse.result.username,
+          roles: userInfoResponse.result.roles,
+          token: token,
+        })
+      );
+
+      navigate("/");
+    } catch (error: any) {
+      message.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 	return (
 		<>

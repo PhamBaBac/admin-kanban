@@ -1,3 +1,4 @@
+import AddCategory from "./AddCategory";
 import HeaderComponent from "./HeaderComponent";
 import SalesAndPurchaseStatistic from "./SalesAndPurchaseStatistic";
 import SiderComponent from "./SiderComponent";
@@ -7,5 +8,6 @@ export{
     HeaderComponent,
     SiderComponent,
     StatisticComponent,
-    SalesAndPurchaseStatistic
+    SalesAndPurchaseStatistic,
+    AddCategory
 }

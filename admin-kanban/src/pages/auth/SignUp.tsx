@@ -4,12 +4,9 @@ import { Button, Card, Form, Input, message, Space, Typography } from 'antd';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import handleAPI from '../../apis/handleAPI';
-import { addAuth } from '../../redux/reducers/authReducer';
-import { useDispatch } from 'react-redux';
 
 const { Title, Text, Paragraph } = Typography;
 const SignUp = () => {
-	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
 
@@ -21,8 +18,7 @@ const SignUp = () => {
 
 		setIsLoading(true);
 		try {
-			const res: any = await handleAPI(api, values, 'post');
-			dispatch(addAuth(res.result));
+			await handleAPI(api, values, 'post');
 			navigate('/login');
 
 		} catch (error: any) {

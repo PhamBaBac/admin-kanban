@@ -1,20 +1,21 @@
 /** @format */
 
 import { Affix, Layout } from 'antd';
-import HomeScreen from '../pages/HomeScreen';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { HeaderComponent, SiderComponent } from '../components';
 import {
-	Chart as ChartJS,
-	CategoryScale,
-	LinearScale,
 	BarElement,
+	CategoryScale,
+	Chart as ChartJS,
+	Legend,
+	LinearScale,
+	LineElement,
+	PointElement,
 	Title,
 	Tooltip,
-	Legend,
-	PointElement,
-	LineElement,
 } from 'chart.js';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { HeaderComponent, SiderComponent } from '../components';
+import HomeScreen from '../pages/HomeScreen';
+import AddProduct from '../pages/inventories/AddProduct';
 
 ChartJS.register(
 	CategoryScale,
@@ -27,7 +28,7 @@ ChartJS.register(
 	Tooltip,
 	Legend
 );
-const { Content, Footer, Header, Sider } = Layout;
+const { Content, Footer } = Layout;
 
 const MainRouter = () => {
 	return (
@@ -45,9 +46,12 @@ const MainRouter = () => {
 					</Affix>
 					<Content className='pt-3 container-fluid'>
 						<Routes>
-							<Route path='/home' element={<HomeScreen />} />
-							
-							
+							<Route path='/' element={<HomeScreen />} />
+							<Route>
+								<Route path='/inventory/add-product' element={<AddProduct />} />
+								
+							</Route>
+		
 						</Routes>
 					</Content>
 					<Footer className='bg-white' />
