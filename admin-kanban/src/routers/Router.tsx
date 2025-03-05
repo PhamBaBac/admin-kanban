@@ -19,32 +19,11 @@ useEffect(() => {
   
 }, []);
 
-// useEffect(() => {
-//   auth.token && handleCheckToken();
-// }, [auth.token]);
 
 const getData = async () => {
   const res = localStorage.getItem(localDataNames.authData);
   res && dispatch(addAuth(JSON.parse(res)));
 };
-
-// const handleCheckToken = async () => {
-//   setIsLoading(true);
-//   try {
-//     // Gọi API kiểm tra token
-//     const res: any = await handleAPI("/auth/introspect", auth.token, "post");
-//     if (res.result.valid === false) {
-//       const tokenNew: any = await handleAPI("/auth/refresh", auth.token, "post");
-
-//       dispatch(addAuth({ ...auth, token: tokenNew.result }));
-
-//     }
-//     setIsLoading(false);
-//   } catch (error: any) {
-//     console.log("error", error);
-//     setIsLoading(false);
-//   }
-// }
 
                               
   return isLoading ? <Spin /> : !auth.token ? <AuthRouter /> : <MainRouter />;
