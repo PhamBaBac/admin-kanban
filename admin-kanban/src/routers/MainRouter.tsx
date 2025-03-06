@@ -16,7 +16,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { HeaderComponent, SiderComponent } from '../components';
 import HomeScreen from '../pages/HomeScreen';
 import AddProduct from '../pages/inventories/AddProduct';
-import { Inventories } from '../pages';
+import { Inventories, ProductDetail } from '../pages';
 
 ChartJS.register(
 	CategoryScale,
@@ -52,6 +52,10 @@ const MainRouter = () => {
               <Route>
                 <Route path="/inventory" element={<Inventories />} />
                 <Route path="/inventory/add-product" element={<AddProduct />} />
+                <Route
+                  path="/inventory/detail/:slug"
+                  element={<ProductDetail />}
+                />
               </Route>
             </Routes>
           </Content>

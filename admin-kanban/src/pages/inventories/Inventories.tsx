@@ -21,7 +21,7 @@ import { MdLibraryAdd } from "react-icons/md";
 import { Link, useNavigate } from "react-router-dom";
 import handleAPI from "../../apis/handleAPI";
 import { colors, listColors } from "../../constants/colors";
-// import { AddSubProductModal } from "../../modals";
+import { AddSubProductModal } from "../../modals";
 import {
   CategoyModel,
   ProductModel,
@@ -50,10 +50,32 @@ const Inventories = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
+useEffect(() => {
+  if (!searchKey) {
+    // setPage(1);  
     getProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
-  }, [page, pageSize]);
+  }
+}, [searchKey, page, pageSize]);
   
+   const hanleRemoveProduct = async (id: string) => {
+     const api = `/products/${id}`;
+     try {
+       await handleAPI(api, undefined, "delete");
+       const items = [...products];
+       const index = items.findIndex((element) => element.id === id);
+
+       if (index !== -1) {
+         items.splice(index, 1);
+       }
+
+       setProducts(items);
+
+       message.success("Product removed!!!");
+     } catch (error: any) {
+       message.error(error.message);
+     }
+   };
+
 
   const getProducts = async (api: string) => {
     setIsLoading(true);
@@ -61,7 +83,7 @@ const Inventories = () => {
       const res:any = await handleAPI(api);
       const data = res.result.data;
       const total = res.result.totalElements;
-      setProducts(data.map((item: any) => ({ ...item, key: item._id })));
+      setProducts(data.map((item: any) => ({ ...item, key: item.id })));
       setTotal(total);
     } catch (error) {
       console.log(error);
@@ -78,6 +100,21 @@ const Inventories = () => {
     selectedRowKeys,
     onChange: onSelectChange,
   };
+  const getMinMaxValues = (data: SubProductModel[]) => {
+    const nums: number[] = [];
+
+    if (data.length > 0) {
+      data.forEach((item) => nums.push(item.price));
+    }
+
+    return nums.length > 0
+      ? `${Math.min(...nums).toLocaleString()} - ${Math.max(
+          ...nums
+        ).toLocaleString()}`
+      : "";
+  };
+
+ 
 
   const columns: ColumnProps<ProductModel>[] = [
     {
@@ -86,7 +123,7 @@ const Inventories = () => {
       title: "Title",
       width: 300,
       render: (item: ProductModel) => (
-        <Link to={`/inventory/detail/${item.slug}?id=${item._id}`}>
+        <Link to={`/inventory/detail/${item.slug}?id=${item.id}`}>
           {item.title}
         </Link>
       ),
@@ -109,12 +146,12 @@ const Inventories = () => {
       render: (cats: CategoyModel[]) => (
         <Space key={"categories-nd"} wrap>
           {cats.map((cat) => (
-            <Link to={`/inventory/categories/detail/${cat.slug}?id=${cat._id}`}>
+            <Link to={`/inventory/categories/detail/${cat.slug}?id=${cat.id}`}>
               <Tag
                 color={
                   listColors[Math.floor(Math.random() * listColors.length)]
                 }
-                key={cat._id}
+                key={cat.id}
               >
                 {cat.title}
               </Tag>
@@ -141,68 +178,68 @@ const Inventories = () => {
     //     ),
     //   width: 300,
     // },
-    // {
-    //   key: "colors",
-    //   dataIndex: "subItems",
-    //   title: "Color",
-    //   render: (items: SubProductModel[]) => {
-    //     const colors: string[] = [];
+    {
+      key: "colors",
+      dataIndex: "subProducts",
+      title: "Color",
+      render: (items: SubProductModel[]) => {
+        const colors: string[] = [];
 
-    //     items.forEach(
-    //       (sub) => !colors.includes(sub.color) && colors.push(sub.color)
-    //     );
+        items.forEach(
+          (sub) => !colors.includes(sub.color) && colors.push(sub.color)
+        );
 
-    //     return (
-    //       <Space>
-    //         {colors.length > 0 &&
-    //           colors.map((item, index) => (
-    //             <div
-    //               style={{
-    //                 width: 24,
-    //                 height: 24,
-    //                 backgroundColor: item,
-    //                 borderRadius: 12,
-    //               }}
-    //               key={`color${item}${index}`}
-    //             />
-    //           ))}
-    //       </Space>
-    //     );
-    //   },
-    //   width: 300,
-    // },
-    // {
-    //   key: "sizes",
-    //   dataIndex: "subItems",
-    //   title: "Sizes",
-    //   render: (items: SubProductModel[]) => (
-    //     <Space wrap>
-    //       {items.length > 0 &&
-    //         items.map((item, index) => (
-    //           <Tag key={`size${item.size}-${index}`}>{item.size}</Tag>
-    //         ))}
-    //     </Space>
-    //   ),
-    //   width: 150,
-    // },
-    // {
-    //   key: "price",
-    //   dataIndex: "subItems",
-    //   title: "Price",
-    //   render: (items: SubProductModel[]) => (
-    //     <Typography.Text>{getMinMaxValues(items)}</Typography.Text>
-    //   ),
-    //   width: 200,
-    // },
-    // {
-    //   key: "stock",
-    //   dataIndex: "subItems",
-    //   title: "Stock",
-    //   render: (items: SubProductModel[]) =>
-    //     items.reduce((a, b) => a + b.qty, 0),
-    //   align: "right",
-    //   width: 100,
-    // },
+        return (
+          <Space>
+            {colors.length > 0 &&
+              colors.map((item, index) => (
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    backgroundColor: item,
+                    borderRadius: 12,
+                  }}
+                  key={`color${item}${index}`}
+                />
+              ))}
+          </Space>
+        );
+      },
+      width: 300,
+    },
+    {
+      key: "sizes",
+      dataIndex: "subProducts",
+      title: "Sizes",
+      render: (items: SubProductModel[]) => (
+        <Space wrap>
+          {items.length > 0 &&
+            items.map((item, index) => (
+              <Tag key={`size${item.size}-${index}`}>{item.size}</Tag>
+            ))}
+        </Space>
+      ),
+      width: 150,
+    },
+    {
+      key: "price",
+      dataIndex: "subProducts",
+      title: "Price",
+      render: (items: SubProductModel[]) => (
+        <Typography.Text>{getMinMaxValues(items)}</Typography.Text>
+      ),
+      width: 200,
+    },
+    {
+      key: "stock",
+      dataIndex: "subProducts",
+      title: "Stock",
+      render: (items: SubProductModel[]) =>
+        items.reduce((a, b) => a + b.qty, 0),
+      align: "right",
+      width: 100,
+    },
     {
       key: "actions",
       title: "Actions",
@@ -221,13 +258,6 @@ const Inventories = () => {
               }}
             />
           </Tooltip>
-          <Tooltip title="Edit product" key={"btnEdit"}>
-            <Button
-              icon={<Edit2 color={colors.primary500} size={20} />}
-              type="text"
-              onClick={() => navigate(`/inventory/add-product?id=${item._id}`)}
-            />
-          </Tooltip>
           <Tooltip title="Delete product" key={"btnDelete"}>
             <Button
               icon={<Trash className="text-danger" size={20} />}
@@ -237,9 +267,16 @@ const Inventories = () => {
                   title: "Confirm?",
                   content: "Are you sure you want to delete this item?",
                   onCancel: () => console.log("cancel"),
-                  onOk: () => {},
+                  onOk: () => {hanleRemoveProduct(item.id)},
                 })
               }
+            />
+          </Tooltip>
+          <Tooltip title="Edit product" key={"btnEdit"}>
+            <Button
+              icon={<Edit2 color={colors.primary500} size={20} />}
+              type="text"
+              onClick={() => navigate(`/inventory/add-product?id=${item.id}`)}
             />
           </Tooltip>
         </Space>
@@ -247,6 +284,41 @@ const Inventories = () => {
       align: "right",
     },
   ];
+  const handleSearchProducts = async () => {
+    const key = replaceName(searchKey);
+    const api = `/products/page?title=${key}&page=${page}&pageSize=${pageSize}`;
+    setIsLoading(true);
+    try {
+      const res: any = await handleAPI(api);
+
+      setProducts(res.result.data);
+      setTotal(res.totalElements);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleSelectAllProduct = async () => {
+    try {
+      const res: any = await handleAPI("/products");
+
+      const items = res.result
+      console.log("Items:", items);
+
+      if (items.length > 0) {
+        const keys = items.map((item: any) => item.id);
+        console.log("Selected Keys:", keys);
+        setSelectedRowKeys(keys);
+      } else {
+        setSelectedRowKeys([]);
+      }
+    } catch (error) {
+      console.error("Lỗi khi gọi API:", error);
+    }
+  };
+
+
 
 
   return (
@@ -268,9 +340,13 @@ const Inventories = () => {
                         setSelectedRowKeys([]);
                       },
                       onOk: () => {
-                        selectedRowKeys.forEach(
-                          async (key) => {}
-                        );
+                        setSelectedRowKeys([]);
+                        selectedRowKeys.forEach(async (key) =>{
+                          await hanleRemoveProduct(key);
+                          await getProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
+                          setSelectedRowKeys([]);
+                          
+                        } );
                       },
                     })
                   }
@@ -285,7 +361,7 @@ const Inventories = () => {
                 {selectedRowKeys.length} items selected
               </Typography.Text>
               {selectedRowKeys.length < total && (
-                <Button type="link" onClick={() => {}}>
+                <Button type="link" onClick={handleSelectAllProduct}>
                   Select all
                 </Button>
               )}
@@ -311,7 +387,7 @@ const Inventories = () => {
             <Input.Search
               value={searchKey}
               onChange={(val) => setSearchKey(val.target.value)}
-              onSearch={(val) => {}}
+              onSearch={handleSearchProducts}
               placeholder="Search"
               allowClear
             />
@@ -331,12 +407,12 @@ const Inventories = () => {
         </div>
       </div>
       <Table
-        rowKey={(record) => record._id}
+        rowKey={(record) => record.id}
         pagination={{
           showSizeChanger: true,
           onShowSizeChange: (current, size) => {
             console.log(current, size);
-            console.log('size');
+            console.log("size");
           },
           total,
           onChange(page, pageSize) {
@@ -357,7 +433,7 @@ const Inventories = () => {
         size="small"
       />
 
-      {/* <AddSubProductModal
+      <AddSubProductModal
         product={productSelected}
         visible={isVisibleAddSubProduct}
         onClose={() => {
@@ -365,7 +441,7 @@ const Inventories = () => {
           setIsVisibleAddSubProduct(false);
         }}
         onAddNew={async (val: any) => {}}
-      /> */}
+      />
     </div>
   );
 };

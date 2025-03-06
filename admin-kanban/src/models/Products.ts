@@ -1,7 +1,7 @@
 /** @format */
 
 export interface CategoyModel {
-	_id: string;
+	id: string;
 	title: string;
 	parentId: string;
 	slug: string;
@@ -12,7 +12,7 @@ export interface CategoyModel {
 }
 
 export interface ProductModel {
-	_id: string;
+	id: string;
 	title: string;
 	slug: string;
 	description: string;
@@ -33,7 +33,7 @@ export interface SubProductModel {
 	cost: number;
 	productId: string;
 	images: any[];
-	_id: string;
+	id: string;
 	createdAt: string;
 	updatedAt: string;
 	__v: number;

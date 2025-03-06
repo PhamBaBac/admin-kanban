@@ -24,12 +24,13 @@ import { replaceName } from "../../utils/replaceName";
 // import { uploadFile } from '../../utils/uploadFile';
 import { Add } from "iconsax-react";
 import { ModalCategory } from "../../modals";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
 
 const { Text, Title, Paragraph } = Typography;
 
 const AddProduct = () => {
+  const navigate = useNavigate(); 
   const [isLoading, setIsLoading] = useState(false);
   const [content, setcontent] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SelectModel[]>([]);
@@ -49,6 +50,16 @@ const AddProduct = () => {
   useEffect(() => {
     getData();
   }, []);
+  useEffect(() => {
+    if (id) {
+      getProductDetail(id);
+     
+    }else{
+       form.resetFields(); // Xóa hết dữ liệu trong form khi không có id
+       setcontent(""); // Xóa nội dung của editor
+       setFileList([]);
+    }
+  }, [id]);
 
   const getData = async () => {
     setIsLoading(true);
@@ -62,7 +73,26 @@ const AddProduct = () => {
     }
   };
 
-  const getProductDetail = async (id: string) => {};
+
+	const getProductDetail = async (id: string) => {
+    const api = `/products/${id}`;
+    try {
+      const res: any = await handleAPI(api);
+      const item = res.result;
+
+      if (item) {
+        form.setFieldsValue({
+          ...item,
+          categories:
+            item.categories?.map((category: any) => category.id) || [], // Chuyển đổi thành mảng ID
+        });
+        setcontent(item.content);
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const handleAddNewProduct = async (values: any) => {
     const content = editorRef.current.getContent();
@@ -88,15 +118,16 @@ const AddProduct = () => {
 
     //   data.images = urls;
     // }
-	console.log("data", data);
 
     try {
       await handleAPI(
-        `/products`,
+        `/products/${id ? `${id}` : ""}`,
         data,
-         "post"
+        id ? "put" : "post"
       );
-      window.history.back();
+
+      navigate("/inventory");
+      
     } catch (error) {
       console.log(error);
     } finally {
@@ -110,7 +141,6 @@ const AddProduct = () => {
     const res: any = await handleAPI(`/categories`);
 
     const datas = res.result;
-	console.log("datas", datas);
 
     const data = datas.length > 0 ? getTreeValues(datas, true) : [];
 
@@ -215,7 +245,7 @@ const AddProduct = () => {
                 </Space>
               </Card>
               <Card size="small" className="mt-3" title="Categories">
-                <Form.Item name={"categories"}>
+                <Form.Item name={"categories"} initialValue={[]}>
                   <TreeSelect
                     treeData={categories}
                     multiple
