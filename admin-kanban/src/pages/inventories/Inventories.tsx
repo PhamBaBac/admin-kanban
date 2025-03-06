@@ -440,7 +440,9 @@ useEffect(() => {
           setProductSelected(undefined);
           setIsVisibleAddSubProduct(false);
         }}
-        onAddNew={async (val: any) => {}}
+        onAddNew={async (val: any) => {
+         
+        }}
       />
     </div>
   );

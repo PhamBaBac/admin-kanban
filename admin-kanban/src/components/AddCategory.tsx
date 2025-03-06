@@ -31,7 +31,7 @@ const AddCategory = (props: Props) => {
 
 	const handleCategory = async (values: any) => {
 		const api = seleted
-			? `/products/update-category?id=${seleted._id}`
+			? `/products/update-category?id=${seleted.id}`
 			: `/categories`;
 		const data: any = {};
 

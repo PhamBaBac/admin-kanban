@@ -33,6 +33,7 @@ interface Props {
 
 const AddSubProductModal = (props: Props) => {
   const { visible, onClose, product, onAddNew, subProduct } = props;
+  console.log("subProduct", subProduct);
 
   const [isLoading, setIsLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
@@ -46,12 +47,6 @@ const AddSubProductModal = (props: Props) => {
   useEffect(() => {
     form.setFieldValue("color", colors.primary500);
   }, []);
-
-  useEffect(() => {
-    if (!product) {
-      getProductOptions();
-    }
-  }, [product]);
 
   useEffect(() => {
     if (subProduct) {
@@ -110,13 +105,35 @@ const AddSubProductModal = (props: Props) => {
     }
   };
 
+  // const createSubProduct = async (data: any) => {
+// const api = `/sub-products/create`;
+
+//     try {
+//       const res = await handleAPI(api, data, "post");
+//       console.log("res", res);
+//       // await handleAddOrder({ ...data, subProductid: res?.data.id });
+//       onAddNew(res.data);
+//       handleCancel();
+//     } catch (error) {
+//       console.log(error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
   const createSubProduct = async (data: any) => {
-const api = `/sub-products/create`;
+    const api = `/sub-products/${
+      subProduct ? `update` : "create"
+    }`;
+    if (subProduct) {
+      data.id = subProduct.id;
+    }
 
     try {
-      const res = await handleAPI(api, data, "post");
-      // await handleAddOrder({ ...data, subProductid: res?.data.id });
-      onAddNew(res.data);
+    console.log("data", data);
+
+      const res: any = await handleAPI(api, data, subProduct ? "put" : "post");
+      // await handleAddOrder({ ...data, subProduct_id: res?.data._id });
+      onAddNew(res.result);
       handleCancel();
     } catch (error) {
       console.log(error);
@@ -144,17 +161,6 @@ const api = `/sub-products/create`;
     );
 
     setFileList(items);
-  };
-
-  const getProductOptions = async () => {
-    const api = `/products`;
-
-    try {
-      const res = await handleAPI(api);
-      setOptions(res.data);
-    } catch (error) {
-      console.log(error);
-    }
   };
 
   return (
