@@ -21,11 +21,11 @@ import { useEffect, useRef, useState } from "react";
 import handleAPI from "../../apis/handleAPI";
 import { SelectModel, TreeModel } from "../../models/FormModel";
 import { replaceName } from "../../utils/replaceName";
-// import { uploadFile } from '../../utils/uploadFile';
 import { Add } from "iconsax-react";
 import { ModalCategory } from "../../modals";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
+import { uploadFile } from "../../utils/uploadFile";
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -39,6 +39,7 @@ const AddProduct = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [fileUrl, setFileUrl] = useState("");
   const [fileList, setFileList] = useState<any[]>([]);
+  console.log("fileList", fileList);
 
   const [searchParams] = useSearchParams();
 
@@ -56,8 +57,6 @@ const AddProduct = () => {
      
     }else{
        form.resetFields(); // Xóa hết dữ liệu trong form khi không có id
-       setcontent(""); // Xóa nội dung của editor
-       setFileList([]);
     }
   }, [id]);
 
@@ -84,9 +83,12 @@ const AddProduct = () => {
         form.setFieldsValue({
           ...item,
           categories:
-            item.categories?.map((category: any) => category.id) || [], // Chuyển đổi thành mảng ID
+            item.categories?.map((category: any) => category.id) || [], 
         });
         setcontent(item.content);
+        setFileList(
+          item.images?.map((image: any, index: number) => ({ url: image, uid: index }))
+        );
       }
 
     } catch (error) {
@@ -94,46 +96,57 @@ const AddProduct = () => {
     }
   };
 
-  const handleAddNewProduct = async (values: any) => {
-    const content = editorRef.current.getContent();
-    const data: any = {};
-    setIsCreating(true);
-    for (const i in values) {
-      data[`${i}`] = values[i] ?? "";
-    }
+const handleAddNewProduct = async (values: any) => {
+  const content = editorRef.current.getContent();
+  const data: any = {};
+  setIsCreating(true);
 
-    data.content = content;
-    data.slug = replaceName(values.title);
+  for (const i in values) {
+    data[`${i}`] = values[i] ?? "";
+  }
 
-    // if (fileList.length > 0) {
-    //   const urls: string[] = [];
-    //   fileList.forEach(async (file) => {
-    //     if (file.originFileObj) {
-    //       const url = await uploadFile(file.originFileObj);
-    //       url && urls.push(url);
-    //     } else {
-    //       urls.push(file.url);
-    //     }
-    //   });
+  data.content = content;
+  data.slug = replaceName(values.title);
 
-    //   data.images = urls;
-    // }
-
+  if (fileList.length > 0) {
     try {
-      await handleAPI(
-        `/products/${id ? `${id}` : ""}`,
-        data,
-        id ? "put" : "post"
-      );
+      // Tạo một mảng các promise để upload file
+      const uploadPromises = fileList.map(async (file) => {
+        if (file.originFileObj) {
+          const url = await uploadFile(file.originFileObj);
+          return url;
+        } else {
+          return file.url;
+        }
+      });
 
-      navigate("/inventory");
-      
+      // Đợi tất cả các file upload xong
+      const urls = await Promise.all(uploadPromises);
+
+      // Gán giá trị cho data.images sau khi tất cả các file đã upload xong
+      data.images = urls.filter((url) => url); // Lọc bỏ các giá trị null/undefined
     } catch (error) {
-      console.log(error);
-    } finally {
+      console.error("Error uploading files:", error);
       setIsCreating(false);
+      return;
     }
-  };
+  }
+
+  try {
+    console.log("data", data);
+    await handleAPI(
+      `/products/${id ? `${id}` : ""}`,
+      data,
+      id ? "put" : "post"
+    );
+
+    navigate("/inventory");
+  } catch (error) {
+    console.log(error);
+  } finally {
+    setIsCreating(false);
+  }
+};
 
   const getSuppliers = async () => {};
 
@@ -147,9 +160,21 @@ const AddProduct = () => {
     setCategories(data);
   };
 
-  const handleChange: UploadProps["onChange"] = ({
-    fileList: newFileList,
-  }) => {};
+  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
+    const items = newFileList.map((item) =>
+      item.originFileObj
+        ? {
+            ...item,
+            url: item.originFileObj
+              ? URL.createObjectURL(item.originFileObj)
+              : "",
+            status: "done",
+          }
+        : { ...item }
+    );
+
+    setFileList(items);
+  };
 
   return isLoading ? (
     <Spin />
@@ -314,10 +339,10 @@ const AddProduct = () => {
                   onChange={async (files: any) => {
                     const file = files.target.files[0];
 
-                    // if (file) {
-                    // 	const donwloadUrl = await uploadFile(file);
-                    // 	donwloadUrl && setFileUrl(donwloadUrl);
-                    // }
+                    if (file) {
+                    	const donwloadUrl = await uploadFile(file);
+                    	donwloadUrl && setFileUrl(donwloadUrl);
+                    }
                   }}
                 />
               </Card>

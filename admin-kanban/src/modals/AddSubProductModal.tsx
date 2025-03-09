@@ -33,7 +33,6 @@ interface Props {
 
 const AddSubProductModal = (props: Props) => {
   const { visible, onClose, product, onAddNew, subProduct } = props;
-  console.log("subProduct", subProduct);
 
   const [isLoading, setIsLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
@@ -129,7 +128,6 @@ const AddSubProductModal = (props: Props) => {
     }
 
     try {
-    console.log("data", data);
 
       const res: any = await handleAPI(api, data, subProduct ? "put" : "post");
       // await handleAddOrder({ ...data, subProduct_id: res?.data._id });

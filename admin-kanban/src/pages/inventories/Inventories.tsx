@@ -42,7 +42,6 @@ const Inventories = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  console.log("pageSize", pageSize);
   const [total, setTotal] = useState<number>(10);
   console.log()
   const [searchKey, setSearchKey] = useState("");
@@ -161,23 +160,23 @@ useEffect(() => {
       ),
       width: 300,
     },
-    // {
-    //   key: "images",
-    //   dataIndex: "images",
-    //   title: "Images",
-    //   render: (imgs: string[]) =>
-    //     imgs &&
-    //     imgs.length > 0 && (
-    //       <Space>
-    //         <Avatar.Group>
-    //           {imgs.map((img) => (
-    //             <Avatar src={img} size={40} />
-    //           ))}
-    //         </Avatar.Group>
-    //       </Space>
-    //     ),
-    //   width: 300,
-    // },
+    {
+      key: "images",
+      dataIndex: "images",
+      title: "Images",
+      render: (imgs: string[]) =>
+        imgs &&
+        imgs.length > 0 && (
+          <Space>
+            <Avatar.Group>
+              {imgs.map((img) => (
+                <Avatar src={img} size={40} />
+              ))}
+            </Avatar.Group>
+          </Space>
+        ),
+      width: 300,
+    },
     {
       key: "colors",
       dataIndex: "subProducts",
@@ -206,7 +205,7 @@ useEffect(() => {
           </Space>
         );
       },
-      width: 300,
+      width: 150,
     },
     {
       key: "sizes",
@@ -220,7 +219,7 @@ useEffect(() => {
             ))}
         </Space>
       ),
-      width: 150,
+      width: 300,
     },
     {
       key: "price",
