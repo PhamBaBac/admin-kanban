@@ -83,16 +83,16 @@ const ProductDetail = () => {
   };
 
   const columns: ColumnProps<SubProductModel>[] = [
-    // {
-    // 	key: 'images',
-    // 	dataIndex: 'images',
-    // 	title: 'Images',
-    // 	render: (imgs: string[]) => (
-    // 		<Space>
-    // 			{imgs.length > 0 && imgs.map((img) => <Avatar src={img} size={40} />)}
-    // 		</Space>
-    // 	),
-    // },
+    {
+    	key: 'images',
+    	dataIndex: 'images',
+    	title: 'Images',
+    	render: (imgs: string[]) => (
+    		<Space>
+    			{imgs.length > 0 && imgs.map((img) => <Avatar src={img} size={40} />)}
+    		</Space>
+    	),
+    },
     {
       title: "Size",
       key: "size",

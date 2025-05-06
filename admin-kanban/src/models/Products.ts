@@ -1,14 +1,15 @@
 /** @format */
 
 export interface CategoyModel {
-	id: string;
-	title: string;
-	parentId: string;
-	slug: string;
-	description: string;
-	createdAt: string;
-	updatedAt: string;
-	__v: number;
+  id: string;
+  title: string;
+  parentId: string;
+  slug: string;
+  description: string;
+  children?: CategoyModel[];
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 }
 
 export interface ProductModel {

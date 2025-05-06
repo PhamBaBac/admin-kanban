@@ -22,6 +22,7 @@ import { useSelector } from "react-redux";
 import { authSeletor } from "../redux/reducers/authReducer";
 import { SelectModel } from "../models/FormModel";
 import { get } from "http";
+import { uploadFile } from "../utils/uploadFile";
 
 interface Props {
   visible: boolean;
@@ -33,9 +34,11 @@ interface Props {
 
 const AddSubProductModal = (props: Props) => {
   const { visible, onClose, product, onAddNew, subProduct } = props;
+  console.log("subProduct", subProduct);
 
   const [isLoading, setIsLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
+  console.log("fileList", fileList);                                                
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [options, setOptions] = useState<SelectModel[]>();
@@ -80,16 +83,18 @@ const AddSubProductModal = (props: Props) => {
             : data.color.toHexString();
       }
 
-    //   if (fileList.length > 0) {
-    //     const promises = fileList.map(async (file) => {
-    //       const url = await uploadFile(file.originFileObj);
-    //       return url;
-    //     });
+      if (fileList.length > 0) {
+        const promises = fileList.map(async (file) => {
+          const url = await uploadFile(file.originFileObj);
+          return url;
+        });
 
-    //     const urls = await Promise.all(promises);
+        const urls = await Promise.all(promises);
+        console.log("urls", urls);
 
-    //     data.images = urls;
-    //   }
+        data.images = urls;
+      }
+      console.log("Data before API call:", data);
 
       if (!product) {
         onAddNew({
@@ -104,21 +109,6 @@ const AddSubProductModal = (props: Props) => {
     }
   };
 
-  // const createSubProduct = async (data: any) => {
-// const api = `/sub-products/create`;
-
-//     try {
-//       const res = await handleAPI(api, data, "post");
-//       console.log("res", res);
-//       // await handleAddOrder({ ...data, subProductid: res?.data.id });
-//       onAddNew(res.data);
-//       handleCancel();
-//     } catch (error) {
-//       console.log(error);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
   const createSubProduct = async (data: any) => {
     const api = `/sub-products/${
       subProduct ? `update` : "create"

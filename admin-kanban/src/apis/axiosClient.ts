@@ -21,18 +21,18 @@ const getAssetToken = () => {
   return authData?.token || "";
 };
 
-
 const refreshToken = async () => {
   const currentToken = getAssetToken();
+  console.log("acceess:", currentToken);
   try {
     const response = await axios.post(`${baseURL}/auth/refresh`, {
-      token: currentToken, 
+      token: currentToken,
     });
 
     const newToken = response.data.result.token;
     const authData = getAuthData();
     authData.token = newToken;
-	
+
     store.dispatch(addAuth(authData));
 
     return newToken;
@@ -72,20 +72,20 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-	if (error.response.status === 401 && !originalRequest._retry) {
-	  originalRequest._retry = true;
-	  try {
-		const newToken = await refreshToken();
-		originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
-		return axiosClient(originalRequest);
-	  } catch (refreshError) {
-		localStorage.removeItem(localDataNames.authData);
-		window.location.href = "/";
-		return Promise.reject(refreshError);
-	  }
-	}
+    if (error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const newToken = await refreshToken();
+        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+        return axiosClient(originalRequest);
+      } catch (refreshError) {
+        localStorage.removeItem(localDataNames.authData);
+        window.location.href = "/";
+        return Promise.reject(refreshError);
+      }
+    }
 
-    return Promise.reject(error.response.data); 
+    return Promise.reject(error.response.data);
   }
 );
 

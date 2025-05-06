@@ -95,9 +95,8 @@ const AddProduct = () => {
       console.log(error);
     }
   };
-
 const handleAddNewProduct = async (values: any) => {
-  const content = editorRef.current.getContent();
+  const content = editorRef.current?.getContent() || ""; // Tránh lỗi undefined
   const data: any = {};
   setIsCreating(true);
 
@@ -107,24 +106,22 @@ const handleAddNewProduct = async (values: any) => {
 
   data.content = content;
   data.slug = replaceName(values.title);
+  data.images = [];
 
-  if (fileList.length > 0) {
+  const fileListSafe = fileList || []; 
+
+  if (fileListSafe.length > 0) {
     try {
-      // Tạo một mảng các promise để upload file
-      const uploadPromises = fileList.map(async (file) => {
+      const uploadPromises = fileListSafe.map(async (file) => {
         if (file.originFileObj) {
-          const url = await uploadFile(file.originFileObj);
-          return url;
+          return await uploadFile(file.originFileObj);
         } else {
           return file.url;
         }
       });
 
-      // Đợi tất cả các file upload xong
       const urls = await Promise.all(uploadPromises);
-
-      // Gán giá trị cho data.images sau khi tất cả các file đã upload xong
-      data.images = urls.filter((url) => url); // Lọc bỏ các giá trị null/undefined
+      data.images = urls.filter((url) => url); // Lọc bỏ giá trị null/undefined
     } catch (error) {
       console.error("Error uploading files:", error);
       setIsCreating(false);
@@ -135,7 +132,7 @@ const handleAddNewProduct = async (values: any) => {
   try {
     console.log("data", data);
     await handleAPI(
-      `/products/${id ? `${id}` : ""}`,
+      `/products${id ? `/${id}` : ""}`,
       data,
       id ? "put" : "post"
     );
@@ -255,7 +252,7 @@ const handleAddNewProduct = async (values: any) => {
                   <Button
                     loading={isCreating}
                     size="middle"
-                    onClick={() => form.submit()}
+                    onClick={() => navigate("/inventory")}
                   >
                     Cancel
                   </Button>
