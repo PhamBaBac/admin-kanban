@@ -11,7 +11,6 @@ const Router = () => {
   const [isLoading, setIsLoading] = useState(false);
 
 const auth: AuthState = useSelector(authSeletor);
-console.log("auth", auth);
 const dispatch = useDispatch();
 
 useEffect(() => {

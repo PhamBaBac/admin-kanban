@@ -28,6 +28,8 @@ import {
   SubProductModel,
 } from "../../models/Products";
 import { replaceName } from "../../utils/replaceName";
+import { FilterProduct } from "../../components";
+import { FilterProductValue } from "../../components/FilterProduct";
 
 const { confirm } = Modal;
 
@@ -303,11 +305,9 @@ useEffect(() => {
       const res: any = await handleAPI("/products");
 
       const items = res.result
-      console.log("Items:", items);
 
       if (items.length > 0) {
         const keys = items.map((item: any) => item.id);
-        console.log("Selected Keys:", keys);
         setSelectedRowKeys(keys);
       } else {
         setSelectedRowKeys([]);
@@ -317,7 +317,18 @@ useEffect(() => {
     }
   };
 
-
+const handleFilterProducts = async (vals: FilterProductValue) => {
+  const api = `/products/filter-products`;
+  setIsFilting(true);
+  try {
+    // console.log(vals);
+    const res = await handleAPI(api, vals, "post");
+    setTotal(res.data.totalItems);
+    setProducts(res.data.items);
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 
   return (
@@ -340,12 +351,13 @@ useEffect(() => {
                       },
                       onOk: () => {
                         setSelectedRowKeys([]);
-                        selectedRowKeys.forEach(async (key) =>{
+                        selectedRowKeys.forEach(async (key) => {
                           await hanleRemoveProduct(key);
-                          await getProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
+                          await getProducts(
+                            `/products/page?page=${page}&pageSize=${pageSize}`
+                          );
                           setSelectedRowKeys([]);
-                          
-                        } );
+                        });
                       },
                     })
                   }
@@ -390,7 +402,9 @@ useEffect(() => {
               placeholder="Search"
               allowClear
             />
-            {/* <Dropdown
+
+            <Divider type="vertical" />
+            <Dropdown
               dropdownRender={(menu) => (
                 <FilterProduct
                   values={{}}
@@ -399,9 +413,7 @@ useEffect(() => {
               )}
             >
               <Button icon={<Sort size={20} />}>Filter</Button>
-            </Dropdown> */}
-            <Divider type="vertical" />
-            <Button type="primary">Add Product</Button>
+            </Dropdown>
           </Space>
         </div>
       </div>
@@ -439,9 +451,7 @@ useEffect(() => {
           setProductSelected(undefined);
           setIsVisibleAddSubProduct(false);
         }}
-        onAddNew={async (val: any) => {
-         
-        }}
+        onAddNew={async (val: any) => {}}
       />
     </div>
   );

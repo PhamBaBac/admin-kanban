@@ -6,7 +6,7 @@ import { localDataNames } from "../constants/appInfos";
 import { addAuth } from "../redux/reducers/authReducer";
 import store from "../redux/store"; // Import the store
 
-const baseURL = `http://localhost:8080/api/v1/identity-service`;
+const baseURL = `http://localhost:8080/api/v1/kanban-service`;
 
 const getAuthData = () => {
   const res = localStorage.getItem(localDataNames.authData);

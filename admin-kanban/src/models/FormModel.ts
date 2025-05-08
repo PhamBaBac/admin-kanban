@@ -20,6 +20,7 @@ export interface FormItemModel {
 	required: boolean;
 	message: string;
 	default_value: string;
+	options?: { label: string; value: any }[];
 }
 
 export interface SelectModel {

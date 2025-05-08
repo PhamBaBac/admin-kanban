@@ -25,12 +25,10 @@ const { confirm } = Modal;
 
 const Categories = () => {
   const [categories, setCategories] = useState<CategoyModel[]>([]);
-  console.log("categories", categories);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [treeValues, setTreeValues] = useState<TreeModel[]>([]);
-  console.log("treeValues", treeValues);
   const [categorySelected, setCategorySelected] = useState<CategoyModel>();
   const [total, setTotal] = useState<number>(10);
 

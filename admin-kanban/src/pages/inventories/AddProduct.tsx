@@ -30,7 +30,7 @@ import { uploadFile } from "../../utils/uploadFile";
 const { Text, Title, Paragraph } = Typography;
 
 const AddProduct = () => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [content, setcontent] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SelectModel[]>([]);
@@ -39,7 +39,6 @@ const AddProduct = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [fileUrl, setFileUrl] = useState("");
   const [fileList, setFileList] = useState<any[]>([]);
-  console.log("fileList", fileList);
 
   const [searchParams] = useSearchParams();
 
@@ -54,9 +53,8 @@ const AddProduct = () => {
   useEffect(() => {
     if (id) {
       getProductDetail(id);
-     
-    }else{
-       form.resetFields(); // Xóa hết dữ liệu trong form khi không có id
+    } else {
+      form.resetFields(); 
     }
   }, [id]);
 
@@ -72,80 +70,97 @@ const AddProduct = () => {
     }
   };
 
-
-	const getProductDetail = async (id: string) => {
+  const getProductDetail = async (id: string) => {
     const api = `/products/${id}`;
     try {
       const res: any = await handleAPI(api);
       const item = res.result;
+      console.log("item", item);
 
       if (item) {
         form.setFieldsValue({
           ...item,
           categories:
-            item.categories?.map((category: any) => category.id) || [], 
+            item.categories?.map((category: any) => category.id) || [],
+          supplier: item.supplierId || null,
+            
         });
         setcontent(item.content);
         setFileList(
-          item.images?.map((image: any, index: number) => ({ url: image, uid: index }))
+          item.images?.map((image: any, index: number) => ({
+            url: image,
+            uid: index,
+          }))
         );
       }
-
     } catch (error) {
       console.log(error);
     }
   };
-const handleAddNewProduct = async (values: any) => {
-  const content = editorRef.current?.getContent() || ""; // Tránh lỗi undefined
-  const data: any = {};
-  setIsCreating(true);
+  const handleAddNewProduct = async (values: any) => {
+    const content = editorRef.current?.getContent() || ""; 
+    console.log("content", content);
+    const data: any = {};
+    setIsCreating(true);
 
-  for (const i in values) {
-    data[`${i}`] = values[i] ?? "";
-  }
-
-  data.content = content;
-  data.slug = replaceName(values.title);
-  data.images = [];
-
-  const fileListSafe = fileList || []; 
-
-  if (fileListSafe.length > 0) {
-    try {
-      const uploadPromises = fileListSafe.map(async (file) => {
-        if (file.originFileObj) {
-          return await uploadFile(file.originFileObj);
-        } else {
-          return file.url;
-        }
-      });
-
-      const urls = await Promise.all(uploadPromises);
-      data.images = urls.filter((url) => url); // Lọc bỏ giá trị null/undefined
-    } catch (error) {
-      console.error("Error uploading files:", error);
-      setIsCreating(false);
-      return;
+    for (const i in values) {
+      data[`${i}`] = values[i] ?? "";
     }
-  }
+    data.supplierId = values.supplier ? values.supplier : null;
+    data.content = content;
+    data.slug = replaceName(values.title);
+    data.images = [];
+    
 
-  try {
-    console.log("data", data);
-    await handleAPI(
-      `/products${id ? `/${id}` : ""}`,
-      data,
-      id ? "put" : "post"
-    );
+    const fileListSafe = fileList || [];
 
-    navigate("/inventory");
-  } catch (error) {
-    console.log(error);
-  } finally {
-    setIsCreating(false);
-  }
-};
+    if (fileListSafe.length > 0) {
+      try {
+        const uploadPromises = fileListSafe.map(async (file) => {
+          if (file.originFileObj) {
+            return await uploadFile(file.originFileObj);
+          } else {
+            return file.url;
+          }
+        });
 
-  const getSuppliers = async () => {};
+        const urls = await Promise.all(uploadPromises);
+        data.images = urls.filter((url) => url); // Lọc bỏ giá trị null/undefined
+      } catch (error) {
+        console.error("Error uploading files:", error);
+        setIsCreating(false);
+        return;
+      }
+    }
+
+    try {
+      await handleAPI(
+        `/products${id ? `/${id}` : ""}`,
+        data,
+        id ? "put" : "post"
+      );
+
+      navigate("/inventory");
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const getSuppliers = async () => {
+    const api = `/suppliers/page`;
+    const res: any = await handleAPI(api);
+    console.log("suppler", res)
+
+    const data = res.result.data;
+    const options = data.map((item: any) => ({
+      value: item.id,
+      label: item.name,
+    }));
+
+    setSupplierOptions(options);
+  };
 
   const getCategories = async () => {
     const res: any = await handleAPI(`/categories`);
@@ -337,8 +352,8 @@ const handleAddNewProduct = async (values: any) => {
                     const file = files.target.files[0];
 
                     if (file) {
-                    	const donwloadUrl = await uploadFile(file);
-                    	donwloadUrl && setFileUrl(donwloadUrl);
+                      const donwloadUrl = await uploadFile(file);
+                      donwloadUrl && setFileUrl(donwloadUrl);
                     }
                   }}
                 />
