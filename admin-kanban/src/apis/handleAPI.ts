@@ -1,24 +1,32 @@
-/** @format */
-
-import axiosClient from './axiosClient';
+import axiosClient from "./axiosClient";
 
 const handleAPI = async (
   url: string,
   data?: any,
-  method?: "post" | "put" | "get" | "delete"
+  method: "post" | "put" | "get" | "delete" = "get"
 ) => {
   try {
-    const response = await axiosClient(url, {
-      method: method ?? "get",
-      data,
+    let config: any = {
+      method,
       headers: {
-        "Content-Type": "application/json", // Đặt Content-Type là application/json
+        "Content-Type": "application/json",
       },
-    });
+    };
+
+    if (method === "get") {
+      // Với GET: truyền data dưới dạng params
+      config.params = data;
+    } else {
+      // Với các method khác: truyền data dưới dạng body
+      config.data = data;
+    }
+
+    const response = await axiosClient(url, config);
     return response;
   } catch (error) {
     console.error("API Error:", error);
     throw error;
   }
 };
+
 export default handleAPI;

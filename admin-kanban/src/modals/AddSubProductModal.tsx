@@ -34,11 +34,9 @@ interface Props {
 
 const AddSubProductModal = (props: Props) => {
   const { visible, onClose, product, onAddNew, subProduct } = props;
-  console.log("subProduct", subProduct);
 
   const [isLoading, setIsLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
-  console.log("fileList", fileList);                                                
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [options, setOptions] = useState<SelectModel[]>();

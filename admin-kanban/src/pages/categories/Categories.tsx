@@ -25,6 +25,7 @@ const { confirm } = Modal;
 
 const Categories = () => {
   const [categories, setCategories] = useState<CategoyModel[]>([]);
+  console.log("categories", categories);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -44,14 +45,13 @@ const Categories = () => {
   const getCategories = async (api: string, isSelect?: boolean) => {
     try {
       const res: any = await handleAPI(api);
-      console.log("res", res.result.data);
-
-      setTotal(res.result.totalElements);
 
       if (isSelect) {
         setTreeValues(getTreeValues(res.result, true));
       } else {
-        setCategories(getTreeValues(res.result.data, false));
+        setCategories(res.result.data);
+        setTotal(res.result.totalElements);
+        
       }
     } catch (error) {
       console.log(error);

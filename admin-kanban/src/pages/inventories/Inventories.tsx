@@ -45,7 +45,6 @@ const Inventories = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState<number>(10);
-  console.log()
   const [searchKey, setSearchKey] = useState("");
   const [isFilting, setIsFilting] = useState(false);
 
@@ -316,20 +315,33 @@ useEffect(() => {
       console.error("Lỗi khi gọi API:", error);
     }
   };
+  const handleFilterProducts = async (vals: FilterProductValue) => {
+    console.log("vals trước xử lý", vals);
 
-const handleFilterProducts = async (vals: FilterProductValue) => {
-  const api = `/products/filter-products`;
-  setIsFilting(true);
-  try {
-    // console.log(vals);
-    const res = await handleAPI(api, vals, "post");
-    setTotal(res.data.totalItems);
-    setProducts(res.data.items);
-  } catch (error) {
-    console.log(error);
-  }
-};
+    // Nếu colors là chuỗi thì tách thành mảng
+    if (typeof vals.colors === "string" && (vals.colors as string).includes(",")) {
+      vals.colors = (vals.colors as string).split(",").map((c) => c.trim());
+    } else if (typeof vals.colors === "string" && (vals.colors as string).length > 0) {
+      vals.colors = [(vals.colors as string)];
+    } else if (!Array.isArray(vals.colors)) {
+      vals.colors = [];
+    }
 
+    console.log("vals sau xử lý", vals);
+
+    const api = `/products/filter-products`;
+    setIsFilting(true);
+    try {
+      const res: any = await handleAPI(api, vals, "get");
+      console.log("res", res);
+
+      setProducts(res.result);
+      setTotal(res.totalElements);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  
 
   return (
     <div>
@@ -401,9 +413,7 @@ const handleFilterProducts = async (vals: FilterProductValue) => {
               onSearch={handleSearchProducts}
               placeholder="Search"
               allowClear
-            />
-
-            <Divider type="vertical" />
+            />  
             <Dropdown
               dropdownRender={(menu) => (
                 <FilterProduct

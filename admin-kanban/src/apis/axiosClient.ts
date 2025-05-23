@@ -23,7 +23,6 @@ const getAssetToken = () => {
 
 const refreshToken = async () => {
   const currentToken = getAssetToken();
-  console.log("acceess:", currentToken);
   try {
     const response = await axios.post(`${baseURL}/auth/refresh`, {
       token: currentToken,
