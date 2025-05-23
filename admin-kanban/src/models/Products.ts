@@ -32,6 +32,7 @@ export interface SubProductModel {
 	price: number;
 	qty: number;
 	cost: number;
+	discount: number;
 	productId: string;
 	images: any[];
 	id: string;

@@ -39,6 +39,7 @@ type TableRowSelection<T extends object = object> =
 const Inventories = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<ProductModel[]>([]);
+  console.log("products", products);
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
   const [productSelected, setProductSelected] = useState<ProductModel>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
@@ -83,7 +84,24 @@ useEffect(() => {
       const res:any = await handleAPI(api);
       const data = res.result.data;
       const total = res.result.totalElements;
-      setProducts(data.map((item: any) => ({ ...item, key: item.id })));
+      const subProductMap: { [key: string]: SubProductModel[] } = {};
+      await Promise.all(
+        data.map(async (product: ProductModel) => {
+          const resSubs: any = await handleAPI(
+            `/sub-products/get-all-sub-product/${product.id}`
+          );
+          subProductMap[product.id] = resSubs.result || [];
+        })
+      );
+
+      // Merge subProducts vào product
+      const enrichedProducts = data.map((item: any) => ({
+        ...item,
+        key: item.id,
+        subProducts: subProductMap[item.id] || [],
+      }));
+
+      setProducts(enrichedProducts);
       setTotal(total);
     } catch (error) {
       console.log(error);

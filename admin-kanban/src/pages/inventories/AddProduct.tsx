@@ -75,7 +75,6 @@ const AddProduct = () => {
     try {
       const res: any = await handleAPI(api);
       const item = res.result;
-      console.log("item", item);
 
       if (item) {
         form.setFieldsValue({
@@ -99,7 +98,6 @@ const AddProduct = () => {
   };
   const handleAddNewProduct = async (values: any) => {
     const content = editorRef.current?.getContent() || ""; 
-    console.log("content", content);
     const data: any = {};
     setIsCreating(true);
 

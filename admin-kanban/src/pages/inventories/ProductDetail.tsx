@@ -46,13 +46,13 @@ const ProductDetail = () => {
   }, [productDetail]);
 
   const getProductDetail = async () => {
-    const api = `/products/${id}`;
+    const api = `/sub-products/get-all-sub-product/${id}`;
 
     setIsLoading(true);
     try {
       const res: any = await handleAPI(api);
       setProductDetail(res.result);
-      setSubProducts(res.result.subProducts);
+      setSubProducts(res.result);
     } catch (error) {
       console.log(error);
     } finally {
@@ -151,7 +151,10 @@ const ProductDetail = () => {
                 title: "Confirm",
                 content:
                   "Are you sure you want to remove this sub product item?",
-                onOk: async () => await handleRemoveSubProduct(item.id),
+                onOk: async () =>{
+                  await handleRemoveSubProduct(item.id);
+                  await getProductDetail();
+                },
               })
             }
             type="text"
