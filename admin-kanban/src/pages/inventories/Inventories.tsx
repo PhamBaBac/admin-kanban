@@ -1,5 +1,3 @@
-/** @format */
-
 import {
   Avatar,
   Button,
@@ -33,13 +31,10 @@ import { FilterProductValue } from "../../components/FilterProduct";
 
 const { confirm } = Modal;
 
-type TableRowSelection<T extends object = object> =
-  TableProps<T>["rowSelection"];
 
 const Inventories = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<ProductModel[]>([]);
-  console.log("products", products);
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
   const [productSelected, setProductSelected] = useState<ProductModel>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
@@ -48,45 +43,23 @@ const Inventories = () => {
   const [total, setTotal] = useState<number>(10);
   const [searchKey, setSearchKey] = useState("");
   const [isFilting, setIsFilting] = useState(false);
-
   const navigate = useNavigate();
 
-useEffect(() => {
-  if (!searchKey) {
-    // setPage(1);  
-    getProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
-  }
-}, [searchKey, page, pageSize]);
-  
-   const hanleRemoveProduct = async (id: string) => {
-     const api = `/products/${id}`;
-     try {
-       await handleAPI(api, undefined, "delete");
-       const items = [...products];
-       const index = items.findIndex((element) => element.id === id);
+  useEffect(() => {
+    if (!searchKey)
+      fetchProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
+  }, [searchKey, page, pageSize]);
 
-       if (index !== -1) {
-         items.splice(index, 1);
-       }
-
-       setProducts(items);
-
-       message.success("Product removed!!!");
-     } catch (error: any) {
-       message.error(error.message);
-     }
-   };
-
-
-  const getProducts = async (api: string) => {
+  const fetchProducts = async (api: string) => {
     setIsLoading(true);
     try {
-      const res:any = await handleAPI(api);
-      const data = res.result.data;
-      const total = res.result.totalElements;
+      const res: any = await handleAPI(api);
+      const productsData = res.result.data;
+      const totalItems = res.result.totalElements;
+
       const subProductMap: { [key: string]: SubProductModel[] } = {};
       await Promise.all(
-        data.map(async (product: ProductModel) => {
+        productsData.map(async (product: ProductModel) => {
           const resSubs: any = await handleAPI(
             `/sub-products/get-all-sub-product/${product.id}`
           );
@@ -94,15 +67,14 @@ useEffect(() => {
         })
       );
 
-      // Merge subProducts vào product
-      const enrichedProducts = data.map((item: any) => ({
+      const enrichedProducts = productsData.map((item: any) => ({
         ...item,
         key: item.id,
         subProducts: subProductMap[item.id] || [],
       }));
 
       setProducts(enrichedProducts);
-      setTotal(total);
+      setTotal(totalItems);
     } catch (error) {
       console.log(error);
     } finally {
@@ -110,35 +82,104 @@ useEffect(() => {
     }
   };
 
-  const onSelectChange = (newSelectRowKeys: React.Key[]) => {
-    setSelectedRowKeys(newSelectRowKeys);
-  };
-
-  const rowSelection: TableRowSelection<ProductModel> = {
-    selectedRowKeys,
-    onChange: onSelectChange,
-  };
-  const getMinMaxValues = (data: SubProductModel[]) => {
-    const nums: number[] = [];
-
-    if (data.length > 0) {
-      data.forEach((item) => nums.push(item.price));
+  const handleRemoveProduct = async (id: string) => {
+    try {
+      await handleAPI(`/products/${id}`, undefined, "delete");
+      setProducts((prev) => prev.filter((product) => product.id !== id));
+      message.success("Product removed");
+    } catch (error: any) {
+      message.error(error.message);
     }
+  };
 
-    return nums.length > 0
-      ? `${Math.min(...nums).toLocaleString()} - ${Math.max(
-          ...nums
+  const getMinMaxValues = (data: SubProductModel[]) => {
+    const prices = data.map((item) => item.price);
+    return prices.length
+      ? `${Math.min(...prices).toLocaleString()} - ${Math.max(
+          ...prices
         ).toLocaleString()}`
       : "";
   };
 
- 
+  const rowSelection: TableProps<ProductModel>["rowSelection"] = {
+    selectedRowKeys,
+    onChange: setSelectedRowKeys,
+  };
+
+  const handleSearchProducts = async () => {
+    const key = replaceName(searchKey);
+    console.log("Search key:", key);
+    setIsLoading(true);
+    try {
+      const res: any = await handleAPI(
+        `/products/page?title=${key}&page=${page}&pageSize=${pageSize}`
+      );
+
+      const productsData = res.result.data;
+      const totalItems = res.result.totalElements;
+
+      const subProductMap: { [key: string]: SubProductModel[] } = {};
+      await Promise.all(
+        productsData.map(async (product: ProductModel) => {
+          const resSubs: any = await handleAPI(
+            `/sub-products/get-all-sub-product/${product.id}`
+          );
+          subProductMap[product.id] = resSubs.result || [];
+        })
+      );
+
+      const enrichedProducts = productsData.map((item: any) => ({
+        ...item,
+        key: item.id,
+        subProducts: subProductMap[item.id] || [],
+      }));
+
+      setProducts(enrichedProducts);
+      setTotal(totalItems);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectAllProduct = async () => {
+    try {
+      const res: any = await handleAPI("/products");
+      setSelectedRowKeys(res.result.map((item: any) => item.id));
+    } catch (error) {
+      console.error("Error selecting all products:", error);
+    }
+  };
+
+  const handleFilterProducts = async (vals: FilterProductValue) => {
+    if (typeof vals.colors === "string") {
+      vals.colors = (vals.colors as string).includes(",")
+        ? (vals.colors as string).split(",").map((c) => c.trim())
+        : [vals.colors as string];
+    } else if (!Array.isArray(vals.colors)) {
+      vals.colors = [];
+    }
+
+    setIsFilting(true);
+    try {
+      const res: any = await handleAPI(
+        `/products/filter-products`,
+        vals,
+        "get"
+      );
+      setProducts(res.result);
+      setTotal(res.totalElements);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const columns: ColumnProps<ProductModel>[] = [
     {
       key: "title",
-      dataIndex: "",
       title: "Title",
+      dataIndex: "",
       width: 300,
       render: (item: ProductModel) => (
         <Link to={`/inventory/detail/${item.slug}?id=${item.id}`}>
@@ -148,28 +189,31 @@ useEffect(() => {
     },
     {
       key: "description",
+      title: "Description",
       dataIndex: "description",
-      title: "description",
       width: 400,
       render: (desc: string) => (
-        <Tooltip style={{ width: 320 }} title={desc}>
+        <Tooltip title={desc}>
           <div className="text-2-line">{desc}</div>
         </Tooltip>
       ),
     },
     {
       key: "categories",
+      title: "Categories",
       dataIndex: "categories",
-      title: "categories",
-      render: (cats: CategoyModel[]) => (
-        <Space key={"categories-nd"} wrap>
+      width: 300,
+      render: (cats: CategoyModel[] = []) => (
+        <Space wrap>
           {cats.map((cat) => (
-            <Link to={`/inventory/categories/detail/${cat.slug}?id=${cat.id}`}>
+            <Link
+              to={`/inventory/categories/detail/${cat.slug}?id=${cat.id}`}
+              key={cat.id}
+            >
               <Tag
                 color={
                   listColors[Math.floor(Math.random() * listColors.length)]
                 }
-                key={cat.id}
               >
                 {cat.title}
               </Tag>
@@ -177,86 +221,79 @@ useEffect(() => {
           ))}
         </Space>
       ),
-      width: 300,
     },
     {
       key: "images",
-      dataIndex: "images",
       title: "Images",
-      render: (imgs: string[]) =>
-        imgs &&
-        imgs.length > 0 && (
-          <Space>
-            <Avatar.Group>
-              {imgs.map((img) => (
-                <Avatar src={img} size={40} />
-              ))}
-            </Avatar.Group>
-          </Space>
-        ),
+      dataIndex: "images",
       width: 300,
+      render: (imgs: string[] = []) =>
+        imgs?.length ? (
+          <Avatar.Group>
+            {imgs.map((img, idx) => (
+              <Avatar
+                src={img}
+                size={40}
+                key={idx}
+                style={{ marginRight: 8 }}
+              />
+            ))}
+          </Avatar.Group>
+        ) : null,
     },
     {
       key: "colors",
-      dataIndex: "subProducts",
       title: "Color",
-      render: (items: SubProductModel[]) => {
-        const colors: string[] = [];
-
-        items.forEach(
-          (sub) => !colors.includes(sub.color) && colors.push(sub.color)
-        );
-
-        return (
-          <Space>
-            {colors.length > 0 &&
-              colors.map((item, index) => (
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    backgroundColor: item,
-                    borderRadius: 12,
-                  }}
-                  key={`color${item}${index}`}
-                />
-              ))}
-          </Space>
-        );
-      },
+      dataIndex: "subProducts",
       width: 150,
+      render: (items: SubProductModel[] = []) => (
+        <Space>
+          {Array.from(new Set(items.map((sub) => sub.color))).map(
+            (color, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: 24,
+                  height: 24,
+                  backgroundColor: color,
+                  borderRadius: "50%",
+                }}
+              />
+            )
+          )}
+        </Space>
+      ),
     },
     {
       key: "sizes",
-      dataIndex: "subProducts",
       title: "Sizes",
-      render: (items: SubProductModel[]) => (
+      dataIndex: "subProducts",
+      width: 300,
+      render: (items: SubProductModel[] = []) => (
         <Space wrap>
-          {items.length > 0 &&
-            items.map((item, index) => (
-              <Tag key={`size${item.size}-${index}`}>{item.size}</Tag>
-            ))}
+          {items.map((item, idx) => (
+            <Tag key={idx}>{item.size}</Tag>
+          ))}
         </Space>
       ),
-      width: 300,
     },
     {
       key: "price",
-      dataIndex: "subProducts",
       title: "Price",
-      render: (items: SubProductModel[]) => (
+      dataIndex: "subProducts",
+      width: 200,
+      render: (items: SubProductModel[] = []) => (
         <Typography.Text>{getMinMaxValues(items)}</Typography.Text>
       ),
-      width: 200,
     },
     {
       key: "stock",
-      dataIndex: "subProducts",
       title: "Stock",
-      render: (items: SubProductModel[]) =>
-        items.reduce((a, b) => a + b.qty, 0),
-      align: "right",
+      dataIndex: "subProducts",
       width: 100,
+      align: "right",
+      render: (items: SubProductModel[] = []) =>
+        items.reduce((sum, item) => sum + item.qty, 0),
     },
     {
       key: "actions",
@@ -264,9 +301,10 @@ useEffect(() => {
       dataIndex: "",
       fixed: "right",
       width: 150,
+      align: "right",
       render: (item: ProductModel) => (
         <Space>
-          <Tooltip title="Add sub product" key={"addSubProduct"}>
+          <Tooltip title="Add sub product">
             <Button
               icon={<MdLibraryAdd color={colors.primary500} size={20} />}
               type="text"
@@ -276,7 +314,7 @@ useEffect(() => {
               }}
             />
           </Tooltip>
-          <Tooltip title="Delete product" key={"btnDelete"}>
+          <Tooltip title="Delete product">
             <Button
               icon={<Trash className="text-danger" size={20} />}
               type="text"
@@ -284,13 +322,12 @@ useEffect(() => {
                 confirm({
                   title: "Confirm?",
                   content: "Are you sure you want to delete this item?",
-                  onCancel: () => console.log("cancel"),
-                  onOk: () => {hanleRemoveProduct(item.id)},
+                  onOk: () => handleRemoveProduct(item.id),
                 })
               }
             />
           </Tooltip>
-          <Tooltip title="Edit product" key={"btnEdit"}>
+          <Tooltip title="Edit product">
             <Button
               icon={<Edit2 color={colors.primary500} size={20} />}
               type="text"
@@ -299,67 +336,8 @@ useEffect(() => {
           </Tooltip>
         </Space>
       ),
-      align: "right",
     },
   ];
-  const handleSearchProducts = async () => {
-    const key = replaceName(searchKey);
-    const api = `/products/page?title=${key}&page=${page}&pageSize=${pageSize}`;
-    setIsLoading(true);
-    try {
-      const res: any = await handleAPI(api);
-
-      setProducts(res.result.data);
-      setTotal(res.totalElements);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  const handleSelectAllProduct = async () => {
-    try {
-      const res: any = await handleAPI("/products");
-
-      const items = res.result
-
-      if (items.length > 0) {
-        const keys = items.map((item: any) => item.id);
-        setSelectedRowKeys(keys);
-      } else {
-        setSelectedRowKeys([]);
-      }
-    } catch (error) {
-      console.error("Lỗi khi gọi API:", error);
-    }
-  };
-  const handleFilterProducts = async (vals: FilterProductValue) => {
-    console.log("vals trước xử lý", vals);
-
-    // Nếu colors là chuỗi thì tách thành mảng
-    if (typeof vals.colors === "string" && (vals.colors as string).includes(",")) {
-      vals.colors = (vals.colors as string).split(",").map((c) => c.trim());
-    } else if (typeof vals.colors === "string" && (vals.colors as string).length > 0) {
-      vals.colors = [(vals.colors as string)];
-    } else if (!Array.isArray(vals.colors)) {
-      vals.colors = [];
-    }
-
-    console.log("vals sau xử lý", vals);
-
-    const api = `/products/filter-products`;
-    setIsFilting(true);
-    try {
-      const res: any = await handleAPI(api, vals, "get");
-      console.log("res", res);
-
-      setProducts(res.result);
-      setTotal(res.totalElements);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  
 
   return (
     <div>
@@ -372,28 +350,26 @@ useEffect(() => {
             <Space>
               <Tooltip title="Delete product">
                 <Button
-                  onClick={() =>
-                    confirm({
-                      title: "Confirm?",
-                      content: "Are you sure you want to delete this item?",
-                      onCancel: () => {
-                        setSelectedRowKeys([]);
-                      },
-                      onOk: () => {
-                        setSelectedRowKeys([]);
-                        selectedRowKeys.forEach(async (key) => {
-                          await hanleRemoveProduct(key);
-                          await getProducts(
-                            `/products/page?page=${page}&pageSize=${pageSize}`
-                          );
-                          setSelectedRowKeys([]);
-                        });
-                      },
-                    })
-                  }
                   danger
                   type="text"
                   icon={<Trash size={18} className="text-danger" />}
+                  onClick={() =>
+                    confirm({
+                      title: "Confirm?",
+                      content:
+                        "Are you sure you want to delete selected items?",
+                      onOk: async () => {
+                        await Promise.all(
+                          selectedRowKeys.map((id) => handleRemoveProduct(id))
+                        );
+                        setSelectedRowKeys([]);
+                        await fetchProducts(
+                          `/products/page?page=${page}&pageSize=${pageSize}`
+                        );
+                      },
+                      onCancel: () => setSelectedRowKeys([]),
+                    })
+                  }
                 >
                   Delete
                 </Button>
@@ -409,14 +385,13 @@ useEffect(() => {
             </Space>
           )}
         </div>
-
         <div className="col text-right">
           <Space>
             {isFilting && (
               <Button
                 onClick={async () => {
                   setPage(1);
-                  await getProducts(
+                  await fetchProducts(
                     `/products/page?page=${page}&pageSize=${pageSize}`
                   );
                   setIsFilting(false);
@@ -427,17 +402,14 @@ useEffect(() => {
             )}
             <Input.Search
               value={searchKey}
-              onChange={(val) => setSearchKey(val.target.value)}
+              onChange={(e) => setSearchKey(e.target.value)}
               onSearch={handleSearchProducts}
               placeholder="Search"
               allowClear
-            />  
+            />
             <Dropdown
-              dropdownRender={(menu) => (
-                <FilterProduct
-                  values={{}}
-                  onFilter={(vals: any) => handleFilterProducts(vals)}
-                />
+              dropdownRender={() => (
+                <FilterProduct values={{}} onFilter={handleFilterProducts} />
               )}
             >
               <Button icon={<Sort size={20} />}>Filter</Button>
@@ -447,27 +419,19 @@ useEffect(() => {
       </div>
       <Table
         rowKey={(record) => record.id}
+        rowSelection={rowSelection}
         pagination={{
           showSizeChanger: true,
-          onShowSizeChange: (current, size) => {
-            console.log(current, size);
-            console.log("size");
-          },
           total,
-          onChange(page, pageSize) {
-            console.log(page, pageSize);
+          onChange: (page, size) => {
             setPage(page);
-            setPageSize(pageSize);
+            setPageSize(size);
           },
-          showQuickJumper: false,
         }}
-        rowSelection={rowSelection}
-        dataSource={products}
         columns={columns}
+        dataSource={products}
         loading={isLoading}
-        scroll={{
-          x: "100%",
-        }}
+        scroll={{ x: "100%" }}
         bordered
         size="small"
       />
@@ -479,7 +443,7 @@ useEffect(() => {
           setProductSelected(undefined);
           setIsVisibleAddSubProduct(false);
         }}
-        onAddNew={async (val: any) => {}}
+        onAddNew={async () => {}}
       />
     </div>
   );
