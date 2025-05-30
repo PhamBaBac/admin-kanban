@@ -38,24 +38,6 @@ const ModalExportData = (props: Props) => {
     end: "",
   });
 
-  useEffect(() => {
-    if (visible) {
-      getFroms();
-    }
-  }, [visible, api]);
-
-  const getFroms = async () => {
-    const url = `/${api}/get-form`;
-    setIsGetting(true);
-    try {
-      const res = await handleAPI(url);
-      res.data && setForms(res.data);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsGetting(false);
-    }
-  };
 
   const handleChangeCheckedValue = (val: string) => {
     const items = [...checkedValues];
@@ -71,35 +53,51 @@ const ModalExportData = (props: Props) => {
   };
 
   const handleExport = async () => {
-    let url = ``;
-    if (timeSelected !== "all" && dates.start && dates.end) {
-      if (new Date(dates.start).getTime() > new Date(dates.end).getTime()) {
-        message.error("Thời gian lỗi!!!");
-      } else {
-        url = `/${api}/get-export-data/?start=${dates.start}&end=${dates.end}`;
-      }
-    } else {
-      url = `/${api}/get-export-data`;
+    if (timeSelected === "all") {
+      // ✅ Nếu chọn "Get all" → gọi GET API và tự động tải file
+      const exportUrl = `/${api}/export`;
+
+      const link = document.createElement("a");
+      link.href = exportUrl;
+      link.setAttribute("download", "suppliersxx.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      onClose();
+      return;
     }
 
-    const data = checkedValues;
-    if (Object.keys(data).length > 0) {
-      setIsLoading(true);
-      try {
-        const res = await handleAPI(url, data, "post");
+    // if (!dates.start || !dates.end) {
+    //   message.error("Please select date range!");
+    //   return;
+    // }
 
-        res.data && (await hanldExportExcel(res.data, api));
+    // if (new Date(dates.start).getTime() > new Date(dates.end).getTime()) {
+    //   message.error("Invalid date range!");
+    //   return;
+    // }
 
-        onClose();
-      } catch (error: any) {
-        message.error(error.message);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      message.error("Please selcte 1 key of values");
-    }
+    // if (checkedValues.length === 0) {
+    //   message.error("Please select at least one field");
+    //   return;
+    // }
+
+    // const url = `/${api}/get-export-data?start=${dates.start}&end=${dates.end}`;
+
+    // setIsLoading(true);
+    // try {
+    //   const res = await handleAPI(url, checkedValues, "post");
+
+    //   res.data && (await hanldExportExcel(res.data, api));
+    //   onClose();
+    // } catch (error: any) {
+    //   message.error(error.message);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
+  
 
   return (
     <Modal

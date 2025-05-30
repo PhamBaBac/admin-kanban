@@ -59,10 +59,7 @@ const MainRouter = () => {
               </Route>
               <Route>
                 <Route path="/categories" element={<Categories />} />
-                <Route
-                  path="/categories/detail/:slug"
-                  // element={<CategoryDetail />}
-                />
+              
               </Route>
               <Route path="/suppliers" element={<Suppliers />} />
             </Routes>

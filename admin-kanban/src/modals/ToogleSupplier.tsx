@@ -21,6 +21,7 @@ interface Props {
 
 const ToogleSupplier = (props: Props) => {
   const { visible, onAddNew, onClose, supplier } = props;
+  console.log("supplier", supplier);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGetting, setIsGetting] = useState(false);
@@ -39,18 +40,30 @@ const ToogleSupplier = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    if (supplier) {
-      form.setFieldsValue(supplier);
+    if (supplier && categories.length > 0) {
+      const categoryIds = supplier.categories
+        .map((catLabel: string) => {
+          const found = categories.find((c) => c.label === catLabel);
+          return found ? found.value : null;
+        })
+        .filter(Boolean); // loại bỏ null
+
+      form.setFieldsValue({
+        ...supplier,
+        categories: categoryIds,
+      });
+
       setIsTaking(supplier.isTaking === 1);
     }
-  }, [supplier]);
+  }, [supplier, categories]);
+  
 
   const addNewSupplier = async (values: any) => {
     setIsLoading(true);
 
     const data: any = {};
     const api = `/suppliers/${
-      supplier ? `update?id=${supplier.id}` : "add-new"
+      supplier ? `update/${supplier.id}` : "add-new"
     }`;
 
     for (const i in values) {

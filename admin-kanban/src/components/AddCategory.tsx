@@ -16,6 +16,7 @@ interface Props {
 
 const AddCategory = (props: Props) => {
   const { values, onAddNew, seleted, onClose } = props;
+  console.log("seleted", seleted);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,7 +32,7 @@ const AddCategory = (props: Props) => {
 
   const handleCategory = async (values: any) => {
     const api = seleted
-      ? `/products/update-category?id=${seleted.id}`
+      ? `/categories/${seleted.id}`
       : `/categories`;
     const data: any = {};
 

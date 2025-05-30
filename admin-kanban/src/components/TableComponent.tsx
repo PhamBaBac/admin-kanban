@@ -56,7 +56,6 @@ useEffect(() => {
     const items: any[] = [];
 
     forms.formItems.forEach((item: any) => {
-      // Xử lý đặc biệt cho cột products và categories
       if (item.key === "products" || item.key === "categories") {
         items.push({
           key: item.key,
@@ -177,23 +176,27 @@ useEffect(() => {
         columns={columns}
         bordered
         title={() => (
-          <div className="row">
-            <div className="col">
-              <Title level={5}>{forms.title}</Title>
-            </div>
-            <div className="col text-right">
-              <Space>
-                <Button type="primary" onClick={onAddNew}>
-                  Add Supplier
-                </Button>
-                <Button icon={<Sort size={20} color={colors.gray600} />}>
-                  Filters
-                </Button>
-                <Button onClick={() => setIsVisibleModalExport(true)}>
-                  Export Excel
-                </Button>
-              </Space>
-            </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Title level={5} style={{ margin: 0 }}>
+              {forms.title}
+            </Title>
+            <Space>
+              <Button type="primary" onClick={onAddNew}>
+                Add Supplier
+              </Button>
+              <Button icon={<Sort size={20} color={colors.gray600} />}>
+                Filters
+              </Button>
+              <Button onClick={() => setIsVisibleModalExport(true)}>
+                Export Excel
+              </Button>
+            </Space>
           </div>
         )}
         components={{

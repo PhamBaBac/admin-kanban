@@ -25,7 +25,6 @@ const { confirm } = Modal;
 
 const Categories = () => {
   const [categories, setCategories] = useState<CategoyModel[]>([]);
-  console.log("categories", categories);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -60,6 +59,8 @@ const Categories = () => {
     }
   };
 
+
+
   const columns: ColumnProps<CategoyModel>[] = [
     {
       key: "title",
@@ -85,6 +86,7 @@ const Categories = () => {
           <Tooltip title="Edit categories" key={"btnEdit"}>
             <Button
               onClick={() => setCategorySelected(item)}
+
               icon={<Edit2 size={20} color={colors.gray600} />}
               type="text"
             />

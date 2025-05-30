@@ -341,7 +341,7 @@ const Inventories = () => {
 
   return (
     <div>
-      <div className="row">
+      <div className="row mb-2">
         <div className="col">
           <Typography.Title level={4}>Product</Typography.Title>
         </div>
@@ -385,36 +385,38 @@ const Inventories = () => {
             </Space>
           )}
         </div>
-        <div className="col text-right">
-          <Space>
-            {isFilting && (
-              <Button
-                onClick={async () => {
-                  setPage(1);
-                  await fetchProducts(
-                    `/products/page?page=${page}&pageSize=${pageSize}`
-                  );
-                  setIsFilting(false);
-                }}
-              >
-                Clear filter values
-              </Button>
-            )}
-            <Input.Search
-              value={searchKey}
-              onChange={(e) => setSearchKey(e.target.value)}
-              onSearch={handleSearchProducts}
-              placeholder="Search"
-              allowClear
-            />
-            <Dropdown
-              dropdownRender={() => (
-                <FilterProduct values={{}} onFilter={handleFilterProducts} />
+        <div className="col">
+          <div className="d-flex justify-content-end">
+            <Space>
+              {isFilting && (
+                <Button
+                  onClick={async () => {
+                    setPage(1);
+                    await fetchProducts(
+                      `/products/page?page=${page}&pageSize=${pageSize}`
+                    );
+                    setIsFilting(false);
+                  }}
+                >
+                  Clear filter values
+                </Button>
               )}
-            >
-              <Button icon={<Sort size={20} />}>Filter</Button>
-            </Dropdown>
-          </Space>
+              <Input.Search
+                value={searchKey}
+                onChange={(e) => setSearchKey(e.target.value)}
+                onSearch={handleSearchProducts}
+                placeholder="Search"
+                allowClear
+              />
+              <Dropdown
+                dropdownRender={() => (
+                  <FilterProduct values={{}} onFilter={handleFilterProducts} />
+                )}
+              >
+                <Button icon={<Sort size={20} />}>Filter</Button>
+              </Dropdown>
+            </Space>
+          </div>
         </div>
       </div>
       <Table
