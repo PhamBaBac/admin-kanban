@@ -3,7 +3,6 @@
 export const getTreeValues = (data: any[], isSelect?: boolean) => {
 	const values: any = [];
 	const items = data.filter((element) => !element.parentId);
-	console.log("items", items);
 	const newItems = items.map((item) =>
 		isSelect
 			? {

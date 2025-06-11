@@ -21,6 +21,7 @@
     "dotenv": "^16.4.7",
     "firebase": "^11.3.1",
     "iconsax-react": "^0.0.8",
+    "js-cookie": "^3.0.5",
     "query-string": "^9.1.1",
     "re-resizable": "^6.11.2",
     "react": "^18.3.1",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@types/chart.js": "^2.9.41",
+    "@types/js-cookie": "^3.0.6",
     "@types/react": "^19.0.8",
     "@types/react-chartjs-2": "^2.5.7",
     "@types/react-dom": "^19.0.3",

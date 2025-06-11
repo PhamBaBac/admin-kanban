@@ -7,25 +7,24 @@ import { Spin } from "antd";
 import { useEffect, useState } from "react";
 import { addAuth, authSeletor, AuthState } from "../redux/reducers/authReducer";
 import handleAPI from "../apis/handleAPI";
-const Router = () => {   
+const Router = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-const auth: AuthState = useSelector(authSeletor);
-const dispatch = useDispatch();
+  const auth: AuthState = useSelector(authSeletor);
+  const dispatch = useDispatch();
 
-useEffect(() => {
-  getData();
+  useEffect(() => {
+    getData();
+  }, []);
+
+
+  const getData = async () => {
+    const res = localStorage.getItem(localDataNames.authData);
+    res && dispatch(addAuth(JSON.parse(res)));
+  };
   
-}, []);
 
-
-const getData = async () => {
-  const res = localStorage.getItem(localDataNames.authData);
-  res && dispatch(addAuth(JSON.parse(res)));
+  return isLoading ? <Spin /> : !auth.token ? <AuthRouter /> : <MainRouter />;
 };
 
-                              
-  return isLoading ? <Spin /> : !auth.token ? <AuthRouter /> : <MainRouter />;
-}
-
-export default Router
+export default Router;

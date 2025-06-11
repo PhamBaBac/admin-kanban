@@ -88,11 +88,9 @@ const AddSubProductModal = (props: Props) => {
         });
 
         const urls = await Promise.all(promises);
-        console.log("urls", urls);
 
         data.images = urls;
       }
-      console.log("Data before API call:", data);
 
       if (!product) {
         onAddNew({

@@ -13,6 +13,8 @@ import {
   authSeletor,
   removeAuth,
 } from "../redux/reducers/authReducer";
+import axios from "axios";
+import Cookies from "js-cookie";
 
 const HeaderComponent = () => {
   const auth = useSelector(authSeletor);
@@ -30,12 +32,19 @@ const HeaderComponent = () => {
     {
       key: "logout",
       label: "Đăng xuất",
-      
+
       onClick: async () => {
-        await handleAPI("/auth/logout", { token: auth.token}, "post");
-        dispatch(removeAuth({}));
+        await axios.post(`http://localhost:8080/api/v1/auth/logout`, null, {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+          withCredentials: true,
+        });
+
         localStorage.clear();
-        navigate("/");
+        Cookies.remove("refreshToken");
+        navigate("/login");
+        dispatch(removeAuth());
       },
     },
   ];

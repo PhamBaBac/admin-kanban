@@ -21,7 +21,6 @@ interface Props {
 
 const ToogleSupplier = (props: Props) => {
   const { visible, onAddNew, onClose, supplier } = props;
-  console.log("supplier", supplier);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGetting, setIsGetting] = useState(false);

@@ -108,7 +108,6 @@ const Inventories = () => {
 
   const handleSearchProducts = async () => {
     const key = replaceName(searchKey);
-    console.log("Search key:", key);
     setIsLoading(true);
     try {
       const res: any = await handleAPI(

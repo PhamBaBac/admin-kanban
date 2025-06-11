@@ -53,8 +53,6 @@ const Suppliers = () => {
     try {
       const res: any = await handleAPI(api);
 
-      console.log("res", res.result.data);
-
       if (res.result) {
         const updatedSuppliers = res.result.data.map(
           (item: any, index: number) => ({

@@ -22,7 +22,7 @@ import handleAPI from "../../apis/handleAPI";
 import { SelectModel, TreeModel } from "../../models/FormModel";
 import { replaceName } from "../../utils/replaceName";
 import { Add } from "iconsax-react";
-import { ModalCategory } from "../../modals";
+import { ModalCategory, ToogleSupplier } from "../../modals";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
 import { uploadFile } from "../../utils/uploadFile";
@@ -39,6 +39,7 @@ const AddProduct = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [fileUrl, setFileUrl] = useState("");
   const [fileList, setFileList] = useState<any[]>([]);
+  const [isVisibleAddSupplier, setIsVisibleAddSupplier] = useState(false);
 
   const [searchParams] = useSearchParams();
 
@@ -54,7 +55,7 @@ const AddProduct = () => {
     if (id) {
       getProductDetail(id);
     } else {
-      form.resetFields(); 
+      form.resetFields();
     }
   }, [id]);
 
@@ -82,7 +83,6 @@ const AddProduct = () => {
           categories:
             item.categories?.map((category: any) => category.id) || [],
           supplier: item.supplierId || null,
-            
         });
         setcontent(item.content);
         setFileList(
@@ -97,7 +97,7 @@ const AddProduct = () => {
     }
   };
   const handleAddNewProduct = async (values: any) => {
-    const content = editorRef.current?.getContent() || ""; 
+    const content = editorRef.current?.getContent() || "";
     const data: any = {};
     setIsCreating(true);
 
@@ -108,7 +108,6 @@ const AddProduct = () => {
     data.content = content;
     data.slug = replaceName(values.title);
     data.images = [];
-    
 
     const fileListSafe = fileList || [];
 
@@ -149,7 +148,6 @@ const AddProduct = () => {
   const getSuppliers = async () => {
     const api = `/suppliers/page`;
     const res: any = await handleAPI(api);
-    console.log("suppler", res)
 
     const data = res.result.data;
     const options = data.map((item: any) => ({
@@ -184,6 +182,11 @@ const AddProduct = () => {
     );
 
     setFileList(items);
+  };
+  // Add this handler function near other handlers
+  const handleAddNewSupplier = async (val: any) => {
+    await getSuppliers(); // Refresh the supplier list
+    setIsVisibleAddSupplier(false);
   };
 
   return isLoading ? (
@@ -316,6 +319,22 @@ const AddProduct = () => {
                 >
                   <Select
                     showSearch
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider className="m-0" />
+                        <Button
+                          onClick={() => setIsVisibleAddSupplier(true)}
+                          type="link"
+                          icon={<Add size={20} />}
+                          style={{
+                            padding: "0 16px",
+                          }}
+                        >
+                          Add new
+                        </Button>
+                      </>
+                    )}
                     filterOption={(input, option) =>
                       replaceName(option?.label ? option.label : "").includes(
                         replaceName(input)
@@ -368,6 +387,11 @@ const AddProduct = () => {
           await getCategories();
         }}
         values={categories}
+      />
+      <ToogleSupplier
+        visible={isVisibleAddSupplier}
+        onClose={() => setIsVisibleAddSupplier(false)}
+        onAddNew={handleAddNewSupplier}
       />
     </div>
   );

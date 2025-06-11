@@ -187,7 +187,6 @@ const Categories = () => {
                   onShowSizeChange: (current, size) => {},
                   total,
                   onChange(page, pageSize) {
-                    console.log(page, pageSize);
                     setPage(page);
                     setPageSize(pageSize);
                   },

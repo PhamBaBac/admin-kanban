@@ -80,7 +80,6 @@ const FilterProduct = (props: Props) => {
 
   const getCategories = async (): Promise<SelectModel[]> => {
     const res: any = await handleAPI(`/categories`);
-    console.log(res);
     return res.result && res.result.length > 0
       ? res.result.map((item: any) => ({
           label: item.title,

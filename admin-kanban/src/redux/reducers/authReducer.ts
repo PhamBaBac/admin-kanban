@@ -2,25 +2,19 @@ import { createSlice } from '@reduxjs/toolkit';
 import { localDataNames } from '../../constants/appInfos';
 
 export interface AuthState {
-  id: string;
-  name: string;
-  roles: [{
-    name: string;
-    description: string;
-    permissions: string[];
-  }];
-  token: string;
+  firstName?: string;
+  lastName?: string;  
+  email?: string;
+  role?: string
+  token?: string;
 }
 
 const initialState: AuthState = {
-  id: '',
-  name: '',
-  roles: [{
-    name: '',
-    description: '',
-    permissions: [],
-  }],
-  token: '',
+  firstName: "",
+  lastName: "",
+  email: "",
+  role: "",
+  token: ""
 };
 
 const syncLocal = (data: any) => {
@@ -37,12 +31,13 @@ const authSlice = createSlice({
       state.data = action.payload;
       syncLocal(action.payload);
     },
-    removeAuth: (state, _action) => {
+    removeAuth: (state) => {
       state.data = initialState;
-      syncLocal({});
+      localStorage.removeItem(localDataNames.authData);
     },
     refreshtoken: (state, action) => {
       state.data.token = action.payload;
+      syncLocal(state.data);
     },
   },
 });

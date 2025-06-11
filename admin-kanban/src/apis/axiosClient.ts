@@ -3,59 +3,95 @@
 import axios from "axios";
 import queryString from "query-string";
 import { localDataNames } from "../constants/appInfos";
-import { addAuth } from "../redux/reducers/authReducer";
-import store from "../redux/store"; // Import the store
+import { addAuth, removeAuth } from "../redux/reducers/authReducer";
+import store from "../redux/store";
 
-const baseURL = `http://localhost:8080/api/v1/kanban-service`;
+const baseURL = `http://localhost:8080/api/v1`;
 
 const getAuthData = () => {
   const res = localStorage.getItem(localDataNames.authData);
-  if (res) {
-    return JSON.parse(res);
-  }
+  if (res) return JSON.parse(res);
   return null;
 };
 
-const getAssetToken = () => {
+const getAccessToken = () => {
   const authData = getAuthData();
   return authData?.token || "";
 };
 
-const refreshToken = async () => {
-  const currentToken = getAssetToken();
-  try {
-    const response = await axios.post(`${baseURL}/auth/refresh`, {
-      token: currentToken,
+let isRefreshing = false;
+let failedQueue: {
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}[] = [];
+
+const processQueue = (error: any = null, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token!);
+  });
+  failedQueue = [];
+};
+
+const refreshToken = async (): Promise<string | null> => {
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject });
     });
+  }
 
-    const newToken = response.data.result.token;
-    const authData = getAuthData();
-    authData.token = newToken;
+  isRefreshing = true;
 
-    store.dispatch(addAuth(authData));
-
-    return newToken;
-  } catch (error: any) {
-    console.error(
-      "Failed to refresh token",
-      error.response?.data || error.message
+  try {
+    const response: any = await axios.post(
+      `${baseURL}/auth/refresh-token`,
+      {},
+      { withCredentials: true }
     );
-    throw error;
+
+    const newToken = response.data.accessToken;
+    const currentAuthData = getAuthData();
+
+    if (currentAuthData) {
+      const updatedAuthData = {
+        ...currentAuthData,
+        token: newToken,
+      };
+      localStorage.setItem(
+        localDataNames.authData,
+        JSON.stringify(updatedAuthData)
+      );
+      store.dispatch(addAuth(updatedAuthData));
+    }
+
+    processQueue(null, newToken);
+    return newToken;
+  } catch (error) {
+     alert("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
+    localStorage.removeItem(localDataNames.authData);
+    store.dispatch(removeAuth());
+    window.location.href = "/login";
+    return null;
+  } finally {
+    isRefreshing = false;
   }
 };
+
 const axiosClient = axios.create({
-  baseURL: baseURL,
+  baseURL,
   paramsSerializer: (params) => queryString.stringify(params),
 });
 
-axiosClient.interceptors.request.use(async (config: any) => {
-  const accesstoken = getAssetToken();
+axiosClient.interceptors.request.use((config: any) => {
+  const token = getAccessToken();
 
-  config.headers = {
-    Authorization: accesstoken ? `Bearer ${accesstoken}` : "",
-    Accept: "application/json",
-    ...config.headers,
-  };
+  if (token) {
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    };
+  }
 
   return { ...config, data: config.data ?? null };
 });
@@ -64,27 +100,27 @@ axiosClient.interceptors.response.use(
   (res) => {
     if (res.data && res.status >= 200 && res.status < 300) {
       return res.data;
-    } else {
-      return Promise.reject(res.data);
     }
+    throw new Error("Request failed");
   },
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
       try {
         const newToken = await refreshToken();
-        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
-        return axiosClient(originalRequest);
+        if (!newToken) return Promise.reject("Unable to refresh token");
+
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return axiosClient(originalRequest); 
       } catch (refreshError) {
-        localStorage.removeItem(localDataNames.authData);
-        window.location.href = "/";
         return Promise.reject(refreshError);
       }
     }
 
-    return Promise.reject(error.response.data);
+    return Promise.reject(error.response?.data || error.message);
   }
 );
 

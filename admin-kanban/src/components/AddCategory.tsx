@@ -16,7 +16,6 @@ interface Props {
 
 const AddCategory = (props: Props) => {
   const { values, onAddNew, seleted, onClose } = props;
-  console.log("seleted", seleted);
 
   const [isLoading, setIsLoading] = useState(false);
 
