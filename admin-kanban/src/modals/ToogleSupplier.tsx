@@ -106,7 +106,7 @@ const ToogleSupplier = (props: Props) => {
 
   const getCategories = async () => {
     try {
-      const res: any = await handleAPI("/categories");
+      const res: any = await handleAPI("/categories/all");
       if (res && Array.isArray(res.result)) {
         const options = res.result.map((cat: any) => ({
           label: cat.title,

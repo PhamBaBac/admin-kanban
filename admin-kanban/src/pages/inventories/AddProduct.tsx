@@ -23,7 +23,7 @@ import { SelectModel, TreeModel } from "../../models/FormModel";
 import { replaceName } from "../../utils/replaceName";
 import { Add } from "iconsax-react";
 import { ModalCategory, ToogleSupplier } from "../../modals";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
 import { uploadFile } from "../../utils/uploadFile";
 
@@ -42,8 +42,10 @@ const AddProduct = () => {
   const [isVisibleAddSupplier, setIsVisibleAddSupplier] = useState(false);
 
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const id = searchParams.get("id");
+  const slug = location.state?.slug;
 
   const editorRef = useRef<any>(null);
   const [form] = Form.useForm();
@@ -72,7 +74,7 @@ const AddProduct = () => {
   };
 
   const getProductDetail = async (id: string) => {
-    const api = `/products/${id}`;
+    const api = `/products/${slug}/${id}`;
     try {
       const res: any = await handleAPI(api);
       const item = res.result;
@@ -132,7 +134,7 @@ const AddProduct = () => {
 
     try {
       await handleAPI(
-        `/products${id ? `/${id}` : ""}`,
+        `/products${id ? `/${slug}/${id}` : ""}`,
         data,
         id ? "put" : "post"
       );
@@ -159,7 +161,7 @@ const AddProduct = () => {
   };
 
   const getCategories = async () => {
-    const res: any = await handleAPI(`/categories`);
+    const res: any = await handleAPI(`/categories/all`);
 
     const datas = res.result;
 

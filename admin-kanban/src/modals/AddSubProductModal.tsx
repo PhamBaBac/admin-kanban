@@ -23,6 +23,7 @@ import { authSeletor } from "../redux/reducers/authReducer";
 import { SelectModel } from "../models/FormModel";
 import { get } from "http";
 import { uploadFile } from "../utils/uploadFile";
+import { useSearchParams } from "react-router-dom";
 
 interface Props {
   visible: boolean;
@@ -34,12 +35,18 @@ interface Props {
 
 const AddSubProductModal = (props: Props) => {
   const { visible, onClose, product, onAddNew, subProduct } = props;
+  console.log("subProduct", subProduct);
+
+  const [searchParams] = useSearchParams();
+
+  const id = searchParams.get("id");
 
   const [isLoading, setIsLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [options, setOptions] = useState<SelectModel[]>();
+
   const [form] = Form.useForm();
 
   const auth = useSelector(authSeletor);
@@ -49,18 +56,18 @@ const AddSubProductModal = (props: Props) => {
   }, []);
 
   useEffect(() => {
-    if (subProduct) {
+    if (visible && subProduct) {
       form.setFieldsValue(subProduct);
 
       if (subProduct.images && subProduct.images.length > 0) {
         const items = subProduct.images.map((item) => ({
           url: item,
+          status: "done",
         }));
-
         setFileList(items);
       }
     }
-  }, [subProduct]);
+  }, [visible]); // chỉ phụ thuộc vào visible
 
   const handleAddSubproduct = async (values: any) => {
     const data: any = {};
@@ -68,7 +75,7 @@ const AddSubProductModal = (props: Props) => {
     for (const i in values) {
       data[i] = values[i] ?? "";
     }
-    data.productId = product ? product.id : values.productId;
+    data.productId = id ? id : product ? product.id : values.productId;
 
     if (!data.productId) {
       message.error("Please select product");
@@ -81,16 +88,24 @@ const AddSubProductModal = (props: Props) => {
             : data.color.toHexString();
       }
 
-      if (fileList.length > 0) {
-        const promises = fileList.map(async (file) => {
-          const url = await uploadFile(file.originFileObj);
-          return url;
-        });
+     if (fileList.length > 0) {
+       const promises = fileList
+         .filter((file) => file.originFileObj) // chỉ upload ảnh mới
+         .map(async (file) => {
+           const url = await uploadFile(file.originFileObj);
+           return url;
+         });
 
-        const urls = await Promise.all(promises);
+       const uploadedUrls = await Promise.all(promises);
 
-        data.images = urls;
-      }
+       // lấy ảnh cũ đã có sẵn URL
+       const oldImageUrls = fileList
+         .filter((file) => !file.originFileObj && file.url)
+         .map((file) => file.url);
+
+       data.images = [...oldImageUrls, ...uploadedUrls]; // gộp lại
+     }
+
 
       if (!product) {
         onAddNew({
@@ -106,19 +121,18 @@ const AddSubProductModal = (props: Props) => {
   };
 
   const createSubProduct = async (data: any) => {
-    const api = `/sub-products/${
-      subProduct ? `update` : "create"
-    }`;
+    const api = `/subProducts/${subProduct ? `update` : "create"}`;
     if (subProduct) {
       data.id = subProduct.id;
     }
 
     try {
+      await handleAPI(api, data, subProduct ? "put" : "post");
 
-      const res: any = await handleAPI(api, data, subProduct ? "put" : "post");
       // await handleAddOrder({ ...data, subProduct_id: res?.data._id });
-      onAddNew(res.result);
       handleCancel();
+      //reload lai danh sach sub product bang cach goi lai api
+      onClose();
     } catch (error) {
       console.log(error);
     } finally {

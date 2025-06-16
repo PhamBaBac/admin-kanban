@@ -61,7 +61,7 @@ const Inventories = () => {
       await Promise.all(
         productsData.map(async (product: ProductModel) => {
           const resSubs: any = await handleAPI(
-            `/sub-products/get-all-sub-product/${product.id}`
+            `/subProducts/get-all-sub-product/${product.id}`
           );
           subProductMap[product.id] = resSubs.result || [];
         })
@@ -121,7 +121,7 @@ const Inventories = () => {
       await Promise.all(
         productsData.map(async (product: ProductModel) => {
           const resSubs: any = await handleAPI(
-            `/sub-products/get-all-sub-product/${product.id}`
+            `/subProducts/get-all-sub-product/${product.id}`
           );
           subProductMap[product.id] = resSubs.result || [];
         })
@@ -330,7 +330,11 @@ const Inventories = () => {
             <Button
               icon={<Edit2 color={colors.primary500} size={20} />}
               type="text"
-              onClick={() => navigate(`/inventory/add-product?id=${item.id}`)}
+              onClick={() =>
+                navigate(`/inventory/add-product?id=${item.id}`, {
+                  state: { slug: item.slug },
+                })
+              }
             />
           </Tooltip>
         </Space>

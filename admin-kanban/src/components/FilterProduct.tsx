@@ -79,7 +79,7 @@ const FilterProduct = (props: Props) => {
   }, [values, form]);
 
   const getCategories = async (): Promise<SelectModel[]> => {
-    const res: any = await handleAPI(`/categories`);
+    const res: any = await handleAPI(`/categories/all`);
     return res.result && res.result.length > 0
       ? res.result.map((item: any) => ({
           label: item.title,
@@ -93,7 +93,7 @@ const FilterProduct = (props: Props) => {
     sizes: SelectModel[];
     prices: number[];
   }> => {
-    const res: any = await handleAPI("/sub-products/get-filter-values");
+    const res: any = await handleAPI("/subProducts/get-filter-values");
 
     const raw = res.result;
 

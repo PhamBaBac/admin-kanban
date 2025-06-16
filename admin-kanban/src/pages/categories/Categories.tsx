@@ -167,7 +167,7 @@ const Categories = () => {
                 seleted={categorySelected}
                 values={treeValues}
                 onAddNew={async (val) => {
-                  await getCategories(`/categories`, true);
+                  await getCategories(`/categories/all`, true);
                   await getCategories(
                     `/categories/page?page=${page}&pageSize=${pageSize}`
                   );

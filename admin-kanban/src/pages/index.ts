@@ -5,5 +5,5 @@ import HomeScreen from "./HomeScreen";
 import Inventories from "./inventories/Inventories";
 import ProductDetail from "./inventories/ProductDetail";
 import Suppliers from "./Suppliers";
-
-export { Login, SignUp, HomeScreen, Inventories, ProductDetail,Categories, Suppliers };
+import PromotionScreen from "./PromotionScreen";
+export { Login, SignUp, HomeScreen, Inventories, ProductDetail,Categories, Suppliers,PromotionScreen };

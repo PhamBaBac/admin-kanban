@@ -46,11 +46,13 @@ const ProductDetail = () => {
   }, [productDetail]);
 
   const getProductDetail = async () => {
-    const api = `/sub-products/get-all-sub-product/${id}`;
+    const api = `/subProducts/get-all-sub-product/${id}`;
 
     setIsLoading(true);
     try {
       const res: any = await handleAPI(api);
+      console.log("resaaaaa", res);
+      
       setProductDetail(res.result);
       setSubProducts(res.result);
     } catch (error) {
@@ -61,7 +63,7 @@ const ProductDetail = () => {
   };
 
   const handleRemoveSubProduct = async (id: string) => {
-    const api = `/sub-products/remove-sub-product/${id}`;
+    const api = `/subProducts/remove-sub-product/${id}`;
 
     try {
       await handleAPI(api, undefined, "delete");
@@ -199,7 +201,7 @@ const ProductDetail = () => {
           subProduct={subProductSelected}
           onAddNew={async (val) => {
             await getProductDetail();
-            // setSubProducts([...subProducts, val]);
+            setSubProducts([...subProducts, val]);
           }}
         />
       )}
