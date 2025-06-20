@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Divider,
   Form,
   Input,
   message,
@@ -16,6 +17,7 @@ import handleAPI from "../../apis/handleAPI";
 import { appInfo, localDataNames } from "../../constants/appInfos";
 import { useDispatch } from "react-redux";
 import { addAuth } from "../../redux/reducers/authReducer";
+import SocialLogin from "./components/SocialLogin";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -50,10 +52,6 @@ const Login = () => {
 
       const token = tokenResponse?.result?.accessToken;
       if (!token) throw new Error("Missing access token from response");
-      localStorage.setItem(localDataNames.authData, JSON.stringify({ token,
-
-       }));
-       dispatch(addAuth({ token }));
       const userInfoResponse: any = await handleAPI("/auth/me");
       dispatch(
         addAuth({
@@ -61,7 +59,7 @@ const Login = () => {
           lastName: userInfoResponse.result?.lastname,
           email: userInfoResponse.result?.email,
           role: userInfoResponse.result?.role,
-          token,
+          accessToken: token,
         })
       );
        navigate("/");
@@ -135,6 +133,9 @@ const Login = () => {
           Login
         </Button>
       </div>
+      <SocialLogin provider="google" />
+      <Divider />
+      <SocialLogin provider="github" />
 
       <div className="mt-3 text-center">
         <Space>

@@ -51,7 +51,6 @@ const ProductDetail = () => {
     setIsLoading(true);
     try {
       const res: any = await handleAPI(api);
-      console.log("resaaaaa", res);
       
       setProductDetail(res.result);
       setSubProducts(res.result);

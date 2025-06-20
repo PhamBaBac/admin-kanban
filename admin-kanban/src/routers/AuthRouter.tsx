@@ -33,15 +33,13 @@ const AuthRouter = () => {
         </div>
 
         <div className="col content-center">
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/code-verify" element={<CodeVerify />} />
-              <Route path="/code-email" element={<CodeEmail />} />
-              <Route path="/sign-up" element={<SignUp />} />
-              <Route path="/mfa-setup" element={<MfaSetup />} />
-            </Routes>
-          </BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/code-verify" element={<CodeVerify />} />
+            <Route path="/code-email" element={<CodeEmail />} />
+            <Route path="/sign-up" element={<SignUp />} />
+            <Route path="/mfa-setup" element={<MfaSetup />} />
+          </Routes>
         </div>
       </div>
     </div>

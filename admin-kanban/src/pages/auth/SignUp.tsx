@@ -66,7 +66,6 @@ const SignUp = () => {
         );
         
       const userInfoResponse: any = await handleAPI("/auth/me");
-      console.log("userInfoResponse", userInfoResponse);
       dispatch(
         addAuth({
           firstName: userInfoResponse.result?.firstname,

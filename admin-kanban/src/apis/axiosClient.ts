@@ -106,6 +106,16 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    const isLoginRequest = originalRequest.url?.includes("/auth/authenticate");
+    const isRefreshRequest = originalRequest.url?.includes(
+      "/auth/refresh-token"
+    );
+
+    // Nếu đang login hoặc refresh mà vẫn lỗi thì không làm gì thêm
+    if (isLoginRequest || isRefreshRequest) {
+      return Promise.reject(error.response?.data || error.message);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -114,7 +124,7 @@ axiosClient.interceptors.response.use(
         if (!newToken) return Promise.reject("Unable to refresh token");
 
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return axiosClient(originalRequest); 
+        return axiosClient(originalRequest);
       } catch (refreshError) {
         return Promise.reject(refreshError);
       }
@@ -123,5 +133,6 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error.response?.data || error.message);
   }
 );
+
 
 export default axiosClient;
