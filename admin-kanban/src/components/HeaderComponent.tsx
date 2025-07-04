@@ -74,7 +74,7 @@ const HeaderComponent = () => {
             }
           />
           <Dropdown menu={{ items }}>
-            <Avatar src={auth.photoUrl} size={40} />
+            <Avatar src={auth.avatar} size={40} />
           </Dropdown>
         </Space>
       </div>

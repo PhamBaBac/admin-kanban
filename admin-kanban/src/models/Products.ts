@@ -13,17 +13,18 @@ export interface CategoyModel {
 }
 
 export interface ProductModel {
-	id: string;
-	title: string;
-	slug: string;
-	description: string;
-	categories: string[];
-	supplier: string;
-	createdAt: string;
-	updatedAt: string;
-	__v: number;
-	isDeleted: boolean;
-	subItems: SubProductModel[];
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  categories: string[];
+  supplier: string;
+  createdAt: string;
+  updatedAt: string;
+  price?: number[];
+  __v: number;
+  isDeleted: boolean;
+  subItems: SubProductModel[];
 }
 
 export interface SubProductModel {

@@ -163,11 +163,11 @@ const Inventories = () => {
     setIsFilting(true);
     try {
       const res: any = await handleAPI(
-        `/products/filter-products`,
+        `/products/filter`,
         vals,
         "get"
       );
-      setProducts(res.result);
+      setProducts(res.result.data);
       setTotal(res.totalElements);
     } catch (error) {
       console.log(error);

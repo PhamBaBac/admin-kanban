@@ -33,7 +33,7 @@ const Categories = () => {
   const [total, setTotal] = useState<number>(10);
 
   useEffect(() => {
-    getCategories(`/categories`, true);
+    getCategories(`/categories/all`, true);
   }, []);
 
   useEffect(() => {

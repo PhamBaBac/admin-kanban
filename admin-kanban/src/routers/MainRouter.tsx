@@ -17,6 +17,7 @@ import { HeaderComponent, SiderComponent } from '../components';
 import HomeScreen from '../pages/HomeScreen';
 import AddProduct from '../pages/inventories/AddProduct';
 import { Categories, Inventories, ProductDetail, PromotionScreen, Suppliers } from '../pages';
+import BillsScreen from '../pages/bills';
 
 ChartJS.register(
 	CategoryScale,
@@ -62,6 +63,7 @@ const MainRouter = () => {
             </Route>
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/promotions" element={<PromotionScreen />} />
+            <Route path="/bills" element={<BillsScreen />} />
           </Routes>
         </Content>
         <Footer className="bg-white" />

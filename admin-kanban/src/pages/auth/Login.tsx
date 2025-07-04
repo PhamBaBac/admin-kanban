@@ -17,7 +17,6 @@ import handleAPI from "../../apis/handleAPI";
 import { appInfo, localDataNames } from "../../constants/appInfos";
 import { useDispatch } from "react-redux";
 import { addAuth } from "../../redux/reducers/authReducer";
-import SocialLogin from "./components/SocialLogin";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -38,28 +37,17 @@ const Login = () => {
         "post"
       );
 
-      if (tokenResponse?.result?.mfaEnabled === true) {
-        message.info(
-          "MFA enabled. Please enter the code from your authenticator app."
-        );
-        navigate("/code-verify", {
-          state: {
-            email: values.email,
-          },
-        });
-        return;
-      }
-
       const token = tokenResponse?.result?.accessToken;
       if (!token) throw new Error("Missing access token from response");
-      const userInfoResponse: any = await handleAPI("/auth/me");
+      const userInfoResponse: any = await handleAPI("/users/me");
       dispatch(
         addAuth({
           firstName: userInfoResponse.result?.firstname,
           lastName: userInfoResponse.result?.lastname,
           email: userInfoResponse.result?.email,
           role: userInfoResponse.result?.role,
-          accessToken: token,
+          token: token,
+          avatar: userInfoResponse.result?.avatarUrl,
         })
       );
        navigate("/");
@@ -133,9 +121,6 @@ const Login = () => {
           Login
         </Button>
       </div>
-      <SocialLogin provider="google" />
-      <Divider />
-      <SocialLogin provider="github" />
 
       <div className="mt-3 text-center">
         <Space>

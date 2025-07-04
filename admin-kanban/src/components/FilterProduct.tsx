@@ -17,7 +17,7 @@ import { SelectModel } from "../models/SelectModel";
 
 export interface FilterProductValue {
   colors?: string[];
-  categories?: string[];
+  catIds?: string[];
   size?: string;
   price?: number[];
 }
@@ -32,7 +32,7 @@ const FilterProduct = (props: Props) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectDatas, setSelectDatas] = useState<{
-    categories: SelectModel[];
+    catIds: SelectModel[];
     colors: string[];
     prices: number[];
     sizes: SelectModel[];
@@ -44,7 +44,7 @@ const FilterProduct = (props: Props) => {
     const init = async () => {
       setIsLoading(true);
       try {
-        const [categories, filterValues] = await Promise.all([
+        const [catIds, filterValues] = await Promise.all([
           getCategories(),
           getFilterValues(),
         ]);
@@ -52,7 +52,7 @@ const FilterProduct = (props: Props) => {
         const { colors, sizes, prices } = filterValues;
 
         setSelectDatas({
-          categories,
+          catIds: catIds,
           colors,
           sizes,
           prices,
@@ -132,12 +132,12 @@ const FilterProduct = (props: Props) => {
             onFinish={handleFilter}
             initialValues={values}
           >
-            <Form.Item name="categories" label="Categories">
+            <Form.Item name="catIds" label="Categories">
               <Select
                 placeholder="Categories"
                 allowClear
                 mode="multiple"
-                options={selectDatas.categories}
+                options={selectDatas.catIds}
               />
             </Form.Item>
 

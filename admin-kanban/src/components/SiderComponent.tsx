@@ -57,19 +57,19 @@ const SiderComponent = () => {
 			icon: <ProfileCircle size={20} />,
 		},
 		{
-			key: 'Orders',
-			label: <Link to={'/orders'}>Orders</Link>,
+			key: 'Bills',
+			label: <Link to={'/bills'}>Bills</Link>,
 			icon: <Box size={20} />,
-			children: [
-				{
-					key: 'all',
-					label: <Link to={'/orders'}>All</Link>,
-				},
-				{
-					key: 'add',
-					label: <Link to={'/orders/add-new'}>Add Order</Link>,
-				},
-			],
+			// children: [
+			// 	{
+			// 		key: 'all',
+			// 		label: <Link to={'/bills'}>All</Link>,
+			// 	},
+				// {
+				// 	key: 'add',
+				// 	label: <Link to={'/orders/add-new'}>Add Order</Link>,
+				// },
+			// ],
 		},
 		{
 			key: 'Manage Store',

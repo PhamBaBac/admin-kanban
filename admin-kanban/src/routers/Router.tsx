@@ -29,7 +29,7 @@ const Router = () => {
           );
           dispatch(addAuth({ token: accessToken }));
 
-          const userRes: any = await handleAPI("/auth/me");
+          const userRes: any = await handleAPI("/users/me");
           dispatch(
             addAuth({
               token: accessToken,
@@ -37,6 +37,7 @@ const Router = () => {
               lastName: userRes.result.lastname,
               email: userRes.result.email,
               role: userRes.result.role,
+              avatar: userRes.result.avatarUrl,
             })
           );
         } else {

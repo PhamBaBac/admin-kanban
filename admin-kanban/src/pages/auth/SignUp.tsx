@@ -65,7 +65,7 @@ const SignUp = () => {
           JSON.stringify({ token })
         );
         
-      const userInfoResponse: any = await handleAPI("/auth/me");
+      const userInfoResponse: any = await handleAPI("/users/me");
       dispatch(
         addAuth({
           firstName: userInfoResponse.result?.firstname,

@@ -7,6 +7,7 @@ export interface AuthState {
   email?: string;
   role?: string
   token?: string;
+  avatar?: string;
 }
 
 const initialState: AuthState = {
@@ -14,7 +15,8 @@ const initialState: AuthState = {
   lastName: "",
   email: "",
   role: "",
-  token: ""
+  token: "",
+  avatar: "",
 };
 
 const syncLocal = (data: any) => {

@@ -3,9 +3,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Typography } from "antd";
 import { Login, SignUp } from "../pages";
-import MfaSetup from "../pages/auth/components/MfaSetup";
-import CodeVerify from "../pages/auth/components/CodeVerify";
-import CodeEmail from "../pages/auth/components/CodeEmail";
 
 const { Title } = Typography;
 
@@ -35,10 +32,7 @@ const AuthRouter = () => {
         <div className="col content-center">
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/code-verify" element={<CodeVerify />} />
-            <Route path="/code-email" element={<CodeEmail />} />
             <Route path="/sign-up" element={<SignUp />} />
-            <Route path="/mfa-setup" element={<MfaSetup />} />
           </Routes>
         </div>
       </div>
