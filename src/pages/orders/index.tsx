@@ -6,7 +6,7 @@ import {
   PaymentStatusColor,
   PaymentTypeColor,
 } from "../../models/BillModel";
-import handleAPI from "../../apis/handleAPI";
+import { useOrders } from "../../hooks/useOrders";
 import { ColumnProps, TableProps } from "antd/es/table";
 import {
   DatePicker,
@@ -39,7 +39,8 @@ import { colors } from "../../constants/colors";
 const { confirm } = Modal;
 
 const OrdersScreen = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { getOrders, deleteOrder, updateOrderStatus, loading, error } =
+    useOrders();
   const [bills, setBills] = useState<BillModel[]>([]);
   const [total, setTotal] = useState(0);
   const [limit, setLimit] = useState(10);
@@ -71,44 +72,45 @@ const OrdersScreen = () => {
   }, [api]);
 
   const getBills = async (url: string) => {
-    setIsLoading(true);
     try {
-      const res: any = await handleAPI(url);
-      const billsData = res.result.data.map((item: any) => ({
+      const params = new URLSearchParams(url.split("?")[1]);
+      const page = params.get("page") || "1";
+      const pageSize = params.get("pageSize") || "10";
+      const search = params.get("search") || "";
+
+      const res = await getOrders({
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        search,
+      });
+      const billsData = res.data.map((item: any) => ({
         ...item,
         key: item.id,
       }));
       setBills(billsData);
-      setTotal(res.result.totalElements);
+      setTotal(res.totalElements);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSearchBills = async () => {
-    setIsLoading(true);
     try {
-      const res: any = await handleAPI(
-        `/orders/all?page=${page}&pageSize=${limit}&search=${searchKey}`
-      );
-      const billsData = res.result.data.map((item: any) => ({
+      const res = await getOrders({ page, pageSize: limit, search: searchKey });
+      const billsData = res.data.map((item: any) => ({
         ...item,
         key: item.id,
       }));
       setBills(billsData);
-      setTotal(res.result.totalElements);
+      setTotal(res.totalElements);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleRemoveBill = async (id: string) => {
     try {
-      await handleAPI(`/orders/${id}`, undefined, "delete");
+      await deleteOrder(id);
       setBills((prev) => prev.filter((bill) => bill.id !== id));
       message.success("Bill removed successfully");
     } catch (error: any) {
@@ -119,11 +121,7 @@ const OrdersScreen = () => {
   const handleUpdateStatusOrder = async () => {
     if (!selectedOrderId || !selectedStatus) return;
     try {
-      await handleAPI(
-        `/orders/${selectedOrderId}/status`,
-        {orderStatus:selectedStatus },
-        "patch"
-      );
+      await updateOrderStatus(selectedOrderId, selectedStatus);
       message.success("Order status updated successfully");
       setIsModalStatusOpen(false);
       setSelectedOrderId(null);
@@ -269,11 +267,7 @@ const OrdersScreen = () => {
             autoFocus
             onSelect={async (status) => {
               try {
-                await handleAPI(
-                  `/orders/${record.id}/status`,
-                  { orderStatus: status },
-                  "patch"
-                );
+                await updateOrderStatus(record.id, status);
                 message.success("Order status updated successfully");
                 setEditingOrderId(null);
                 setEditingStatus("");
@@ -468,7 +462,7 @@ const OrdersScreen = () => {
         <Table
           rowKey={(record) => record.id}
           rowSelection={rowSelection}
-          loading={isLoading}
+          loading={loading}
           dataSource={bills}
           columns={columns}
           size="middle"

@@ -1,17 +1,21 @@
 /** @format */
 
-import { Avatar, Button, Card, List, Table, Tag } from "antd";
+import { Avatar, Button, Card, List, Table, Tag, Tooltip } from "antd";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import handleAPI from "../apis/handleAPI";
 import { ProductModel } from "../models/Products";
 import { VND } from "../utils/handleCurrency";
+import { useStatistics } from "../hooks/useStatistics";
 
 interface TopSellingItem {
-  name: string;
+  title: string;
+  color: string;
+  size: string;
   soldQuantity: number;
-  remainingQuantity: number;
+  stock: number;
   price: number;
+  images?: string[];
 }
 
 interface LowQuantityItem {
@@ -26,17 +30,16 @@ const TopSellingAndLowQuantityStatictis = () => {
     topSelling: TopSellingItem[];
     lowQuantity: LowQuantityItem[];
   }>();
-
+  const { getTopSellingAndLowQuantity, loading: statisticsLoading } =
+    useStatistics();
   useEffect(() => {
     getTopStatictis();
   }, []);
-
   const getTopStatictis = async () => {
-    const api = `/statistics/topSellingAndLowQuantity`;
     setIsLoading(true);
     try {
-      const res: any = await handleAPI(api);
-      setDatas(res.result);
+      const res = await getTopSellingAndLowQuantity();
+      setDatas(res as any); // ép kiểu tạm thời để tránh lỗi linter
     } catch (error) {
       console.log(error);
     } finally {
@@ -48,7 +51,7 @@ const TopSellingAndLowQuantityStatictis = () => {
     <div className="row mt-4">
       <div className="col-sm-12 col-md-8">
         <Card
-          loading={isLoading}
+          loading={isLoading || statisticsLoading}
           title="Top selling stock"
           extra={<Link to={`/bills`}>See all</Link>}
         >
@@ -68,14 +71,58 @@ const TopSellingAndLowQuantityStatictis = () => {
                 render: (value, record, index) => index + 1,
               },
               {
+                title: "Image",
+                dataIndex: "images",
+                key: "images",
+                align: "center",
+                width: 60,
+                render: (images: string[] | undefined) =>
+                  images && images.length > 0 ? (
+                    <Avatar src={images[0]} size={40} />
+                  ) : null,
+              },
+              {
                 title: "Product Name",
-                dataIndex: "name",
-                key: "name",
+                dataIndex: "title",
+                key: "title",
                 render: (value) => (
-                  <div style={{ fontSize: "12px", lineHeight: "1.3" }}>
-                    {value.length > 60 ? value.substring(0, 60) + "..." : value}
-                  </div>
+                  <Tooltip title={value}>
+                    <div style={{ fontSize: "12px", lineHeight: "1.3" }}>
+                      {value.length > 60
+                        ? value.substring(0, 60) + "..."
+                        : value}
+                    </div>
+                  </Tooltip>
                 ),
+              },
+              {
+                title: "Color",
+                dataIndex: "color",
+                key: "color",
+                align: "center",
+                width: 80,
+                render: (color) =>
+                  color ? (
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        border: "1px solid #d9d9d9",
+                        display: "inline-block",
+                      }}
+                      title={color}
+                    />
+                  ) : null,
+              },
+              {
+                title: "Size",
+                dataIndex: "size",
+                key: "size",
+                align: "center",
+                width: 60,
+                render: (size) => <Tag>{size}</Tag>,
               },
               {
                 title: "Sold Qty",
@@ -91,8 +138,8 @@ const TopSellingAndLowQuantityStatictis = () => {
               },
               {
                 title: "Remaining",
-                dataIndex: "remainingQuantity",
-                key: "remainingQuantity",
+                dataIndex: "stock",
+                key: "stock",
                 align: "center",
                 width: 80,
                 render: (value) => (
@@ -124,7 +171,7 @@ const TopSellingAndLowQuantityStatictis = () => {
       </div>
       <div className="col-sm-12 col-md-4">
         <Card
-          loading={isLoading}
+          loading={isLoading || statisticsLoading}
           title="Low quantity stock"
           extra={<Link to={`/inventory`}>See all</Link>}
         >
@@ -140,11 +187,13 @@ const TopSellingAndLowQuantityStatictis = () => {
                     />
                   }
                   title={
-                    <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
-                      {item.name.length > 50
-                        ? item.name.substring(0, 50) + "..."
-                        : item.name}
-                    </div>
+                    <Tooltip title={item.name}>
+                      <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
+                        {item.name.length > 50
+                          ? item.name.substring(0, 50) + "..."
+                          : item.name}
+                      </div>
+                    </Tooltip>
                   }
                   description={
                     <div style={{ fontSize: "11px", color: "#666" }}>

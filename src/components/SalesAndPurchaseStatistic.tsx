@@ -6,6 +6,7 @@ import { Bar, Line } from "react-chartjs-2";
 import handleAPI from "../apis/handleAPI";
 import { DateTime } from "../utils/dateTime";
 import { add0toNumber } from "../utils/add0toNumber";
+import { useStatistics } from "../hooks/useStatistics";
 
 const SalesAndPurchaseStatistic = () => {
   const [timeTypeSelected, setTimeTypeSelected] = useState("monthly");
@@ -19,6 +20,8 @@ const SalesAndPurchaseStatistic = () => {
       };
     }[]
   >([]);
+  const { getSalesAndPurchaseData, loading: statisticsLoading } =
+    useStatistics();
 
   const options = {
     responsive: true,
@@ -37,48 +40,51 @@ const SalesAndPurchaseStatistic = () => {
   }, [timeTypeSelected]);
 
   const getSalseAndPurchase = async () => {
-    const api = `/statistics/orderPurchase?timeType=${timeTypeSelected}`;
+    setIsLoading(true);
     try {
-      const res: any = await handleAPI(api);
-      setDatas(res.result);
+      const res: any = await getSalesAndPurchaseData({
+        timeType: timeTypeSelected,
+      });
+      setDatas(res.result || res);
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-const renderChart = () => {
-  return {
-    labels: datas.map((item) => {
-      if (timeTypeSelected === "yearly") {
-        return item.date; // "2025"
-      } else if (timeTypeSelected === "weekly") {
-        const weekNumber = item.date.split("-W")[1];
-        return `Week ${weekNumber}`;
-      } else {
-        return item.date; // monthly: "YYYY-MM"
-      }
-    }),
-    datasets: [
-      {
-        label: "Sales",
-        data: datas.map((item) => item.data.purchase),
-        backgroundColor: "rgba(255, 99, 132, 0.2)",
-        borderColor: "rgba(255, 99, 132, 1)",
-        borderWidth: 1,
-      },
-      {
-        label: "Orders",
-        data: datas.map((item) => item.data.orders),
-        backgroundColor: "rgba(54, 162, 235, 0.2)",
-        borderColor: "rgba(54, 162, 235, 1)",
-        borderWidth: 1,
-      },
-    ],
+  const renderChart = () => {
+    return {
+      labels: datas.map((item) => {
+        if (timeTypeSelected === "yearly") {
+          return item.date; // "2025"
+        } else if (timeTypeSelected === "weekly") {
+          const weekNumber = item.date.split("-W")[1];
+          return `Week ${weekNumber}`;
+        } else {
+          return item.date; // monthly: "YYYY-MM"
+        }
+      }),
+      datasets: [
+        {
+          label: "Sales",
+          data: datas.map((item) => item.data.purchase),
+          backgroundColor: "rgba(255, 99, 132, 0.2)",
+          borderColor: "rgba(255, 99, 132, 1)",
+          borderWidth: 1,
+        },
+        {
+          label: "Orders",
+          data: datas.map((item) => item.data.orders),
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderWidth: 1,
+        },
+      ],
+    };
   };
-};
 
-
-  return isLoading ? (
+  return isLoading || statisticsLoading ? (
     <div className="text-center">
       <Spin />
     </div>

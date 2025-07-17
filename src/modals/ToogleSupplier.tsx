@@ -1,21 +1,21 @@
 import { Avatar, Button, Form, message, Modal, Typography } from "antd";
 import { User } from "iconsax-react";
 import { useEffect, useRef, useState } from "react";
-import handleAPI from "../apis/handleAPI";
 import FormItem from "../components/FormItem";
 import { colors } from "../constants/colors";
 import { FormModel } from "../models/FormModel";
 import { SupplierModel } from "../models/SupplierModel";
 import { replaceName } from "../utils/replaceName";
 import { uploadFile } from "../utils/uploadFile";
-import { ProductModel } from "../models/Products";
+import { useSuppliers } from "../hooks/useSuppliers";
+import { useCategories } from "../hooks/useCategories";
 
 const { Paragraph } = Typography;
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onAddNew: (val: SupplierModel) => void;
+  onAddNew: () => void;
   supplier?: SupplierModel;
 }
 
@@ -28,14 +28,22 @@ const ToogleSupplier = (props: Props) => {
   const [formData, setFormData] = useState<FormModel>();
   const [categories, setCategories] = useState<any[]>([]);
   const [file, setFile] = useState<any>();
- 
+
   const [form] = Form.useForm();
   const inpRef = useRef<any>(null);
+
+  const {
+    createSupplier,
+    updateSupplier,
+    getSupplierForm,
+    loading: supplierLoading,
+  } = useSuppliers();
+
+  const { getAllCategories } = useCategories();
 
   useEffect(() => {
     getFormData();
     getCategories();
-   
   }, []);
 
   useEffect(() => {
@@ -55,15 +63,11 @@ const ToogleSupplier = (props: Props) => {
       setIsTaking(supplier.isTaking === 1);
     }
   }, [supplier, categories]);
-  
 
   const addNewSupplier = async (values: any) => {
     setIsLoading(true);
 
     const data: any = {};
-    const api = `/suppliers/${
-      supplier ? `update/${supplier.id}` : "add-new"
-    }`;
 
     for (const i in values) {
       data[i] = values[i] ?? "";
@@ -80,9 +84,15 @@ const ToogleSupplier = (props: Props) => {
 
     data.categories = values.categories;
     try {
-      const res: any = await handleAPI(api, data, supplier ? "put" : "post");
-      message.success(res.message);
-      !supplier && onAddNew(res);
+      if (supplier) {
+        await updateSupplier({ ...data, id: supplier.id });
+      } else {
+        await createSupplier(data);
+      }
+      message.success(
+        supplier ? "Cập nhật supplier thành công!" : "Thêm supplier thành công!"
+      );
+      onAddNew();
       handleClose();
     } catch (error) {
       console.log(error);
@@ -92,10 +102,9 @@ const ToogleSupplier = (props: Props) => {
   };
 
   const getFormData = async () => {
-    const api = `/suppliers/get-form`;
     setIsGetting(true);
     try {
-      const res: any = await handleAPI(api);
+      const res = await getSupplierForm();
       res && setFormData(res);
     } catch (error) {
       console.log(error);
@@ -106,20 +115,16 @@ const ToogleSupplier = (props: Props) => {
 
   const getCategories = async () => {
     try {
-      const res: any = await handleAPI("/public/categories/all");
-      if (res && Array.isArray(res.result)) {
-        const options = res.result.map((cat: any) => ({
-          label: cat.title,
-          value: cat.id,
-        }));
-        setCategories(options);
-      }
+      const response = await getAllCategories();
+      const options = response.map((cat: any) => ({
+        label: cat.title,
+        value: cat.id,
+      }));
+      setCategories(options);
     } catch (error) {
       console.error("Failed to fetch categories", error);
     }
   };
-
-    
 
   const handleClose = () => {
     form.resetFields();
@@ -170,7 +175,7 @@ const ToogleSupplier = (props: Props) => {
 
       {formData && (
         <Form
-          disabled={isLoading}
+          disabled={isLoading || supplierLoading}
           onFinish={addNewSupplier}
           layout={formData.layout}
           labelCol={{ span: formData.labelCol }}

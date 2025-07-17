@@ -16,8 +16,7 @@ import { ColumnProps, TableProps } from "antd/es/table";
 import { Edit2, Sort, Trash } from "iconsax-react";
 import React, { useEffect, useState } from "react";
 import { MdLibraryAdd } from "react-icons/md";
-import { Link, useNavigate } from "react-router-dom";
-import handleAPI from "../../apis/handleAPI";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { colors, listColors } from "../../constants/colors";
 import { AddSubProductModal } from "../../modals";
 import {
@@ -28,12 +27,13 @@ import {
 import { replaceName } from "../../utils/replaceName";
 import { FilterProduct } from "../../components";
 import { FilterProductValue } from "../../components/FilterProduct";
+import { useProducts } from "../../hooks/useProducts";
+import { productService } from "../../services/productService";
 
 const { confirm } = Modal;
 
-
 const Inventories = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { getProducts, deleteProduct, loading, error } = useProducts();
   const [products, setProducts] = useState<ProductModel[]>([]);
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
   const [productSelected, setProductSelected] = useState<ProductModel>();
@@ -44,26 +44,33 @@ const Inventories = () => {
   const [searchKey, setSearchKey] = useState("");
   const [isFilting, setIsFilting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!searchKey)
       fetchProducts(`/public/products/page?page=${page}&pageSize=${pageSize}`);
   }, [searchKey, page, pageSize]);
 
+  // Refresh data khi quay lại từ AddProduct
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchProducts(`/public/products/page?page=${page}&pageSize=${pageSize}`);
+      // Clear refresh state
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.refresh]);
+
   const fetchProducts = async (api: string) => {
-    setIsLoading(true);
     try {
-      const res: any = await handleAPI(api);
-      const productsData = res.result.data;
-      const totalItems = res.result.totalElements;
+      const res = await getProducts({ page, pageSize });
+      const productsData = res.data;
+      const totalItems = res.totalElements;
 
       const subProductMap: { [key: string]: SubProductModel[] } = {};
       await Promise.all(
         productsData.map(async (product: ProductModel) => {
-          const resSubs: any = await handleAPI(
-            `/subProducts/get-all-sub-product/${product.id}`
-          );
-          subProductMap[product.id] = resSubs.result || [];
+          const resSubs = await productService.getSubProducts(product.id);
+          subProductMap[product.id] = resSubs || [];
         })
       );
 
@@ -77,14 +84,12 @@ const Inventories = () => {
       setTotal(totalItems);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleRemoveProduct = async (id: string) => {
     try {
-      await handleAPI(`/admin/products/${id}`, undefined, "delete");
+      await deleteProduct(id);
       setProducts((prev) => prev.filter((product) => product.id !== id));
       message.success("Product removed");
     } catch (error: any) {
@@ -108,22 +113,21 @@ const Inventories = () => {
 
   const handleSearchProducts = async () => {
     const key = replaceName(searchKey);
-    setIsLoading(true);
     try {
-      const res: any = await handleAPI(
-        `/products/page?title=${key}&page=${page}&pageSize=${pageSize}`
-      );
+      const res = await getProducts({
+        title: key,
+        page,
+        pageSize,
+      });
 
-      const productsData = res.result.data;
-      const totalItems = res.result.totalElements;
+      const productsData = res.data;
+      const totalItems = res.totalElements;
 
       const subProductMap: { [key: string]: SubProductModel[] } = {};
       await Promise.all(
         productsData.map(async (product: ProductModel) => {
-          const resSubs: any = await handleAPI(
-            `/subProducts/get-all-sub-product/${product.id}`
-          );
-          subProductMap[product.id] = resSubs.result || [];
+          const resSubs = await productService.getSubProducts(product.id);
+          subProductMap[product.id] = resSubs || [];
         })
       );
 
@@ -137,15 +141,13 @@ const Inventories = () => {
       setTotal(totalItems);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSelectAllProduct = async () => {
     try {
-      const res: any = await handleAPI("/admin/products");
-      setSelectedRowKeys(res.result.map((item: any) => item.id));
+      const res = await getProducts();
+      setSelectedRowKeys(res.data.map((item: any) => item.id));
     } catch (error) {
       console.error("Error selecting all products:", error);
     }
@@ -162,12 +164,8 @@ const Inventories = () => {
 
     setIsFilting(true);
     try {
-      const res: any = await handleAPI(
-        `/public/products/filter`,
-        vals,
-        "get"
-      );
-      setProducts(res.result.data);
+      const res = await getProducts({ ...vals, method: "filter" });
+      setProducts(res.data);
       setTotal(res.totalElements);
     } catch (error) {
       console.log(error);
@@ -292,7 +290,7 @@ const Inventories = () => {
       width: 100,
       align: "right",
       render: (items: SubProductModel[] = []) =>
-        items.reduce((sum, item) => sum + item.qty, 0),
+        items.reduce((sum, item) => sum + item.stock, 0),
     },
     {
       key: "actions",
@@ -332,7 +330,7 @@ const Inventories = () => {
               type="text"
               onClick={() =>
                 navigate(`/inventory/add-product?id=${item.id}`, {
-                  state: { slug: item.slug },
+                  state: { slug: item.slug, product: item },
                 })
               }
             />
@@ -406,7 +404,15 @@ const Inventories = () => {
               )}
               <Input.Search
                 value={searchKey}
-                onChange={(e) => setSearchKey(e.target.value)}
+                onChange={(e) => {
+                  setSearchKey(e.target.value);
+                  if (e.target.value === "") {
+                    setPage(1);
+                    fetchProducts(
+                      `/public/products/page?page=1&pageSize=${pageSize}`
+                    );
+                  }
+                }}
                 onSearch={handleSearchProducts}
                 placeholder="Search"
                 allowClear
@@ -435,7 +441,7 @@ const Inventories = () => {
         }}
         columns={columns}
         dataSource={products}
-        loading={isLoading}
+        loading={loading}
         scroll={{ x: "100%" }}
         bordered
         size="small"
@@ -448,7 +454,21 @@ const Inventories = () => {
           setProductSelected(undefined);
           setIsVisibleAddSubProduct(false);
         }}
-        onAddNew={async () => {}}
+        onAddNew={(newSubProduct) => {
+          if (!newSubProduct || !productSelected) return;
+          setProducts((prev) =>
+            prev.map((prod) => {
+              if (prod.id === productSelected.id) {
+                const prodAny = prod as any;
+                return {
+                  ...prodAny,
+                  subProducts: [...(prodAny.subProducts || []), newSubProduct],
+                };
+              }
+              return prod;
+            })
+          );
+        }}
       />
     </div>
   );

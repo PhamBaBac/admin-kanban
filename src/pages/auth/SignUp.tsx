@@ -12,11 +12,7 @@ import {
 } from "antd";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import handleAPI from "../../apis/handleAPI";
-import { localDataNames } from "../../constants/appInfos";
-import { useDispatch } from "react-redux";
-import { addAuth } from "../../redux/reducers/authReducer";
-import Cookies from "js-cookie";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -30,22 +26,18 @@ interface SignUpFormValues {
 }
 
 const SignUp = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const { signUp, loading, error } = useAuth();
   const [form] = Form.useForm();
 
   const handleSignUp = async (values: SignUpFormValues) => {
-    const api = `/auth/register`;
     const submitData = {
       ...values,
       role: "USER",
     };
 
-    setIsLoading(true);
     try {
-      const res: any = await handleAPI(api, submitData, "post");
-      const response = res.result;
+      const response = await signUp(submitData);
 
       if (response?.mfaEnabled && response?.secretImageUri) {
         // Nếu bật MFA, chuyển hướng người dùng sang trang scan QR
@@ -57,33 +49,12 @@ const SignUp = () => {
           },
         });
       } else {
-        const token = response.accessToken;
-        if (!token) throw new Error("Missing access token from response");
-
-        localStorage.setItem(
-          localDataNames.authData,
-          JSON.stringify({ token })
-        );
-        
-      const userInfoResponse: any = await handleAPI("/users/me");
-      dispatch(
-        addAuth({
-          firstName: userInfoResponse.result?.firstname,
-          lastName: userInfoResponse.result?.lastname,
-          email: userInfoResponse.result?.email,
-          role: userInfoResponse.result?.role,
-          token,
-        })
-      );
         message.success("Account created successfully!");
-        dispatch(addAuth({ token }));
         navigate("/");
       }
     } catch (error: any) {
       console.log(error);
       message.error(error.message || "Registration failed");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -104,7 +75,7 @@ const SignUp = () => {
           layout="vertical"
           form={form}
           onFinish={handleSignUp}
-          disabled={isLoading}
+          disabled={loading}
           size="large"
         >
           <Form.Item
@@ -184,7 +155,7 @@ const SignUp = () => {
 
         <div className="mt-5 mb-3">
           <Button
-            loading={isLoading}
+            loading={loading}
             onClick={() => form.submit()}
             type="primary"
             style={{

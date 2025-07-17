@@ -13,58 +13,26 @@ import {
 } from "antd";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import handleAPI from "../../apis/handleAPI";
-import { appInfo, localDataNames } from "../../constants/appInfos";
-import { useDispatch } from "react-redux";
-import { addAuth } from "../../redux/reducers/authReducer";
+import { appInfo } from "../../constants/appInfos";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Title, Paragraph, Text } = Typography;
 
 const Login = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { login, loading, error } = useAuth();
 
-  const [isLoading, setIsLoading] = useState(false);
   const [isRemember, setIsRemember] = useState(false);
   const [form] = Form.useForm();
 
- const handleLogin = async (values: { email: string; password: string }) => {
-   setIsLoading(true);
-   try {
-     const tokenResponse: any = await handleAPI(
-       "/auth/authenticate",
-       values,
-       "post"
-     );
-
-     const token = tokenResponse?.result?.accessToken;
-     if (!token) throw new Error("Missing access token from response");
-
-     const userInfoResponse: any = await handleAPI("/users/me");
-     const role = userInfoResponse.result?.role;
-
-    //  if (role !== "ADMIN") {
-    //    throw new Error("Only admin accounts are allowed to log in.");
-    //  }
-
-     dispatch(
-       addAuth({
-         firstName: userInfoResponse.result?.firstname,
-         lastName: userInfoResponse.result?.lastname,
-         email: userInfoResponse.result?.email,
-         role: role,
-         token: token,
-         avatar: userInfoResponse.result?.avatarUrl,
-       })
-     );
-     navigate("/");
-   } catch (error: any) {
-     message.error(error.message || "Login failed");
-   } finally {
-     setIsLoading(false);
-   }
- };
-
+  const handleLogin = async (values: { email: string; password: string }) => {
+    try {
+      await login(values);
+      navigate("/");
+    } catch (error: any) {
+      message.error(error.message || "Login failed");
+    }
+  };
 
   return (
     <Card style={{ width: "50%" }}>
@@ -81,11 +49,11 @@ const Login = () => {
         </Paragraph>
       </div>
 
-      <Form
+              <Form
         layout="vertical"
         form={form}
         onFinish={handleLogin}
-        disabled={isLoading}
+        disabled={loading}
         size="large"
       >
         <Form.Item
@@ -120,7 +88,7 @@ const Login = () => {
 
       <div className="mt-4 mb-3">
         <Button
-          loading={isLoading}
+          loading={loading}
           onClick={() => form.submit()}
           type="primary"
           style={{ width: "100%" }}

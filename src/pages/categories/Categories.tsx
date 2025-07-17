@@ -14,68 +14,183 @@ import { ColumnProps } from "antd/es/table";
 import { Edit2, Trash } from "iconsax-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import handleAPI from "../../apis/handleAPI";
 import { colors } from "../../constants/colors";
 import { TreeModel } from "../../models/FormModel";
 import { CategoyModel } from "../../models/Products";
 import { getTreeValues } from "../../utils/getTreeValues";
+import { mapCategoriesToCategoyModels } from "../../utils/categoryMapper";
 import { AddCategory } from "../../components";
+import { useCategories } from "../../hooks/useCategories";
 
 const { confirm } = Modal;
 
+// Function để build tree structure từ flat data
+const buildCategoryTree = (categories: CategoyModel[]): CategoyModel[] => {
+  const categoryMap = new Map<string, CategoyModel>();
+  const rootCategories: CategoyModel[] = [];
+
+  // Tạo map để truy cập nhanh
+  categories.forEach((category) => {
+    categoryMap.set(category.id, { ...category, children: [] });
+  });
+
+  // Build tree structure
+  categories.forEach((category) => {
+    const categoryWithChildren = categoryMap.get(category.id)!;
+
+    if (!category.parentId) {
+      // Root category
+      rootCategories.push(categoryWithChildren);
+    } else {
+      // Child category
+      const parent = categoryMap.get(category.parentId);
+      if (parent) {
+        if (!parent.children) {
+          parent.children = [];
+        }
+        parent.children.push(categoryWithChildren);
+      }
+    }
+  });
+
+  return rootCategories;
+};
+
 const Categories = () => {
+  const { getCategories, getAllCategories, deleteCategory, loading, error } =
+    useCategories();
   const [categories, setCategories] = useState<CategoyModel[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [treeCategories, setTreeCategories] = useState<CategoyModel[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [treeValues, setTreeValues] = useState<TreeModel[]>([]);
   const [categorySelected, setCategorySelected] = useState<CategoyModel>();
   const [total, setTotal] = useState<number>(10);
+  const [tableLoading, setTableLoading] = useState(false); // Loading riêng cho table
+  const [initialLoad, setInitialLoad] = useState(false); // Track initial load
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
   useEffect(() => {
-    getCategories(`/public/categories/all`, true);
+    fetchAllCategories();
+    fetchCategories(); // Load data lần đầu
+    setInitialLoad(true);
   }, []);
 
   useEffect(() => {
-    const api = `/public/categories/page?page=${page}&pageSize=${pageSize}`;
-    getCategories(api);
-  }, [page, pageSize]);
+    // Chỉ fetch khi đã load lần đầu và page/pageSize thay đổi
+    if (initialLoad) {
+      fetchCategories();
+    }
+  }, [page, pageSize, initialLoad]);
 
-  const getCategories = async (api: string, isSelect?: boolean) => {
+  const fetchAllCategories = async () => {
     try {
-      const res: any = await handleAPI(api);
-
-      if (isSelect) {
-        setTreeValues(getTreeValues(res.result, true));
-      } else {
-        setCategories(res.result.data);
-        setTotal(res.result.totalElements);
-        
-      }
+      const res = await getAllCategories();
+      setTreeValues(getTreeValues(res, true));
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      setTableLoading(true); // Chỉ set loading cho table
+      console.log(
+        "Fetching categories with page:",
+        page,
+        "pageSize:",
+        pageSize
+      );
+      const res = await getCategories({ page, pageSize });
+      console.log("Categories response:", res);
+      // Map Category[] to CategoyModel[] format
+      const mappedCategories = mapCategoriesToCategoyModels(res.data);
+      setCategories(mappedCategories);
 
+      // Build tree structure
+      const treeData = buildCategoryTree(mappedCategories);
+      setTreeCategories(treeData);
+
+      setTotal(res.totalElements);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setTableLoading(false);
+    }
+  };
 
   const columns: ColumnProps<CategoyModel>[] = [
     {
       key: "title",
       title: "Name",
-      dataIndex: "",
-      render: (item: CategoyModel) => (
-        <Link to={`/categories/detail/${item.slug}?id=${item.id}`}>
-          {item.title}
-        </Link>
-      ),
+      dataIndex: "title",
+      render: (title: string, record: CategoyModel) => {
+        const isParent =
+          Array.isArray(record.children) && record.children.length > 0;
+        const isExpanded = expandedRowKeys.includes(record.id);
+        return (
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {isParent && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isExpanded) {
+                    setExpandedRowKeys(
+                      expandedRowKeys.filter((k) => k !== record.id)
+                    );
+                  } else {
+                    setExpandedRowKeys([...expandedRowKeys, record.id]);
+                  }
+                }}
+                style={{
+                  cursor: "pointer",
+                  marginRight: 8,
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: colors.primary500,
+                  userSelect: "none",
+                }}
+              >
+                {isExpanded ? "-" : "+"}
+              </span>
+            )}
+            <Link to={`/categories/detail/${record.slug}?id=${record.id}`}>
+              {title}
+            </Link>
+            {isParent && (
+              <span
+                style={{
+                  color: colors.gray600,
+                  fontSize: "12px",
+                  marginLeft: "8px",
+                }}
+              >
+                ({isParent ? record.children!.length : 0} sub-categories)
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "description",
       title: "Description",
       dataIndex: "description",
+      render: (description: string) => (
+        <span style={{ color: colors.gray600 }}>
+          {description || "No description"}
+        </span>
+      ),
+    },
+    {
+      key: "parentId",
+      title: "Parent Category",
+      dataIndex: "parentId",
+      render: (parentId: string) => (
+        <span style={{ color: colors.gray600 }}>
+          {parentId ? "Sub-category" : "Root Category"}
+        </span>
+      ),
     },
     {
       key: "btnContainer",
@@ -86,7 +201,6 @@ const Categories = () => {
           <Tooltip title="Edit categories" key={"btnEdit"}>
             <Button
               onClick={() => setCategorySelected(item)}
-
               icon={<Edit2 size={20} color={colors.gray600} />}
               type="text"
             />
@@ -111,10 +225,8 @@ const Categories = () => {
   ];
 
   const handleRemove = async (id: string) => {
-    const api = `/admin/categories/${id}`;
-
     try {
-      await handleAPI(api, undefined, "delete");
+      await deleteCategory(id);
 
       const removeCategoryRecursively = (
         categories: CategoyModel[],
@@ -127,8 +239,14 @@ const Categories = () => {
             children: removeCategoryRecursively(category.children || [], id),
           }));
       };
+
+      // Update both flat and tree data
       setCategories((prevCategories) =>
         removeCategoryRecursively(prevCategories, id)
+      );
+
+      setTreeCategories((prevTreeCategories) =>
+        removeCategoryRecursively(prevTreeCategories, id)
       );
 
       setTreeValues((prevTreeValues) =>
@@ -154,9 +272,11 @@ const Categories = () => {
       }));
   };
 
-  return isLoading ? (
-    <Spin />
-  ) : (
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  return (
     <div>
       <div className="container">
         <div className="row">
@@ -167,10 +287,10 @@ const Categories = () => {
                 seleted={categorySelected}
                 values={treeValues}
                 onAddNew={async (val) => {
-                  await getCategories(`/public/categories/all`, true);
-                  await getCategories(
-                    `/public/categories/page?page=${page}&pageSize=${pageSize}`
-                  );
+                  await fetchAllCategories();
+                  await fetchCategories();
+                  // Reset selected category after add/update
+                  setCategorySelected(undefined);
                 }}
               />
             </Card>
@@ -179,18 +299,31 @@ const Categories = () => {
             <Card>
               <Table
                 size="small"
-                dataSource={categories}
+                dataSource={treeCategories}
                 columns={columns}
                 rowKey={(record) => record.id}
+                loading={tableLoading} // Chỉ loading cho table
+                expandable={{
+                  expandedRowKeys,
+                  onExpandedRowsChange: (keys) =>
+                    setExpandedRowKeys(keys as string[]),
+                  expandIcon: () => null, // Ẩn icon mặc định
+                  indentSize: 32, // Thụt vào 32px cho mỗi cấp con
+                }}
                 pagination={{
                   showSizeChanger: true,
-                  onShowSizeChange: (current, size) => {},
+                  onShowSizeChange: (current, size) => {
+                    setPageSize(size);
+                    setPage(1); // Reset về trang 1 khi thay đổi page size
+                  },
                   total,
+                  current: page,
+                  pageSize: pageSize,
                   onChange(page, pageSize) {
                     setPage(page);
                     setPageSize(pageSize);
                   },
-                  showQuickJumper: false,
+                  showQuickJumper: true,
                 }}
               />
             </Card>

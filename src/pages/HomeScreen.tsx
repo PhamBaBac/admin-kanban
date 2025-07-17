@@ -2,43 +2,29 @@
 
 import { Card, Spin, Typography, Divider } from "antd";
 import { useEffect, useState } from "react";
-import handleAPI from "../apis/handleAPI";
 import {
   SalesAndPurchaseStatistic,
   StatisticComponent,
   TopSellingAndLowQuantityStatictis,
 } from "../components";
-import { BillModel } from "../models/BillModel";
+import { useStatistics } from "../hooks/useStatistics";
 import { VND } from "../utils/handleCurrency";
+import { DashboardStatistics } from "../services/statisticService";
 
 const HomeScreen = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [statictisValues, setStatictisValues] = useState<{
-    sales?: any[];
-    products: number;
-    suppliers: number;
-    orders: number;
-    totalOrder: number;
-    subProduct: number;
-    totalSubProduct: number;
-    totalQty: number;
-  }>();
+  const { getDashboardStatistics, loading, error } = useStatistics();
+  const [statictisValues, setStatictisValues] = useState<DashboardStatistics>();
+
   useEffect(() => {
     getStatistics();
   }, []);
 
   const getStatistics = async () => {
-    setIsLoading(true);
-    const api = `/statistics`;
-
     try {
-      const res: any = await handleAPI(api);
-      // console.log(res);
-      setStatictisValues(res.result);
+      const res = await getDashboardStatistics();
+      setStatictisValues(res);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -58,11 +44,23 @@ const HomeScreen = () => {
     (item) => item.orderStatus === "REFUNDED"
   ).length;
 
-  return isLoading ? (
-    <div className="container text-center py-5">
-      <Spin />
-    </div>
-  ) : (
+  if (loading) {
+    return (
+      <div className="container text-center py-5">
+        <Spin />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container text-center py-5">
+        <Typography.Text type="danger">Error: {error}</Typography.Text>
+      </div>
+    );
+  }
+
+  return (
     <div className="container py-5">
       <div className="row">
         <div className="col-sm-12 col-md-8">

@@ -2,44 +2,38 @@
 
 import { ColumnProps } from "antd/es/table";
 import { useEffect, useState } from "react";
-import handleAPI from "../apis/handleAPI";
 import { PromotionModel } from "../models/PromotionModel";
 import { Avatar, Button, Image, Modal, Space, Table } from "antd";
 import { Edit2, Trash } from "iconsax-react";
 import AddPromotion from "../modals/AddPromotion ";
+import { usePromotions } from "../hooks/usePromotions";
 
 const { confirm } = Modal;
 
 const PromotionScreen = () => {
+  const { getPromotions, deletePromotion, loading, error } = usePromotions();
   const [isVisibleModalAddPromotion, setIsVisibleModalAddPromotion] =
     useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [promotions, setPromotions] = useState<PromotionModel[]>([]);
   const [promotionSelected, setPromotionSelected] = useState<PromotionModel>();
 
   useEffect(() => {
-    getPromotions();
+    fetchPromotions();
   }, []);
 
-  const getPromotions = async () => {
-    const api = `/promotions`;
-    setIsLoading(true);
+  const fetchPromotions = async () => {
     try {
-      const res: any = await handleAPI(api);
-      setPromotions(res.result);
+      const response = await getPromotions();
+      setPromotions(response);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleRemovePromotion = async (id: string) => {
-    const api = `/promotions/${id}`;
-
     try {
-      await handleAPI(api, undefined, "delete");
-      await getPromotions();
+      await deletePromotion(id);
+      await fetchPromotions();
     } catch (error) {
       console.log(error);
     }
@@ -124,19 +118,29 @@ const PromotionScreen = () => {
           Add new promotion
         </Button>
         <div className="mt-3"></div>
-        <Table loading={isLoading} columns={columns} dataSource={promotions} />
+        <Table loading={loading} columns={columns} dataSource={promotions} />
       </div>
 
       <AddPromotion
         promotion={promotionSelected}
-        onAddNew={async () => {
-          await getPromotions();
-          setPromotionSelected(undefined); // ← Sửa lỗi ở đây
+        onAddNew={(newPromotion) => {
+          if (promotionSelected) {
+            // Update: thay thế promotion cũ
+            setPromotions((prev) =>
+              prev.map((p) =>
+                p.id === promotionSelected.id ? newPromotion : p
+              )
+            );
+          } else {
+            // Add: thêm promotion mới
+            setPromotions((prev) => [...prev, newPromotion]);
+          }
+          setPromotionSelected(undefined);
           setIsVisibleModalAddPromotion(false);
         }}
         visible={isVisibleModalAddPromotion}
         onClose={() => {
-          setPromotionSelected(undefined); // ← Và ở đây
+          setPromotionSelected(undefined);
           setIsVisibleModalAddPromotion(false);
         }}
       />

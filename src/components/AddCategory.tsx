@@ -3,7 +3,7 @@
 import { Button, Form, Input, message, Space, TreeSelect } from "antd";
 import { useEffect, useState } from "react";
 import { replaceName } from "../utils/replaceName";
-import handleAPI from "../apis/handleAPI";
+import { useCategories } from "../hooks/useCategories";
 import { TreeModel } from "../models/FormModel";
 import { CategoyModel } from "../models/Products";
 
@@ -16,8 +16,7 @@ interface Props {
 
 const AddCategory = (props: Props) => {
   const { values, onAddNew, seleted, onClose } = props;
-
-  const [isLoading, setIsLoading] = useState(false);
+  const { createCategory, updateCategory, loading } = useCategories();
 
   useEffect(() => {
     if (seleted) {
@@ -27,12 +26,14 @@ const AddCategory = (props: Props) => {
     }
   }, [seleted]);
 
+  // Reset parentId khi values (treeValues) thay đổi để TreeSelect nhận dữ liệu mới
+  useEffect(() => {
+    form.setFieldsValue({ parentId: undefined });
+  }, [values]);
+
   const [form] = Form.useForm();
 
   const handleCategory = async (values: any) => {
-    const api = seleted
-      ? `/admin/categories/${seleted.id}`
-      : `/admin/categories`;
     const data: any = {};
 
     for (const i in values) {
@@ -42,22 +43,30 @@ const AddCategory = (props: Props) => {
     data.slug = replaceName(values.title);
 
     try {
-      const res: any = await handleAPI(api, data, seleted ? "put" : "post");
-      message.success("Add new category successfuly!!");
-      onAddNew(res.result);
+      let res: any;
+      if (seleted) {
+        res = await updateCategory({ ...data, id: seleted.id });
+      } else {
+        res = await createCategory(data);
+      }
+
+      message.success(
+        seleted
+          ? "Update category successfully!"
+          : "Add new category successfully!"
+      );
+      onAddNew(res);
 
       form.resetFields();
     } catch (error: any) {
       message.error(error.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
     <>
       <Form
-        disabled={isLoading}
+        disabled={loading}
         form={form}
         layout="vertical"
         onFinish={handleCategory}
@@ -92,8 +101,8 @@ const AddCategory = (props: Props) => {
         <Space>
           {onClose && (
             <Button
-              loading={isLoading}
-              disabled={isLoading}
+              loading={loading}
+              disabled={loading}
               onClick={() => {
                 form.resetFields();
                 onClose();
@@ -103,8 +112,8 @@ const AddCategory = (props: Props) => {
             </Button>
           )}
           <Button
-            loading={isLoading}
-            disabled={isLoading}
+            loading={loading}
+            disabled={loading}
             type="primary"
             onClick={() => form.submit()}
           >

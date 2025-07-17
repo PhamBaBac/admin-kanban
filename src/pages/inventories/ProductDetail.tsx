@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import handleAPI from "../../apis/handleAPI";
 import { ProductModel, SubProductModel } from "../../models/Products";
+import { useProducts } from "../../hooks/useProducts";
 import {
   Empty,
   Space,
@@ -23,13 +23,16 @@ import { colors } from "../../constants/colors";
 import { AddSubProductModal } from "../../modals";
 
 const ProductDetail = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { getSubProducts, deleteSubProduct, loading, error } = useProducts();
   const [productDetail, setProductDetail] = useState<ProductModel>();
   const [subProducts, setSubProducts] = useState<SubProductModel[]>([]);
   const [productSelected, setProductSelected] = useState<ProductModel>();
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
   const [subProductSelected, setSubProductSelected] =
     useState<SubProductModel>();
+  const [removingSubProductId, setRemovingSubProductId] = useState<
+    string | null
+  >(null);
 
   const [searchParams] = useSearchParams();
 
@@ -46,40 +49,31 @@ const ProductDetail = () => {
   }, [productDetail]);
 
   const getProductDetail = async () => {
-    const api = `/subProducts/get-all-sub-product/${id}`;
+    if (!id) return;
 
-    setIsLoading(true);
     try {
-      const res: any = await handleAPI(api);
-      
-      setProductDetail(res.result);
-      setSubProducts(res.result);
+      const response = await getSubProducts(id);
+      setProductDetail(response);
+      setSubProducts(response);
     } catch (error) {
       console.log(error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleRemoveSubProduct = async (id: string) => {
-    const api = `/subProducts/remove-sub-product/${id}`;
-
+  const handleRemoveSubProduct = async (subProductId: string) => {
+    setRemovingSubProductId(subProductId);
     try {
-      await handleAPI(api, undefined, "delete");
-
+      await deleteSubProduct(subProductId); // chỉ truyền subProductId
       // update state
-      const items = [...subProducts];
-      const index = items.findIndex((element) => element.id === id);
-
-      if (index - 1) {
-        items.splice(index, 1);
-      }
-
-      setSubProducts(items);
-
-      // call api again
+      setSubProducts((prev) =>
+        prev.filter((element) => element.id !== subProductId)
+      );
+      message.success("SubProduct removed");
     } catch (error) {
       console.log(error);
+      message.error("Failed to remove subProduct");
+    } finally {
+      setRemovingSubProductId(null);
     }
   };
 
@@ -149,6 +143,7 @@ const ProductDetail = () => {
             icon={<Edit2 variant="Bold" color={colors.primary500} size={18} />}
           />
           <Button
+            loading={removingSubProductId === item.id}
             onClick={() =>
               Modal.confirm({
                 title: "Confirm",
@@ -156,7 +151,6 @@ const ProductDetail = () => {
                   "Are you sure you want to remove this sub product item?",
                 onOk: async () => {
                   await handleRemoveSubProduct(item.id);
-                  await getProductDetail();
                 },
               })
             }
@@ -171,9 +165,7 @@ const ProductDetail = () => {
     },
   ];
 
-  return isLoading ? (
-    <Spin />
-  ) : productDetail ? (
+  return productDetail ? (
     <div className="container">
       <div className="row">
         <div className="col">
@@ -181,7 +173,10 @@ const ProductDetail = () => {
         </div>
         <div className="col text-right">
           <Button
-            onClick={() => setIsVisibleAddSubProduct(true)}
+            onClick={() => {
+              setProductSelected(productDetail); // Đảm bảo luôn có productSelected
+              setIsVisibleAddSubProduct(true);
+            }}
             type="primary"
           >
             Add sub product
@@ -189,24 +184,32 @@ const ProductDetail = () => {
         </div>
       </div>
       <div className="mt-4">
-        <Table columns={columns} dataSource={subProducts} />
+        <Table columns={columns} dataSource={subProducts} rowKey="id" />
       </div>
       {productDetail && (
         <AddSubProductModal
           product={productSelected}
           visible={isVisibleAddSubProduct}
           onClose={() => {
-            setProductSelected(undefined);
             setIsVisibleAddSubProduct(false);
           }}
           subProduct={subProductSelected}
-          onAddNew={async (val) => {
-            await getProductDetail();
-            setSubProducts([...subProducts, val]);
+          onAddNew={(val) => {
+            setSubProducts((prev) => {
+              const exists = prev.find((item) => item.id === val.id);
+              if (exists) {
+                // Nếu là update, thay thế phần tử cũ
+                return prev.map((item) => (item.id === val.id ? val : item));
+              }
+              // Nếu là thêm mới, thêm vào cuối mảng
+              return [...prev, val];
+            });
           }}
         />
       )}
     </div>
+  ) : loading ? (
+    <Spin />
   ) : (
     <Empty description="Data not found!!!" />
   );

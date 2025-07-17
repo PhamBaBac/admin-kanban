@@ -1,18 +1,24 @@
 import { Button, Empty, message, Modal, Space, Typography } from "antd";
 import { Edit2, UserRemove } from "iconsax-react";
 import { useEffect, useState } from "react";
-import handleAPI from "../apis/handleAPI";
 import TableComponet from "../components/TableComponent";
 import { ToogleSupplier } from "../modals";
 import { FormModel } from "../models/FormModel";
 import { SupplierModel } from "../models/SupplierModel";
+import { useSuppliers } from "../hooks/useSuppliers";
 
 const { confirm } = Modal;
 
 const Suppliers = () => {
+  const {
+    getSuppliers: fetchSuppliers,
+    deleteSupplier,
+    loading,
+    error,
+    getSupplierForm,
+  } = useSuppliers();
   const [isVisibleModalAddNew, setIsVisibleModalAddNew] = useState(false);
   const [suppliers, setSuppliers] = useState<SupplierModel[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [supplierSelected, setSupplierSelected] = useState<SupplierModel>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -24,57 +30,44 @@ const Suppliers = () => {
   }, []);
 
   useEffect(() => {
-    getSuppliers();
+    fetchSuppliersData();
   }, [page, pageSize]);
 
   const getData = async () => {
-    setIsLoading(true);
     try {
       await getFroms();
     } catch (error: any) {
       message.error(error.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-
   const getFroms = async () => {
-    const api = `/suppliers/get-form`;
-    const res: any = await handleAPI(api);
-
-    res && setForms(res);
+    // Sử dụng hook để lấy form supplier
+    const data = await getSupplierForm();
+    data && setForms(data);
   };
 
-  const getSuppliers = async () => {
-    const api = `/suppliers/page?page=${page}&pageSize=${pageSize}`;
-    console
-    setIsLoading(true);
+  const fetchSuppliersData = async () => {
     try {
-      const res: any = await handleAPI(api);
+      const res = await fetchSuppliers({ page, pageSize });
 
-      if (res.result) {
-        const updatedSuppliers = res.result.data.map(
-          (item: any, index: number) => ({
-            index: (page - 1) * pageSize + (index + 1),
-            ...item,
-          })
-        );
+      if (res.data) {
+        const updatedSuppliers = res.data.map((item: any, index: number) => ({
+          index: (page - 1) * pageSize + (index + 1),
+          ...item,
+        }));
         setSuppliers(updatedSuppliers);
-        setTotal(res.result.totalElements);
+        setTotal(res.totalElements);
       }
     } catch (error: any) {
       message.error(error.message);
-    } finally {
-      setIsLoading(false);
     }
   };
-  
 
   const removeSuppiler = async (id: string) => {
     try {
-      await handleAPI(`/suppliers/remove?id=${id}`, undefined, "delete");
-      await getSuppliers();
+      await deleteSupplier(id);
+      await fetchSuppliersData();
     } catch (error) {
       console.log(error);
     }
@@ -91,7 +84,7 @@ const Suppliers = () => {
         onAddNew={() => {
           setIsVisibleModalAddNew(true);
         }}
-        loading={isLoading}
+        loading={loading}
         forms={forms}
         records={suppliers}
         total={total}
@@ -123,11 +116,12 @@ const Suppliers = () => {
       <ToogleSupplier
         visible={isVisibleModalAddNew}
         onClose={() => {
-          supplierSelected && getSuppliers();
           setSupplierSelected(undefined);
           setIsVisibleModalAddNew(false);
         }}
-        onAddNew={(val) => setSuppliers([...suppliers, val])}
+        onAddNew={async () => {
+          await fetchSuppliersData();
+        }}
         supplier={supplierSelected}
       />
     </div>

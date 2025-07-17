@@ -51,7 +51,7 @@ const HeaderComponent = () => {
 
   return (
     <div className="p-2 row bg-white m-0">
-      <div className="col">
+      {/* <div className="col">
         <Input
           placeholder="Search product, supplier, order"
           style={{
@@ -61,7 +61,7 @@ const HeaderComponent = () => {
           size="large"
           prefix={<SearchNormal1 className="text-muted" size={20} />}
         />
-      </div>
+      </div> */}
       <div className="col text-end">
         <Space>
           <Button

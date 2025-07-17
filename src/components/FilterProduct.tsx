@@ -14,6 +14,8 @@ import {
 import { useEffect, useState } from "react";
 import handleAPI from "../apis/handleAPI";
 import { SelectModel } from "../models/SelectModel";
+import { useCategories } from "../hooks/useCategories";
+import { useProducts } from "../hooks/useProducts";
 
 export interface FilterProductValue {
   colors?: string[];
@@ -40,13 +42,16 @@ const FilterProduct = (props: Props) => {
   const [colorSelected, setColorSelected] = useState<string[]>([]);
   const [form] = Form.useForm();
 
+  const { getAllCategories } = useCategories();
+  const { getFilterValues } = useProducts();
+
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
       try {
         const [catIds, filterValues] = await Promise.all([
           getCategories(),
-          getFilterValues(),
+          getFilterValuesHook(),
         ]);
 
         const { colors, sizes, prices } = filterValues;
@@ -79,24 +84,17 @@ const FilterProduct = (props: Props) => {
   }, [values, form]);
 
   const getCategories = async (): Promise<SelectModel[]> => {
-    const res: any = await handleAPI(`/public/categories/all`);
-    return res.result && res.result.length > 0
-      ? res.result.map((item: any) => ({
+    const res = await getAllCategories();
+    return res && res.length > 0
+      ? res.map((item: any) => ({
           label: item.title,
           value: item.id,
         }))
       : [];
   };
-
-  const getFilterValues = async (): Promise<{
-    colors: string[];
-    sizes: SelectModel[];
-    prices: number[];
-  }> => {
-    const res: any = await handleAPI("/subProducts/get-filter-values");
-
-    const raw = res.result;
-
+  const getFilterValuesHook = async () => {
+    const res: any = await getFilterValues();
+    const raw = res.result || res;
     return {
       colors: raw.colors || [],
       prices: raw.prices || [],

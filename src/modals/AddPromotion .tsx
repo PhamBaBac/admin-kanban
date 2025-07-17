@@ -16,6 +16,7 @@ import { uploadFile } from "../utils/uploadFile";
 import { PromotionModel } from "../models/PromotionModel";
 import dayjs from "dayjs";
 import { url } from "inspector";
+import { usePromotions } from "../hooks/usePromotions";
 
 interface Props {
   visible: boolean;
@@ -31,6 +32,12 @@ const AddPromotion = (props: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [form] = Form.useForm();
+
+  const {
+    createPromotion,
+    updatePromotion,
+    loading: promotionLoading,
+  } = usePromotions();
 
   useEffect(() => {
     if (promotion) {
@@ -50,6 +57,7 @@ const AddPromotion = (props: Props) => {
 
   const handleClose = () => {
     form.resetFields();
+    setImageUpload([]);
     onClose();
   };
 
@@ -91,16 +99,20 @@ const AddPromotion = (props: Props) => {
         data.imageURL =
           imageUpload.length > 0 && imageUpload[0].originFileObj
             ? await uploadFile(imageUpload[0].originFileObj)
+            : imageUpload.length > 0 && imageUpload[0].url
+            ? imageUpload[0].url
             : "";
 
-        const api = `/promotions/${
-          promotion ? `${promotion.id}` : "addNew"
-        }`;
         setIsLoading(true);
 
         try {
-          const res = await handleAPI(api, data, promotion ? "put" : "post");
-          onAddNew(res.data);
+          let res;
+          if (promotion) {
+            res = await updatePromotion({ ...data, id: promotion.id });
+          } else {
+            res = await createPromotion(data);
+          }
+          onAddNew(res);
           handleClose();
         } catch (error) {
           console.log(error);
@@ -117,10 +129,10 @@ const AddPromotion = (props: Props) => {
       onClose={handleClose}
       onCancel={handleClose}
       okButtonProps={{
-        loading: isLoading,
+        loading: isLoading || promotionLoading,
       }}
       cancelButtonProps={{
-        loading: isLoading,
+        loading: isLoading || promotionLoading,
       }}
       onOk={() => form.submit()}
     >
@@ -135,7 +147,7 @@ const AddPromotion = (props: Props) => {
       </Upload>
       <Form
         form={form}
-        disabled={isLoading}
+        disabled={isLoading || promotionLoading}
         size="large"
         onFinish={handleAddNewPromotion}
         layout="vertical"

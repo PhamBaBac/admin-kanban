@@ -24,6 +24,7 @@ import { SelectModel } from "../models/FormModel";
 import { get } from "http";
 import { uploadFile } from "../utils/uploadFile";
 import { useSearchParams } from "react-router-dom";
+import { useProducts } from "../hooks/useProducts";
 
 interface Props {
   visible: boolean;
@@ -50,6 +51,11 @@ const AddSubProductModal = (props: Props) => {
   const [form] = Form.useForm();
 
   const auth = useSelector(authSeletor);
+
+  const {
+    createSubProduct: createSubProductHook,
+    updateSubProduct: updateSubProductHook,
+  } = useProducts();
 
   useEffect(() => {
     form.setFieldValue("color", colors.primary500);
@@ -88,24 +94,23 @@ const AddSubProductModal = (props: Props) => {
             : data.color.toHexString();
       }
 
-     if (fileList.length > 0) {
-       const promises = fileList
-         .filter((file) => file.originFileObj) // chỉ upload ảnh mới
-         .map(async (file) => {
-           const url = await uploadFile(file.originFileObj);
-           return url;
-         });
+      if (fileList.length > 0) {
+        const promises = fileList
+          .filter((file) => file.originFileObj) // chỉ upload ảnh mới
+          .map(async (file) => {
+            const url = await uploadFile(file.originFileObj);
+            return url;
+          });
 
-       const uploadedUrls = await Promise.all(promises);
+        const uploadedUrls = await Promise.all(promises);
 
-       // lấy ảnh cũ đã có sẵn URL
-       const oldImageUrls = fileList
-         .filter((file) => !file.originFileObj && file.url)
-         .map((file) => file.url);
+        // lấy ảnh cũ đã có sẵn URL
+        const oldImageUrls = fileList
+          .filter((file) => !file.originFileObj && file.url)
+          .map((file) => file.url);
 
-       data.images = [...oldImageUrls, ...uploadedUrls]; // gộp lại
-     }
-
+        data.images = [...oldImageUrls, ...uploadedUrls]; // gộp lại
+      }
 
       if (!product) {
         onAddNew({
@@ -121,17 +126,18 @@ const AddSubProductModal = (props: Props) => {
   };
 
   const createSubProduct = async (data: any) => {
-    const api = `/subProducts/${subProduct ? `update` : "create"}`;
     if (subProduct) {
       data.id = subProduct.id;
     }
-
     try {
-      await handleAPI(api, data, subProduct ? "put" : "post");
-
-      // await handleAddOrder({ ...data, subProduct_id: res?.data._id });
+      let created;
+      if (subProduct) {
+        created = await updateSubProductHook(data);
+      } else {
+        created = await createSubProductHook(data);
+      }
+      onAddNew(created); // Truyền object subProduct mới cho cha
       handleCancel();
-      //reload lai danh sach sub product bang cach goi lai api
       onClose();
     } catch (error) {
       console.log(error);

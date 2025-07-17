@@ -7,12 +7,14 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { addAuth, authSeletor, AuthState } from "../redux/reducers/authReducer";
 import handleAPI from "../apis/handleAPI";
+import { useAuth } from "../hooks/useAuth";
 
 const Router = () => {
   const [isLoading, setIsLoading] = useState(false);
   const auth: AuthState = useSelector(authSeletor);
   const dispatch = useDispatch();
   const location = useLocation();
+  const { getUserInfo } = useAuth();
 
   const urlParams = new URLSearchParams(location.search);
   const accessToken = urlParams.get("accessToken");
@@ -29,15 +31,16 @@ const Router = () => {
           );
           dispatch(addAuth({ token: accessToken }));
 
-          const userRes: any = await handleAPI("/users/me");
+          // Sử dụng hook để lấy user info thay vì gọi handleAPI trực tiếp
+          const userRes = await getUserInfo();
           dispatch(
             addAuth({
               token: accessToken,
-              firstName: userRes.result.firstname,
-              lastName: userRes.result.lastname,
-              email: userRes.result.email,
-              role: userRes.result.role,
-              avatar: userRes.result.avatarUrl,
+              firstName: userRes.firstname,
+              lastName: userRes.lastname,
+              email: userRes.email,
+              role: userRes.role,
+              avatar: userRes.avatarUrl,
             })
           );
         } else {

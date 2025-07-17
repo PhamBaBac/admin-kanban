@@ -18,20 +18,33 @@ import {
   UploadProps,
 } from "antd";
 import { useEffect, useRef, useState } from "react";
-import handleAPI from "../../apis/handleAPI";
 import { SelectModel, TreeModel } from "../../models/FormModel";
+import { useProducts } from "../../hooks/useProducts";
+import { useCategories } from "../../hooks/useCategories";
+import { useSuppliers } from "../../hooks/useSuppliers";
 import { replaceName } from "../../utils/replaceName";
 import { Add } from "iconsax-react";
 import { ModalCategory, ToogleSupplier } from "../../modals";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
+import { mapCategoriesToCategoyModels } from "../../utils/categoryMapper";
 import { uploadFile } from "../../utils/uploadFile";
 
 const { Text, Title, Paragraph } = Typography;
 
 const AddProduct = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    getProductById,
+    createProduct,
+    updateProduct,
+    loading: productsLoading,
+  } = useProducts();
+  const { getAllCategories: fetchCategories, loading: categoriesLoading } =
+    useCategories();
+  const { getSuppliers: fetchSuppliers, loading: suppliersLoading } =
+    useSuppliers();
+
   const [content, setcontent] = useState("");
   const [supplierOptions, setSupplierOptions] = useState<SelectModel[]>([]);
   const [isVisibleAddCategory, setIsVisibleAddCategory] = useState(false);
@@ -46,6 +59,7 @@ const AddProduct = () => {
 
   const id = searchParams.get("id");
   const slug = location.state?.slug;
+  const productFromState = location.state?.product;
 
   const editorRef = useRef<any>(null);
   const [form] = Form.useForm();
@@ -54,48 +68,66 @@ const AddProduct = () => {
     getData();
   }, []);
   useEffect(() => {
-    if (id) {
+    if (id && productFromState) {
+      // Sử dụng data từ state thay vì gọi API
+      setProductDetailFromState(productFromState);
+    } else if (id && slug) {
       getProductDetail(id);
-    } else {
+    } else if (!id) {
       form.resetFields();
     }
-  }, [id]);
+  }, [id, slug, productFromState]);
+
+  const setProductDetailFromState = (product: any) => {
+    form.setFieldsValue({
+      title: product.title || "",
+      description: product.description || "",
+      categories: product.categories?.map((category: any) => category.id) || [],
+      supplier: product.supplierId || null, // Sử dụng supplierId thay vì supplier
+    });
+    setcontent(product.content || "");
+    setFileList(
+      product.images?.map((image: any, index: number) => ({
+        url: image,
+        uid: index,
+      })) || []
+    );
+  };
 
   const getData = async () => {
-    setIsLoading(true);
     try {
       await getSuppliers();
       await getCategories();
     } catch (error: any) {
       message.error(error.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const getProductDetail = async (id: string) => {
-    const api = `/public/products/${slug}/${id}`;
-    try {
-      const res: any = await handleAPI(api);
-      const item = res.result;
+    if (!slug) {
+      return;
+    }
 
-      if (item) {
+    try {
+      const response = await getProductById(slug, id);
+
+      if (response && response.product) {
+        const item = response.product;
         form.setFieldsValue({
-          ...item,
+          title: item.title || "",
+          description: item.description || "",
           categories:
             item.categories?.map((category: any) => category.id) || [],
-          supplier: item.supplierId || null,
+          supplier: item.supplier || null,
         });
-        setcontent(item.content);
-        setFileList(
-          item.images?.map((image: any, index: number) => ({
-            url: image,
-            uid: index,
-          }))
-        );
+        setcontent("");
+        setFileList([]);
+      } else {
+        console.log("Response format is not as expected:", response);
       }
     } catch (error) {
-      console.log(error);
+      console.log("Error fetching product detail:", error);
+      // Thử fallback API nếu cần
     }
   };
   const handleAddNewProduct = async (values: any) => {
@@ -103,13 +135,38 @@ const AddProduct = () => {
     const data: any = {};
     setIsCreating(true);
 
-    for (const i in values) {
-      data[`${i}`] = values[i] ?? "";
-    }
-    data.supplierId = values.supplier ? values.supplier : null;
+    // Xử lý dữ liệu cơ bản
+    data.title = values.title || "";
+    data.description = values.description || "";
     data.content = content;
     data.slug = replaceName(values.title);
     data.images = [];
+
+    // Xử lý supplierId - chỉ gửi supplierId cho backend
+    data.supplierId = values.supplier || null;
+
+    // Xử lý categories - đảm bảo là array và đúng format
+    if (
+      values.categories &&
+      Array.isArray(values.categories) &&
+      values.categories.length > 0
+    ) {
+      // TreeSelect có thể trả về array của objects hoặc strings
+      data.categories = values.categories
+        .map((cat: any) => {
+          if (typeof cat === "string") {
+            return cat;
+          } else if (cat && typeof cat === "object" && cat.value) {
+            return cat.value;
+          } else if (cat && typeof cat === "object" && cat.id) {
+            return cat.id;
+          }
+          return cat;
+        })
+        .filter(Boolean); // Lọc bỏ giá trị null/undefined
+    } else {
+      data.categories = [];
+    }
 
     const fileListSafe = fileList || [];
 
@@ -133,41 +190,49 @@ const AddProduct = () => {
     }
 
     try {
-      await handleAPI(
-        `/admin/products${id ? `/${slug}/${id}` : ""}`,
-        data,
-        id ? "put" : "post"
-      );
+      if (id) {
+        await updateProduct({ ...data, id }, slug);
+        message.success("Product updated successfully!");
+      } else {
+        await createProduct(data);
+        message.success("Product created successfully!");
+      }
 
-      navigate("/inventory");
+      // Refresh data khi quay lại Inventories
+      navigate("/inventory", { state: { refresh: true } });
     } catch (error) {
-      console.log(error);
+      console.log("Error creating/updating product:", error);
+      message.error("Failed to save product");
     } finally {
       setIsCreating(false);
     }
   };
 
   const getSuppliers = async () => {
-    const api = `/suppliers/page`;
-    const res: any = await handleAPI(api);
-
-    const data = res.result.data;
-    const options = data.map((item: any) => ({
-      value: item.id,
-      label: item.name,
-    }));
-
-    setSupplierOptions(options);
+    try {
+      const response = await fetchSuppliers();
+      const options = response.data.map((item: any) => ({
+        value: item.id,
+        label: item.name,
+      }));
+      setSupplierOptions(options);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const getCategories = async () => {
-    const res: any = await handleAPI(`/public/categories/all`);
-
-    const datas = res.result;
-
-    const data = datas.length > 0 ? getTreeValues(datas, true) : [];
-
-    setCategories(data);
+    try {
+      const response = await fetchCategories();
+      const mappedCategories = mapCategoriesToCategoyModels(response);
+      const data =
+        mappedCategories.length > 0
+          ? getTreeValues(mappedCategories, true)
+          : [];
+      setCategories(data);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
@@ -190,6 +255,8 @@ const AddProduct = () => {
     await getSuppliers(); // Refresh the supplier list
     setIsVisibleAddSupplier(false);
   };
+
+  const isLoading = productsLoading || categoriesLoading || suppliersLoading;
 
   return isLoading ? (
     <Spin />
@@ -387,13 +454,28 @@ const AddProduct = () => {
         onClose={() => setIsVisibleAddCategory(false)}
         onAddNew={async (val) => {
           await getCategories();
+          // Nếu val là category vừa thêm và có id, tự động chọn luôn
+          if (val && val.id) {
+            form.setFieldsValue({
+              categories: [...(form.getFieldValue("categories") || []), val.id],
+            });
+          }
         }}
         values={categories}
       />
       <ToogleSupplier
         visible={isVisibleAddSupplier}
         onClose={() => setIsVisibleAddSupplier(false)}
-        onAddNew={handleAddNewSupplier}
+        onAddNew={async (val) => {
+          await getSuppliers();
+          // Nếu val là supplier vừa thêm và có id, tự động chọn luôn
+          if (val && val.id) {
+            form.setFieldsValue({
+              supplier: val.id,
+            });
+          }
+          setIsVisibleAddSupplier(false);
+        }}
       />
     </div>
   );
