@@ -33,6 +33,7 @@ export const orderService = {
   updateOrderStatus: async (id: string, status: string): Promise<Order> => {
     const response = await handleAPI(
       `/orders/${id}/status`,
+      { orderStatus: status },
       "patch"
     );
     return response.data;

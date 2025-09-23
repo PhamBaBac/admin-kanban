@@ -19,12 +19,18 @@ export const useAuth = () => {
       setError(null);
       try {
         const response = await authService.login(data);
+        localStorage.setItem("authData", JSON.stringify(response));
+
         const userInfo = await authService.getUserInfo();
 
         const authData = {
-          token: response.accessToken,
-          refreshToken: response.refreshToken,
-          user: userInfo,
+          accessToken: response.accessToken,
+          userId: userInfo.id,
+          firstName: userInfo.firstname,
+          lastName: userInfo.lastname,
+          email: userInfo.email,
+          role: userInfo.role,
+          avatar: userInfo.avatarUrl,
         };
 
         dispatch(addAuth(authData));
@@ -48,10 +54,15 @@ export const useAuth = () => {
         const userInfo = await authService.getUserInfo();
 
         const authData = {
-          token: response.accessToken,
-          refreshToken: response.refreshToken,
-          user: userInfo,
+          accessToken: response.accessToken,
+          userId: userInfo.id,
+          firstName: userInfo.firstname,
+          lastName: userInfo.lastname,
+          email: userInfo.email,
+          role: userInfo.role,
+          avatar: userInfo.avatarUrl,
         };
+        localStorage.setItem("authData", JSON.stringify(authData));
 
         dispatch(addAuth(authData));
         return authData;

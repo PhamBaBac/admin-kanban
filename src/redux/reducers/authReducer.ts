@@ -3,11 +3,12 @@ import { localDataNames } from '../../constants/appInfos';
 
 export interface AuthState {
   firstName?: string;
-  lastName?: string;  
+  lastName?: string;
   email?: string;
-  role?: string
-  token?: string;
+  role?: string;
+  accessToken?: string;
   avatar?: string;
+  userId?: string;
 }
 
 const initialState: AuthState = {
@@ -15,8 +16,9 @@ const initialState: AuthState = {
   lastName: "",
   email: "",
   role: "",
-  token: "",
+  accessToken: "",
   avatar: "",
+  userId: "",
 };
 
 const syncLocal = (data: any) => {
@@ -38,7 +40,7 @@ const authSlice = createSlice({
       localStorage.removeItem(localDataNames.authData);
     },
     refreshtoken: (state, action) => {
-      state.data.token = action.payload;
+      state.data.accessToken = action.payload;
       syncLocal(state.data);
     },
   },

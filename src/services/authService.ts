@@ -29,6 +29,7 @@ export interface UserInfo {
 export const authService = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await handleAPI("/auth/authenticate", data, "post");
+    console.log(" response", response);
     return response.data;
   },
 

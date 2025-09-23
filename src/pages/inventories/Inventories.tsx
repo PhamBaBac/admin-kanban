@@ -418,7 +418,7 @@ const Inventories = () => {
                 allowClear
               />
               <Dropdown
-                dropdownRender={() => (
+                popupRender={() => (
                   <FilterProduct values={{}} onFilter={handleFilterProducts} />
                 )}
               >

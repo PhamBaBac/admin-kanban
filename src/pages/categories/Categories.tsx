@@ -21,7 +21,6 @@ import { getTreeValues } from "../../utils/getTreeValues";
 import { mapCategoriesToCategoyModels } from "../../utils/categoryMapper";
 import { AddCategory } from "../../components";
 import { useCategories } from "../../hooks/useCategories";
-
 const { confirm } = Modal;
 
 // Function để build tree structure từ flat data

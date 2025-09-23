@@ -1,48 +1,66 @@
-/** @format */
-
-import { Avatar, Badge, Button, Dropdown, Input, MenuProps, Space } from "antd";
-import { Notification, SearchNormal1 } from "iconsax-react";
-import { colors } from "../constants/colors";
-
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import handleAPI from "../apis/handleAPI";
-import {
-  addAuth,
-  authSeletor,
-  removeAuth,
-} from "../redux/reducers/authReducer";
 import axios from "axios";
 import Cookies from "js-cookie";
+import { Avatar, Badge, Button, Dropdown, message, Space } from "antd";
+import { Notification } from "iconsax-react";
+import { colors } from "../constants/colors";
+import { authSeletor, removeAuth } from "../redux/reducers/authReducer";
+import { initSocket } from "../connect/SocketIO";
 
 const HeaderComponent = () => {
   const auth = useSelector(authSeletor);
-  useEffect(() => {
-    getMyInfo();
-  }, []);
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const getMyInfo = async () => {
-    // const res: any = await handleAPI("/users/my-info");
-    // dispatch(addAuth(res.result));
-  };
-  const items: MenuProps["items"] = [
+  const socketRef = useRef<any>(null);
+  const [notifyCount, setNotifyCount] = useState(0);
+
+  useEffect(() => {
+    if (!auth?.userId || !auth?.role) return;
+
+    socketRef.current = initSocket(auth.accessToken, auth.userId, auth.role);
+
+    socketRef.current.on("connect", () => {
+      console.log(socketRef.current.id, auth.role);
+    });
+
+    socketRef.current.on("disconnect", () => {
+      console.log("Disconnected from Socket.IO server");
+    });
+
+    socketRef.current.on("orderCancelled", (data: any) => {
+      // Mỗi lần nhận thông báo, tăng số lượng lên 1
+      setNotifyCount((prev) => prev + 1);
+      console.log("Order Cancelled:", data);
+      // Hiển thị thông báoử dụng thư viện như antd message
+      message.info(`Order Cancelled: ${data.orderId}`);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        console.log("Disconnecting old socket:", socketRef.current.id);
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [auth?.userId, auth?.role]);
+
+  const items = [
     {
       key: "logout",
       label: "Đăng xuất",
-
       onClick: async () => {
         await axios.post(`http://localhost:8080/api/v1/auth/logout`, null, {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
           withCredentials: true,
         });
-
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
+        }
         localStorage.clear();
-        Cookies.remove("refreshToken");
+        Cookies.remove("refreshTokenAdmin");
         navigate("/login");
         dispatch(removeAuth());
       },
@@ -51,24 +69,12 @@ const HeaderComponent = () => {
 
   return (
     <div className="p-2 row bg-white m-0">
-      {/* <div className="col">
-        <Input
-          placeholder="Search product, supplier, order"
-          style={{
-            borderRadius: 100,
-            width: "100%",
-          }}
-          size="large"
-          prefix={<SearchNormal1 className="text-muted" size={20} />}
-        />
-      </div> */}
       <div className="col text-end">
         <Space>
           <Button
-            onClick={() => {}}
             type="text"
             icon={
-              <Badge count={5}>
+              <Badge count={notifyCount}>
                 <Notification size={22} color={colors.gray600} />
               </Badge>
             }

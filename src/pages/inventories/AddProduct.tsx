@@ -356,7 +356,7 @@ const AddProduct = () => {
                   <TreeSelect
                     treeData={categories}
                     multiple
-                    dropdownRender={(menu) => (
+                    popupRender={(menu) => (
                       <>
                         {menu}
 
@@ -388,7 +388,7 @@ const AddProduct = () => {
                 >
                   <Select
                     showSearch
-                    dropdownRender={(menu) => (
+                    popupRender={(menu) => (
                       <>
                         {menu}
                         <Divider className="m-0" />
@@ -466,7 +466,7 @@ const AddProduct = () => {
       <ToogleSupplier
         visible={isVisibleAddSupplier}
         onClose={() => setIsVisibleAddSupplier(false)}
-        onAddNew={async (val) => {
+        onAddNew={async (val: any) => {
           await getSuppliers();
           // Nếu val là supplier vừa thêm và có id, tự động chọn luôn
           if (val && val.id) {

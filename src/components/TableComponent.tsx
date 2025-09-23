@@ -8,7 +8,6 @@ import { Sort } from "iconsax-react";
 import { colors } from "../constants/colors";
 import { Resizable } from "re-resizable";
 import { ModalExportData } from "../modals";
-import handleAPI from "../apis/handleAPI";
 
 interface Props {
   forms: FormModel;
@@ -51,69 +50,79 @@ const TableComponent = (props: Props) => {
     onPageChange(pageInfo);
   }, [pageInfo]);
 
-useEffect(() => {
-  if (forms && forms.formItems && forms.formItems.length > 0) {
-    const items: any[] = [];
+  useEffect(() => {
+    if (forms && forms.formItems && forms.formItems.length > 0) {
+      const items: any[] = [];
 
-    forms.formItems.forEach((item: any) => {
-      if (item.key === "products" || item.key === "categories") {
+      forms.formItems.forEach((item: any) => {
+        if (item.key === "products" || item.key === "categories") {
+          items.push({
+            key: item.key,
+            dataIndex: item.value,
+            title: item.label,
+            width: item.displayLength,
+            render: (value: string[] | any[]) => (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                {value?.map((subItem, index) => {
+                  const itemKey =
+                    typeof subItem === "string"
+                      ? subItem
+                      : subItem.id || subItem._id || `${item.key}-${index}`;
+                  return (
+                    <div
+                      key={itemKey}
+                      style={{
+                        padding: "2px 4px",
+                        border: "1px solid #d9d9d9",
+                        borderRadius: "4px",
+                        marginRight: "4px",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {typeof subItem === "string"
+                        ? subItem
+                        : subItem.title || subItem.name}
+                    </div>
+                  );
+                })}
+              </div>
+            ),
+          });
+        } else {
+          items.push({
+            key: item.key,
+            dataIndex: item.value,
+            title: item.label,
+            width: item.displayLength,
+          });
+        }
+      });
+
+      items.unshift({
+        key: "index",
+        dataIndex: "index",
+        title: "#",
+        align: "center",
+        width: 100,
+        render: (_: any, __: any, index: number) =>
+          (pageInfo.page - 1) * pageInfo.pageSize + index + 1,
+      });
+
+      if (extraColumn) {
         items.push({
-          key: item.key,
-          dataIndex: item.value,
-          title: item.label,
-          width: item.displayLength,
-          render: (value: string[] | any[]) => (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              {value?.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    padding: "2px 4px",
-                    border: "1px solid #d9d9d9",
-                    borderRadius: "4px",
-                    marginRight: "4px",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {typeof item === "string" ? item : item.title || item.name}
-                </div>
-              ))}
-            </div>
-          ),
-        });
-      } else {
-        items.push({
-          key: item.key,
-          dataIndex: item.value,
-          title: item.label,
-          width: item.displayLength,
+          key: "actions",
+          dataIndex: "",
+          fixed: "right",
+          title: "Action",
+          align: "right",
+          render: (item: any) => extraColumn(item),
+          width: 100,
         });
       }
-    });
 
-    items.unshift({
-      key: "index",
-      dataIndex: "index",
-      title: "#",
-      align: "center",
-      width: 100,
-    });
-
-    if (extraColumn) {
-      items.push({
-        key: "actions",
-        dataIndex: "",
-        fixed: "right",
-        title: "Action",
-        align: "right",
-        render: (item: any) => extraColumn(item),
-        width: 100,
-      });
+      setColumns(items);
     }
-
-    setColumns(items);
-  }
-}, [forms]);
+  }, [forms, pageInfo, extraColumn]);
 
   const RenderTitle = (props: any) => {
     const { children, ...restProps } = props;
@@ -172,7 +181,10 @@ useEffect(() => {
           y: scrollHeight ? scrollHeight : "calc(100vh - 300px)",
         }}
         loading={loading}
-        dataSource={records}
+        dataSource={records?.map((item, index) => ({
+          ...item,
+          key: item.id || item._id || `row-${index}`,
+        }))}
         columns={columns}
         bordered
         title={() => (

@@ -137,7 +137,6 @@ const ToogleSupplier = (props: Props) => {
       loading={isGetting}
       closable={!isLoading}
       open={visible}
-      onClose={handleClose}
       onCancel={handleClose}
       onOk={() => form.submit()}
       okButtonProps={{

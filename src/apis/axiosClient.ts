@@ -16,7 +16,7 @@ const getAuthData = () => {
 
 const getAccessToken = () => {
   const authData = getAuthData();
-  return authData?.token || "";
+  return authData?.accessToken || "";
 };
 
 let isRefreshing = false;
@@ -55,7 +55,7 @@ const refreshToken = async (): Promise<string | null> => {
     if (currentAuthData) {
       const updatedAuthData = {
         ...currentAuthData,
-        token: newToken,
+        accessToken: newToken,
       };
       localStorage.setItem(
         localDataNames.authData,

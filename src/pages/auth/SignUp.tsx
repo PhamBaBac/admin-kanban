@@ -37,7 +37,7 @@ const SignUp = () => {
     };
 
     try {
-      const response = await signUp(submitData);
+      const response: any = await signUp(submitData);
 
       if (response?.mfaEnabled && response?.secretImageUri) {
         // Nếu bật MFA, chuyển hướng người dùng sang trang scan QR

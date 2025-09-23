@@ -172,7 +172,6 @@ const AddSubProductModal = (props: Props) => {
       title="Add Sub product"
       open={visible}
       onCancel={handleCancel}
-      onClose={handleCancel}
       onOk={() => form.submit()}
       okButtonProps={{
         loading: isLoading,

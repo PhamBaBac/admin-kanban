@@ -56,7 +56,14 @@ const TopSellingAndLowQuantityStatictis = () => {
           extra={<Link to={`/bills`}>See all</Link>}
         >
           <Table
-            dataSource={datas?.topSelling}
+            dataSource={
+              datas?.topSelling
+                ? datas.topSelling.map((item, idx) => ({
+                    ...item,
+                    key: item.title + item.color + item.size + idx, // hoặc nếu có id thì dùng item.id
+                  }))
+                : []
+            }
             size="small"
             pagination={{
               pageSize: 5,

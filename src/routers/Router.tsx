@@ -27,15 +27,15 @@ const Router = () => {
         if (accessToken) {
           localStorage.setItem(
             localDataNames.authData,
-            JSON.stringify({ token: accessToken })
+            JSON.stringify({ accessToken: accessToken })
           );
-          dispatch(addAuth({ token: accessToken }));
+          dispatch(addAuth({ accessToken: accessToken }));
 
           // Sử dụng hook để lấy user info thay vì gọi handleAPI trực tiếp
           const userRes = await getUserInfo();
           dispatch(
             addAuth({
-              token: accessToken,
+              accessToken: accessToken,
               firstName: userRes.firstname,
               lastName: userRes.lastname,
               email: userRes.email,
@@ -57,7 +57,7 @@ const Router = () => {
     fetchData();
   }, [accessToken]);
 
-  return isLoading ? <Spin /> : !auth.token ? <AuthRouter /> : <MainRouter />;
+  return isLoading ? <Spin /> : !auth.accessToken ? <AuthRouter /> : <MainRouter />;
 };
 
 export default Router;

@@ -27,7 +27,13 @@ const Login = () => {
 
   const handleLogin = async (values: { email: string; password: string }) => {
     try {
-      await login(values);
+      const user = await login(values);
+      console.log("Logged in user:", user);
+      if (user.role !== "ADMIN") {
+        message.error("Chỉ ADMIN mới được đăng nhập!");
+        return;
+      }
+      message.success("Login successful");
       navigate("/");
     } catch (error: any) {
       message.error(error.message || "Login failed");
