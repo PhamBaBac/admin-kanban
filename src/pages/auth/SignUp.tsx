@@ -21,7 +21,7 @@ interface SignUpFormValues {
   lastName: string;
   email: string;
   password: string;
-  role: "USER";
+  role: "ADMIN";
   mfaEnabled: boolean;
 }
 
@@ -33,10 +33,11 @@ const SignUp = () => {
   const handleSignUp = async (values: SignUpFormValues) => {
     const submitData = {
       ...values,
-      role: "USER",
+      role: "ADMIN",
     };
 
     try {
+      console.log("Submitting data:", submitData);
       const response: any = await signUp(submitData);
 
       if (response?.mfaEnabled && response?.secretImageUri) {
@@ -50,7 +51,7 @@ const SignUp = () => {
         });
       } else {
         message.success("Account created successfully!");
-        navigate("/");
+        navigate("/login");
       }
     } catch (error: any) {
       console.log(error);
@@ -79,7 +80,7 @@ const SignUp = () => {
           size="large"
         >
           <Form.Item
-            name={"firstname"}
+            name={"firstName"}
             label="First Name"
             rules={[
               {
@@ -92,7 +93,7 @@ const SignUp = () => {
             <Input placeholder="Enter your first name" allowClear />
           </Form.Item>
           <Form.Item
-            name={"lastname"}
+            name={"lastName"}
             label="Last Name"
             rules={[
               {

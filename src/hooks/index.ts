@@ -6,3 +6,4 @@ export * from "./useOrders";
 export * from "./usePromotions";
 export * from "./useStatistics";
 export * from "./useUsers";
+export * from "./useChatMessage";

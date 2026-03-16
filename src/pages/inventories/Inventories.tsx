@@ -48,13 +48,13 @@ const Inventories = () => {
 
   useEffect(() => {
     if (!searchKey)
-      fetchProducts(`/public/products/page?page=${page}&pageSize=${pageSize}`);
+      fetchProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
   }, [searchKey, page, pageSize]);
 
   // Refresh data khi quay lại từ AddProduct
   useEffect(() => {
     if (location.state?.refresh) {
-      fetchProducts(`/public/products/page?page=${page}&pageSize=${pageSize}`);
+      fetchProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
       // Clear refresh state
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -365,7 +365,7 @@ const Inventories = () => {
                         );
                         setSelectedRowKeys([]);
                         await fetchProducts(
-                          `/public/products/page?page=${page}&pageSize=${pageSize}`
+                          `/products/page?page=${page}&pageSize=${pageSize}`
                         );
                       },
                       onCancel: () => setSelectedRowKeys([]),
@@ -394,7 +394,7 @@ const Inventories = () => {
                   onClick={async () => {
                     setPage(1);
                     await fetchProducts(
-                      `/public/products/page?page=${page}&pageSize=${pageSize}`
+                      `/products/page?page=${page}&pageSize=${pageSize}`
                     );
                     setIsFilting(false);
                   }}
@@ -409,7 +409,7 @@ const Inventories = () => {
                   if (e.target.value === "") {
                     setPage(1);
                     fetchProducts(
-                      `/public/products/page?page=1&pageSize=${pageSize}`
+                      `/products/page?page=1&pageSize=${pageSize}`
                     );
                   }
                 }}

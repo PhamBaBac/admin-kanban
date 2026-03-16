@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
-    "@firebase/storage": "^0.13.7",
     "@reduxjs/toolkit": "^2.6.0",
     "@stomp/stompjs": "^7.1.1",
     "@tinymce/tinymce-react": "^6.0.0",
@@ -20,7 +19,6 @@
     "bootstrap": "^5.3.3",
     "chart.js": "^4.4.8",
     "dotenv": "^16.4.7",
-    "firebase": "^11.3.1",
     "iconsax-react": "^0.0.8",
     "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",

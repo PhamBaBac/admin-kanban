@@ -27,11 +27,18 @@ export interface UserInfo {
 }
 
 export const authService = {
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
+login: async (data: LoginRequest): Promise<AuthResponse> => {
+  console.log("login auth:");
+
+  try {
     const response = await handleAPI("/auth/authenticate", data, "post");
-    console.log(" response", response);
+    console.log("response auth:", response);
     return response.data;
-  },
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    throw err;
+  }
+},
 
   signUp: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await handleAPI("/auth/register", data, "post");

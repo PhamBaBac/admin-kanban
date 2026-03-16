@@ -7,6 +7,7 @@ import {
 } from "../services/authService";
 import { addAuth, removeAuth } from "../redux/reducers/authReducer";
 import { useDispatch } from "react-redux";
+import { localDataNames } from "../constants/appInfos";
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -19,6 +20,7 @@ export const useAuth = () => {
       setError(null);
       try {
         const response = await authService.login(data);
+        console.log("Login response:", response);
         localStorage.setItem("authData", JSON.stringify(response));
 
         const userInfo = await authService.getUserInfo();
@@ -50,22 +52,9 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await authService.signUp(data);
-        const userInfo = await authService.getUserInfo();
-
-        const authData = {
-          accessToken: response.accessToken,
-          userId: userInfo.id,
-          firstName: userInfo.firstname,
-          lastName: userInfo.lastname,
-          email: userInfo.email,
-          role: userInfo.role,
-          avatar: userInfo.avatarUrl,
-        };
-        localStorage.setItem("authData", JSON.stringify(authData));
-
-        dispatch(addAuth(authData));
-        return authData;
+        await authService.signUp(data);
+        
+       
       } catch (err: any) {
         setError(err.message || "Sign up failed");
         throw err;

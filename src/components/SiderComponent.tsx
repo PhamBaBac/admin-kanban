@@ -72,14 +72,14 @@ const SiderComponent = () => {
       // ],
     },
     {
-      key: "Manage Store",
-      label: <Link to={"/manage-store"}>Manage Store</Link>,
-      icon: <CiViewList size={20} />,
-    },
-    {
       key: "Promotions",
       label: <Link to={"/promotions"}>Promotions</Link>,
       icon: <PercentageSquare size={20} />,
+    },
+    {
+      key: "Support",
+      label: <Link to={"/support"}>Support</Link>,
+      icon: <CiViewList size={20} className="text-muted" />,
     },
   ];
 	return (

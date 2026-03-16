@@ -7,4 +7,5 @@ import ProductDetail from "./inventories/ProductDetail";
 import Suppliers from "./Suppliers";
 import PromotionScreen from "./PromotionScreen";
 import OrdersScreen from "./orders";
+
 export { Login, SignUp, HomeScreen, Inventories, ProductDetail,Categories, Suppliers,PromotionScreen,OrdersScreen};

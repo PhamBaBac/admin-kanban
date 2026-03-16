@@ -3,7 +3,7 @@ import { localDataNames } from "../constants/appInfos";
 import AuthRouter from "./AuthRouter";
 import MainRouter from "./MainRouter";
 import { Spin } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { addAuth, authSeletor, AuthState } from "../redux/reducers/authReducer";
 import handleAPI from "../apis/handleAPI";
@@ -18,6 +18,7 @@ const Router = () => {
 
   const urlParams = new URLSearchParams(location.search);
   const accessToken = urlParams.get("accessToken");
+  console.log("accessToken", accessToken)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +32,6 @@ const Router = () => {
           );
           dispatch(addAuth({ accessToken: accessToken }));
 
-          // Sử dụng hook để lấy user info thay vì gọi handleAPI trực tiếp
           const userRes = await getUserInfo();
           dispatch(
             addAuth({

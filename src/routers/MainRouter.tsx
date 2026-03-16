@@ -70,7 +70,7 @@ const MainRouter = () => {
             <Route path="/orders" element={<OrdersScreen />} />
 
             {/* Fallback 404 */}
-            <Route path="*" element={<Navigate to="/" />} />
+            {/* <Route path="*" element={<Navigate to="/" />} /> */}
           </Routes>
         </Content>
 

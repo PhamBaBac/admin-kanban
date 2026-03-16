@@ -7,44 +7,15 @@ import { Avatar, Badge, Button, Dropdown, message, Space } from "antd";
 import { Notification } from "iconsax-react";
 import { colors } from "../constants/colors";
 import { authSeletor, removeAuth } from "../redux/reducers/authReducer";
-import { initSocket } from "../connect/SocketIO";
 
 const HeaderComponent = () => {
   const auth = useSelector(authSeletor);
+  console.log("HeaderComponent - auth from Redux:", auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const socketRef = useRef<any>(null);
   const [notifyCount, setNotifyCount] = useState(0);
 
-  useEffect(() => {
-    if (!auth?.userId || !auth?.role) return;
-
-    socketRef.current = initSocket(auth.accessToken, auth.userId, auth.role);
-
-    socketRef.current.on("connect", () => {
-      console.log(socketRef.current.id, auth.role);
-    });
-
-    socketRef.current.on("disconnect", () => {
-      console.log("Disconnected from Socket.IO server");
-    });
-
-    socketRef.current.on("orderCancelled", (data: any) => {
-      // Mỗi lần nhận thông báo, tăng số lượng lên 1
-      setNotifyCount((prev) => prev + 1);
-      console.log("Order Cancelled:", data);
-      // Hiển thị thông báoử dụng thư viện như antd message
-      message.info(`Order Cancelled: ${data.orderId}`);
-    });
-
-    return () => {
-      if (socketRef.current) {
-        console.log("Disconnecting old socket:", socketRef.current.id);
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, [auth?.userId, auth?.role]);
 
   const items = [
     {

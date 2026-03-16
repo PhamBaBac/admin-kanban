@@ -9,9 +9,13 @@ import store from "../redux/store";
 const baseURL = `http://localhost:8080/api/v1`;
 
 const getAuthData = () => {
-  const res = localStorage.getItem(localDataNames.authData);
-  if (res) return JSON.parse(res);
-  return null;
+  try {
+    const res = localStorage.getItem(localDataNames.authData);
+    if (!res) return null;
+    return JSON.parse(res);
+  } catch {
+    return null;
+  }
 };
 
 const getAccessToken = () => {
@@ -106,12 +110,15 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    const isLoginRequest = originalRequest.url?.includes("/auth/authenticate");
-    const isRefreshRequest = originalRequest.url?.includes(
+    if (!originalRequest) {
+      return Promise.reject(error.response?.data || error.message || error);
+    }
+
+    const isLoginRequest = originalRequest?.url?.includes("/auth/authenticate");
+    const isRefreshRequest = originalRequest?.url?.includes(
       "/auth/refresh-token"
     );
 
-    // Nếu đang login hoặc refresh mà vẫn lỗi thì không làm gì thêm
     if (isLoginRequest || isRefreshRequest) {
       return Promise.reject(error.response?.data || error.message);
     }
@@ -133,6 +140,5 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error.response?.data || error.message);
   }
 );
-
 
 export default axiosClient;
