@@ -21,19 +21,22 @@ export interface PromotionUpdateRequest
 export const promotionService = {
   getPromotions: async (): Promise<PromotionModel[]> => {
     const response = await handleAPI("/promotions");
-    return response.data;
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return Array.isArray(response?.data) ? response.data : [];
   },
 
   getPromotionById: async (id: string): Promise<PromotionModel> => {
     const response = await handleAPI(`/promotions/${id}`);
-    return response.data;
+    return response?.data || response;
   },
 
   createPromotion: async (
     data: PromotionCreateRequest
   ): Promise<PromotionModel> => {
-    const response = await handleAPI("/promotions", data, "post");
-    return response.data;
+    const response = await handleAPI("/promotions/addNew", data, "post");
+    return response?.data || response;
   },
 
   updatePromotion: async (

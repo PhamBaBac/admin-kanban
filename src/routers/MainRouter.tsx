@@ -41,9 +41,9 @@ const { Content, Footer } = Layout;
 
 const MainRouter = () => {
   return (
-    <Layout>
+    <Layout style={{ minHeight: "100vh" }}>
       <SiderComponent />
-      <Layout style={{ backgroundColor: "#fff" }}>
+      <Layout style={{ backgroundColor: "#fff", height: "100vh", overflow: "auto" }}>
         <HeaderComponent />
 
         <Content className="pt-3 container-fluid">
@@ -69,8 +69,12 @@ const MainRouter = () => {
             <Route path="/promotions" element={<PromotionScreen />} />
             <Route path="/orders" element={<OrdersScreen />} />
 
+            {/* Redirect auth routes if already authenticated */}
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/sign-up" element={<Navigate to="/" replace />} />
+
             {/* Fallback 404 */}
-            {/* <Route path="*" element={<Navigate to="/" />} /> */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Content>
 

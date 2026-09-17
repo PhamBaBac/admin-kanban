@@ -167,6 +167,23 @@ export const useProducts = () => {
     []
   );
 
+  const filterProducts = useCallback(
+    async (filters: any): Promise<ProductListResponse> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await productService.filterProducts(filters);
+        return response;
+      } catch (err: any) {
+        setError(err.message || "Failed to filter products");
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     getProducts,
     getProductById,
@@ -174,6 +191,7 @@ export const useProducts = () => {
     updateProduct,
     deleteProduct,
     getFilterValues,
+    filterProducts,
     getSubProducts,
     createSubProduct,
     updateSubProduct,

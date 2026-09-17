@@ -33,7 +33,13 @@ import { productService } from "../../services/productService";
 const { confirm } = Modal;
 
 const Inventories = () => {
-  const { getProducts, deleteProduct, loading, error } = useProducts();
+  const {
+    getProducts,
+    deleteProduct,
+    filterProducts: filterProductsApi,
+    loading,
+    error,
+  } = useProducts();
   const [products, setProducts] = useState<ProductModel[]>([]);
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
   const [productSelected, setProductSelected] = useState<ProductModel>();
@@ -43,13 +49,18 @@ const Inventories = () => {
   const [total, setTotal] = useState<number>(10);
   const [searchKey, setSearchKey] = useState("");
   const [isFilting, setIsFilting] = useState(false);
+  const [filterValues, setFilterValues] = useState<FilterProductValue>({});
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!searchKey)
+    if (isFilting) {
+      executeFilter(filterValues, page, pageSize);
+    } else if (!searchKey) {
       fetchProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
-  }, [searchKey, page, pageSize]);
+    }
+  }, [searchKey, page, pageSize, isFilting]);
 
   // Refresh data khi quay lại từ AddProduct
   useEffect(() => {
@@ -153,23 +164,68 @@ const Inventories = () => {
     }
   };
 
-  const handleFilterProducts = async (vals: FilterProductValue) => {
-    if (typeof vals.colors === "string") {
-      vals.colors = (vals.colors as string).includes(",")
-        ? (vals.colors as string).split(",").map((c) => c.trim())
-        : [vals.colors as string];
-    } else if (!Array.isArray(vals.colors)) {
-      vals.colors = [];
-    }
-
-    setIsFilting(true);
+  const executeFilter = async (
+    vals: FilterProductValue,
+    targetPage = 1,
+    targetPageSize = pageSize
+  ) => {
     try {
-      const res = await getProducts({ ...vals, method: "filter" });
-      setProducts(res.data);
-      setTotal(res.totalElements);
+      const res = await filterProductsApi({
+        ...vals,
+        page: targetPage,
+        pageSize: targetPageSize,
+      });
+
+      const productsData = res.data || [];
+      const totalItems = res.totalElements || 0;
+
+      const subProductMap: { [key: string]: SubProductModel[] } = {};
+      await Promise.all(
+        productsData.map(async (product: ProductModel) => {
+          const resSubs = await productService.getSubProducts(product.id);
+          subProductMap[product.id] = resSubs || [];
+        })
+      );
+
+      const enrichedProducts = productsData.map((item: any) => ({
+        ...item,
+        key: item.id,
+        subProducts: subProductMap[item.id] || [],
+      }));
+
+      setProducts(enrichedProducts);
+      setTotal(totalItems);
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const handleFilterProducts = async (vals: FilterProductValue) => {
+    setFilterValues(vals);
+    setIsFilterOpen(false);
+
+    const hasActiveFilter = Boolean(
+      (vals.catIds && vals.catIds.length > 0) ||
+        (vals.price && vals.price.length === 2)
+    );
+
+    if (!hasActiveFilter) {
+      setIsFilting(false);
+      setPage(1);
+      fetchProducts(`/products/page?page=1&pageSize=${pageSize}`);
+      return;
+    }
+
+    setIsFilting(true);
+    setPage(1);
+    await executeFilter(vals, 1, pageSize);
+  };
+
+  const handleClearFilter = async () => {
+    setFilterValues({});
+    setIsFilting(false);
+    setPage(1);
+    await fetchProducts(`/products/page?page=1&pageSize=${pageSize}`);
   };
 
   const columns: ColumnProps<ProductModel>[] = [
@@ -390,15 +446,7 @@ const Inventories = () => {
           <div className="d-flex justify-content-end">
             <Space>
               {isFilting && (
-                <Button
-                  onClick={async () => {
-                    setPage(1);
-                    await fetchProducts(
-                      `/products/page?page=${page}&pageSize=${pageSize}`
-                    );
-                    setIsFilting(false);
-                  }}
-                >
+                <Button onClick={handleClearFilter}>
                   Clear filter values
                 </Button>
               )}
@@ -418,11 +466,23 @@ const Inventories = () => {
                 allowClear
               />
               <Dropdown
-                popupRender={() => (
-                  <FilterProduct values={{}} onFilter={handleFilterProducts} />
+                open={isFilterOpen}
+                onOpenChange={setIsFilterOpen}
+                trigger={["click"]}
+                dropdownRender={() => (
+                  <FilterProduct
+                    values={filterValues}
+                    onFilter={handleFilterProducts}
+                    onClose={() => setIsFilterOpen(false)}
+                  />
                 )}
               >
-                <Button icon={<Sort size={20} />}>Filter</Button>
+                <Button
+                  icon={<Sort size={20} />}
+                  type={isFilting ? "primary" : "default"}
+                >
+                  Filter {isFilting ? "(Active)" : ""}
+                </Button>
               </Dropdown>
             </Space>
           </div>
@@ -433,6 +493,8 @@ const Inventories = () => {
         rowSelection={rowSelection}
         pagination={{
           showSizeChanger: true,
+          current: page,
+          pageSize: pageSize,
           total,
           onChange: (page, size) => {
             setPage(page);

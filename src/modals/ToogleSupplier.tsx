@@ -15,7 +15,7 @@ const { Paragraph } = Typography;
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onAddNew: () => void;
+  onAddNew: (val?: any) => void;
   supplier?: SupplierModel;
 }
 
@@ -84,15 +84,16 @@ const ToogleSupplier = (props: Props) => {
 
     data.categories = values.categories;
     try {
+      let res: any;
       if (supplier) {
-        await updateSupplier({ ...data, id: supplier.id });
+        res = await updateSupplier({ ...data, id: supplier.id });
       } else {
-        await createSupplier(data);
+        res = await createSupplier(data);
       }
       message.success(
         supplier ? "Cập nhật supplier thành công!" : "Thêm supplier thành công!"
       );
-      onAddNew();
+      onAddNew(res);
       handleClose();
     } catch (error) {
       console.log(error);
@@ -137,6 +138,7 @@ const ToogleSupplier = (props: Props) => {
       loading={isGetting}
       closable={!isLoading}
       open={visible}
+      destroyOnClose
       onCancel={handleClose}
       onOk={() => form.submit()}
       okButtonProps={{

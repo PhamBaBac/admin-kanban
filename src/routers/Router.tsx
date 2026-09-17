@@ -3,14 +3,12 @@ import { localDataNames } from "../constants/appInfos";
 import AuthRouter from "./AuthRouter";
 import MainRouter from "./MainRouter";
 import { Spin } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { addAuth, authSeletor, AuthState } from "../redux/reducers/authReducer";
-import handleAPI from "../apis/handleAPI";
 import { useAuth } from "../hooks/useAuth";
 
 const Router = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const auth: AuthState = useSelector(authSeletor);
   const dispatch = useDispatch();
   const location = useLocation();
@@ -18,14 +16,13 @@ const Router = () => {
 
   const urlParams = new URLSearchParams(location.search);
   const accessToken = urlParams.get("accessToken");
-  console.log("accessToken", accessToken)
+  const [isLoading, setIsLoading] = useState(Boolean(accessToken));
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-
-      try {
-        if (accessToken) {
+      if (accessToken) {
+        setIsLoading(true);
+        try {
           localStorage.setItem(
             localDataNames.authData,
             JSON.stringify({ accessToken: accessToken })
@@ -43,21 +40,33 @@ const Router = () => {
               avatar: userRes.avatarUrl,
             })
           );
-        } else {
-          const res = localStorage.getItem(localDataNames.authData);
-          res && dispatch(addAuth(JSON.parse(res)));
+        } catch (e) {
+          console.error("Lỗi trong quá trình xác thực:", e);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (e) {
-        console.error("Lỗi trong quá trình xác thực:", e);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchData();
   }, [accessToken]);
 
-  return isLoading ? <Spin /> : !auth.accessToken ? <AuthRouter /> : <MainRouter />;
+  return isLoading ? (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+      }}
+    >
+      <Spin size="large" />
+    </div>
+  ) : !auth.accessToken ? (
+    <AuthRouter />
+  ) : (
+    <MainRouter />
+  );
 };
 
 export default Router;

@@ -92,4 +92,44 @@ export const productService = {
     const response = await handleAPI("/subProducts/get-filter-values");
     return response.data;
   },
+
+  filterProducts: async (filters: any): Promise<ProductListResponse> => {
+    const params = new URLSearchParams();
+
+    if (filters.search && filters.search.trim()) {
+      params.append("search", filters.search.trim());
+    }
+
+    if (filters.catIds && filters.catIds.length > 0) {
+      filters.catIds.forEach((id: string) => params.append("catIds", id));
+    }
+
+    if (filters.sizes && filters.sizes.length > 0) {
+      filters.sizes.forEach((size: string) => params.append("sizes", size));
+    } else if (filters.size) {
+      params.append("sizes", filters.size);
+    }
+
+    if (filters.colors && filters.colors.length > 0) {
+      filters.colors.forEach((color: string) => params.append("colors", color));
+    }
+
+    if (filters.price && filters.price.length === 2) {
+      params.append("price", filters.price[0].toString());
+      params.append("price", filters.price[1].toString());
+    }
+
+    if (filters.page) {
+      params.append("page", filters.page.toString());
+    }
+
+    if (filters.pageSize) {
+      params.append("pageSize", filters.pageSize.toString());
+    }
+
+    const queryString = params.toString();
+    const url = `/public/products/filter${queryString ? `?${queryString}` : ""}`;
+    const response = await handleAPI(url, undefined, "post");
+    return response.data;
+  },
 };

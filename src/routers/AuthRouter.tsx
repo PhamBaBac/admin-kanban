@@ -1,6 +1,6 @@
 /** @format */
 
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import { Typography } from "antd";
 import { Login, SignUp } from "../pages";
 import { appInfo } from "../constants/appInfos";
@@ -32,8 +32,10 @@ const AuthRouter = () => {
 
         <div className="col content-center">
           <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/sign-up" element={<SignUp />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
       </div>

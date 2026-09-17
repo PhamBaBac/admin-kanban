@@ -1,11 +1,8 @@
 /** @format */
 
-import { Card, DatePicker, Dropdown, Empty, Radio, Spin } from "antd";
-import React, { useEffect, useState } from "react";
+import { Card, Empty, Radio, Spin } from "antd";
+import { useEffect, useState, useMemo } from "react";
 import { Bar, Line } from "react-chartjs-2";
-import handleAPI from "../apis/handleAPI";
-import { DateTime } from "../utils/dateTime";
-import { add0toNumber } from "../utils/add0toNumber";
 import { useStatistics } from "../hooks/useStatistics";
 
 const SalesAndPurchaseStatistic = () => {
@@ -25,6 +22,7 @@ const SalesAndPurchaseStatistic = () => {
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "bottom" as const,
@@ -45,22 +43,31 @@ const SalesAndPurchaseStatistic = () => {
       const res: any = await getSalesAndPurchaseData({
         timeType: timeTypeSelected,
       });
-      setDatas(res.result || res);
+      const dataArray = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.result)
+        ? res.result
+        : [];
+      setDatas(dataArray);
     } catch (error) {
-      console.log(error);
+      console.error("Failed to load statistics:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const renderChart = () => {
+  const chartData = useMemo(() => {
+    const list = Array.isArray(datas) ? datas : [];
     return {
-      labels: datas.map((item) => {
+      labels: list.map((item) => {
+        if (!item || !item.date) return "";
         if (timeTypeSelected === "yearly") {
           return item.date; // "2025"
         } else if (timeTypeSelected === "weekly") {
-          const weekNumber = item.date.split("-W")[1];
-          return `Week ${weekNumber}`;
+          const parts = String(item.date).split("-W");
+          return parts[1] ? `Week ${parts[1]}` : item.date;
         } else {
           return item.date; // monthly: "YYYY-MM"
         }
@@ -68,27 +75,26 @@ const SalesAndPurchaseStatistic = () => {
       datasets: [
         {
           label: "Sales",
-          data: datas.map((item) => item.data.purchase),
+          data: list.map((item) => item?.data?.purchase ?? 0),
           backgroundColor: "rgba(255, 99, 132, 0.2)",
           borderColor: "rgba(255, 99, 132, 1)",
           borderWidth: 1,
         },
         {
           label: "Orders",
-          data: datas.map((item) => item.data.orders),
+          data: list.map((item) => item?.data?.orders ?? 0),
           backgroundColor: "rgba(54, 162, 235, 0.2)",
           borderColor: "rgba(54, 162, 235, 1)",
           borderWidth: 1,
         },
       ],
     };
-  };
+  }, [datas, timeTypeSelected]);
 
-  return isLoading || statisticsLoading ? (
-    <div className="text-center">
-      <Spin />
-    </div>
-  ) : datas ? (
+  const loading = isLoading || statisticsLoading;
+  const hasData = datas && datas.length > 0;
+
+  return (
     <div className="row mt-4">
       <div className="col-sm-12 col-md-6">
         <Card
@@ -112,17 +118,35 @@ const SalesAndPurchaseStatistic = () => {
             />
           }
         >
-          <Bar data={renderChart()} options={options} />
+          <Spin spinning={loading}>
+            <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {hasData ? (
+                <div style={{ width: "100%", height: "100%" }}>
+                  <Bar data={chartData} options={options} />
+                </div>
+              ) : (
+                <Empty description="No data" />
+              )}
+            </div>
+          </Spin>
         </Card>
       </div>
       <div className="col-sm-12 col-md-6">
         <Card title="Sales summary">
-          <Line data={renderChart()} options={options} />
+          <Spin spinning={loading}>
+            <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {hasData ? (
+                <div style={{ width: "100%", height: "100%" }}>
+                  <Line data={chartData} options={options} />
+                </div>
+              ) : (
+                <Empty description="No data" />
+              )}
+            </div>
+          </Spin>
         </Card>
       </div>
     </div>
-  ) : (
-    <Empty />
   );
 };
 

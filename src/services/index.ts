@@ -7,3 +7,4 @@ export * from "./promotionService";
 export * from "./statisticService";
 export * from "./userService";
 export * from "./supportService";
+export * from "./aiService";

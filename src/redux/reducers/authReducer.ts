@@ -21,6 +21,24 @@ const initialState: AuthState = {
   userId: "",
 };
 
+const getInitialAuth = (): AuthState => {
+  try {
+    const data = localStorage.getItem(localDataNames.authData);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (parsed?.accessToken) {
+        return {
+          ...initialState,
+          ...parsed,
+        };
+      }
+    }
+  } catch (e) {
+    console.error("Failed to parse authData from localStorage", e);
+  }
+  return initialState;
+};
+
 const syncLocal = (data: any) => {
   localStorage.setItem(localDataNames.authData, JSON.stringify(data));
 };
@@ -28,7 +46,7 @@ const syncLocal = (data: any) => {
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    data: initialState,
+    data: getInitialAuth(),
   },
   reducers: {
     addAuth: (state, action) => {

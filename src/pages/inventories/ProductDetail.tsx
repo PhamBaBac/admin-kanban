@@ -15,7 +15,9 @@ import {
   Button,
   Modal,
   message,
+  Tooltip,
 } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
 import { ColumnProps } from "antd/es/table";
 import { Edit2, Trash } from "iconsax-react";
 import { VND } from "../../utils/handleCurrency";
@@ -30,6 +32,7 @@ const ProductDetail = () => {
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
   const [subProductSelected, setSubProductSelected] =
     useState<SubProductModel>();
+  const [cloneVariant, setCloneVariant] = useState<Partial<SubProductModel>>();
   const [removingSubProductId, setRemovingSubProductId] = useState<
     string | null
   >(null);
@@ -95,18 +98,40 @@ const ProductDetail = () => {
       ),
     },
     {
-      title: "Size",
-      key: "size",
-      dataIndex: "size",
-      render: (size: string) => <Tag>{size}</Tag>,
-      align: "center",
-    },
-    {
-      title: "Color",
-      key: "color",
-      dataIndex: "color",
-      render: (color: string) => <Tag color={color}>{color}</Tag>,
-      align: "center",
+      title: "Phân loại / Thuộc tính",
+      key: "attributes",
+      render: (_: any, item: SubProductModel) => {
+        const attrs = item.attributes;
+        if (attrs && Object.keys(attrs).length > 0) {
+          return (
+            <Space wrap size={[4, 4]}>
+              {Object.entries(attrs).map(([key, val]) => {
+                const isColor =
+                  key.toLowerCase() === "color" || key.toLowerCase() === "màu sắc";
+                const isHexColor = isColor && val.startsWith("#");
+                return (
+                  <Tag
+                    key={key}
+                    color={isHexColor ? val : undefined}
+                    style={{
+                      border: isHexColor ? "1px solid #bbb" : undefined,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {key}: {val}
+                  </Tag>
+                );
+              })}
+            </Space>
+          );
+        }
+        return (
+          <Space wrap size={[4, 4]}>
+            {item.color && <Tag color={item.color}>{item.color}</Tag>}
+            {item.size && <Tag>{item.size}</Tag>}
+          </Space>
+        );
+      },
     },
     {
       key: "price",
@@ -134,30 +159,56 @@ const ProductDetail = () => {
       dataIndex: "",
       render: (item: SubProductModel) => (
         <Space>
-          <Button
-            type="text"
-            onClick={() => {
-              setSubProductSelected(item);
-              setIsVisibleAddSubProduct(true);
-            }}
-            icon={<Edit2 variant="Bold" color={colors.primary500} size={18} />}
-          />
-          <Button
-            loading={removingSubProductId === item.id}
-            onClick={() =>
-              Modal.confirm({
-                title: "Confirm",
-                content:
-                  "Are you sure you want to remove this sub product item?",
-                onOk: async () => {
-                  await handleRemoveSubProduct(item.id);
-                },
-              })
-            }
-            type="text"
-            danger
-            icon={<Trash variant="Bold" size={18} />}
-          />
+          <Tooltip title="Chép biến thể">
+            <Button
+              type="text"
+              onClick={() => {
+                setProductSelected(productDetail);
+                setSubProductSelected(undefined); // Chế độ thêm mới
+                const { id: _, ...rest } = item;
+                setCloneVariant({
+                  ...rest,
+                  images: item.images ? [...item.images] : [],
+                  attributes: item.attributes ? { ...item.attributes } : undefined,
+                });
+                setIsVisibleAddSubProduct(true);
+              }}
+              icon={
+                <CopyOutlined
+                  style={{ fontSize: 18, color: colors.primary500 }}
+                />
+              }
+            />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa biến thể">
+            <Button
+              type="text"
+              onClick={() => {
+                setCloneVariant(undefined);
+                setSubProductSelected(item);
+                setIsVisibleAddSubProduct(true);
+              }}
+              icon={<Edit2 variant="Bold" color={colors.primary500} size={18} />}
+            />
+          </Tooltip>
+          <Tooltip title="Xóa biến thể">
+            <Button
+              loading={removingSubProductId === item.id}
+              onClick={() =>
+                Modal.confirm({
+                  title: "Confirm",
+                  content:
+                    "Are you sure you want to remove this sub product item?",
+                  onOk: async () => {
+                    await handleRemoveSubProduct(item.id);
+                  },
+                })
+              }
+              type="text"
+              danger
+              icon={<Trash variant="Bold" size={18} />}
+            />
+          </Tooltip>
         </Space>
       ),
       align: "right",
@@ -175,6 +226,8 @@ const ProductDetail = () => {
           <Button
             onClick={() => {
               setProductSelected(productDetail); // Đảm bảo luôn có productSelected
+              setSubProductSelected(undefined); // Reset biến thể được chọn để là THÊM MỚI
+              setCloneVariant(undefined);
               setIsVisibleAddSubProduct(true);
             }}
             type="primary"
@@ -190,7 +243,10 @@ const ProductDetail = () => {
         <AddSubProductModal
           product={productSelected}
           visible={isVisibleAddSubProduct}
+          initialValues={cloneVariant}
           onClose={() => {
+            setSubProductSelected(undefined);
+            setCloneVariant(undefined);
             setIsVisibleAddSubProduct(false);
           }}
           subProduct={subProductSelected}
@@ -204,6 +260,8 @@ const ProductDetail = () => {
               // Nếu là thêm mới, thêm vào cuối mảng
               return [...prev, val];
             });
+            setSubProductSelected(undefined);
+            setCloneVariant(undefined);
           }}
         />
       )}

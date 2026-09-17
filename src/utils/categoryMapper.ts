@@ -21,5 +21,6 @@ export const mapCategoryToCategoyModel = (category: Category): CategoyModel => {
 export const mapCategoriesToCategoyModels = (
   categories: Category[]
 ): CategoyModel[] => {
+  if (!Array.isArray(categories)) return [];
   return categories.map(mapCategoryToCategoyModel);
 };

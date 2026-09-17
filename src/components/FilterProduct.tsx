@@ -5,28 +5,25 @@ import {
   Card,
   Empty,
   Form,
+  InputNumber,
   Select,
-  Slider,
-  Space,
   Spin,
-  Typography,
 } from "antd";
 import { useEffect, useState } from "react";
-import handleAPI from "../apis/handleAPI";
 import { SelectModel } from "../models/SelectModel";
 import { useCategories } from "../hooks/useCategories";
-import { useProducts } from "../hooks/useProducts";
 
 export interface FilterProductValue {
-  colors?: string[];
   catIds?: string[];
-  size?: string;
   price?: number[];
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 interface Props {
   values: FilterProductValue;
   onFilter: (vals: FilterProductValue) => void;
+  onClose?: () => void;
 }
 
 const FilterProduct = (props: Props) => {
@@ -35,33 +32,17 @@ const FilterProduct = (props: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectDatas, setSelectDatas] = useState<{
     catIds: SelectModel[];
-    colors: string[];
-    prices: number[];
-    sizes: SelectModel[];
   }>();
-  const [colorSelected, setColorSelected] = useState<string[]>([]);
   const [form] = Form.useForm();
 
   const { getAllCategories } = useCategories();
-  const { getFilterValues } = useProducts();
 
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
       try {
-        const [catIds, filterValues] = await Promise.all([
-          getCategories(),
-          getFilterValuesHook(),
-        ]);
-
-        const { colors, sizes, prices } = filterValues;
-
-        setSelectDatas({
-          catIds: catIds,
-          colors,
-          sizes,
-          prices,
-        });
+        const catIds = await getCategories();
+        setSelectDatas({ catIds });
       } catch (error) {
         console.log(error);
       } finally {
@@ -74,12 +55,23 @@ const FilterProduct = (props: Props) => {
 
   useEffect(() => {
     if (values) {
-      form.setFieldsValue(values);
-      if (values.colors) {
-        setColorSelected(
-          Array.isArray(values.colors) ? values.colors : [values.colors]
-        );
-      }
+      form.setFieldsValue({
+        catIds: values.catIds,
+        minPrice:
+          values.minPrice !== undefined
+            ? values.minPrice
+            : values.price
+            ? values.price[0]
+            : undefined,
+        maxPrice:
+          values.maxPrice !== undefined
+            ? values.maxPrice
+            : values.price
+            ? values.price[1]
+            : undefined,
+      });
+    } else {
+      form.resetFields();
     }
   }, [values, form]);
 
@@ -92,110 +84,126 @@ const FilterProduct = (props: Props) => {
         }))
       : [];
   };
-  const getFilterValuesHook = async () => {
-    const res: any = await getFilterValues();
-    const raw = res.result || res;
-    return {
-      colors: raw.colors || [],
-      prices: raw.prices || [],
-      sizes: (raw.sizes || []).map((size: string) => ({
-        label: size,
-        value: size,
-      })),
-    };
-  };
 
   const handleFilter = (formValues: any) => {
-    const result: FilterProductValue = {
-      ...formValues,
-      colors: colorSelected.length > 0 ? colorSelected : undefined,
-    };
-    onFilter(result);
+    const { catIds, minPrice, maxPrice } = formValues;
+    let price: number[] | undefined = undefined;
+
+    const hasMin = minPrice !== undefined && minPrice !== null && minPrice !== "";
+    const hasMax = maxPrice !== undefined && maxPrice !== null && maxPrice !== "";
+
+    if (hasMin && hasMax) {
+      price = [Number(minPrice), Number(maxPrice)];
+    } else if (hasMin) {
+      price = [Number(minPrice), 99999999];
+    } else if (hasMax) {
+      price = [0, Number(maxPrice)];
+    }
+
+    onFilter({
+      catIds,
+      price,
+      minPrice: hasMin ? Number(minPrice) : undefined,
+      maxPrice: hasMax ? Number(maxPrice) : undefined,
+    });
+  };
+
+  const handleReset = () => {
+    form.resetFields();
+    onFilter({});
   };
 
   return (
     <Card
       size="small"
       title="Filter values"
-      className="filter-card"
+      className="filter-card shadow-sm"
       style={{ width: 320 }}
     >
       {isLoading ? (
-        <Spin />
+        <div className="text-center py-4">
+          <Spin />
+        </div>
       ) : selectDatas ? (
         <>
           <Form
             form={form}
             layout="vertical"
             onFinish={handleFilter}
-            initialValues={values}
+            initialValues={{
+              catIds: values.catIds,
+              minPrice:
+                values.minPrice !== undefined
+                  ? values.minPrice
+                  : values.price
+                  ? values.price[0]
+                  : undefined,
+              maxPrice:
+                values.maxPrice !== undefined
+                  ? values.maxPrice
+                  : values.price
+                  ? values.price[1]
+                  : undefined,
+            }}
           >
             <Form.Item name="catIds" label="Categories">
               <Select
-                placeholder="Categories"
+                placeholder="Select categories"
                 allowClear
                 mode="multiple"
                 options={selectDatas.catIds}
+                maxTagCount="responsive"
               />
             </Form.Item>
 
-            {selectDatas.colors && selectDatas.colors.length > 0 && (
-              <Space wrap className="mb-3">
-                {selectDatas.colors.map((color) => (
-                  <Button
-                    onClick={() => {
-                      const items = [...colorSelected];
-                      const index = items.findIndex((el) => el === color);
-                      if (index !== -1) {
-                        items.splice(index, 1);
-                      } else {
-                        items.push(color);
-                      }
-                      setColorSelected(items);
-                    }}
-                    key={color}
-                    style={{
-                      borderColor: colorSelected.includes(color)
-                        ? color
-                        : undefined,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 2,
-                        backgroundColor: color,
-                        marginRight: 6,
-                      }}
-                    />
-                    {/* <Typography.Text style={{ color }}>{color}</Typography.Text> */}
-                  </Button>
-                ))}
-              </Space>
-            )}
-
-            <Form.Item name="size" label="Sizes">
-              <Select
-                options={selectDatas.sizes}
-                allowClear
-                placeholder="Size"
-              />
+            <Form.Item label="Price (VND)">
+              <div className="d-flex align-items-center" style={{ gap: 8 }}>
+                <Form.Item name="minPrice" noStyle>
+                  <InputNumber
+                    placeholder="Min"
+                    min={0}
+                    max={99999999}
+                    formatter={(value) =>
+                      value !== undefined && value !== null
+                        ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                        : ""
+                    }
+                    parser={(value) =>
+                      value
+                        ? (value.replace(/\./g, "").replace(/,/g, "") as any)
+                        : ""
+                    }
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+                <span className="text-muted fw-bold">-</span>
+                <Form.Item name="maxPrice" noStyle>
+                  <InputNumber
+                    placeholder="Max"
+                    min={0}
+                    max={99999999}
+                    formatter={(value) =>
+                      value !== undefined && value !== null
+                        ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                        : ""
+                    }
+                    parser={(value) =>
+                      value
+                        ? (value.replace(/\./g, "").replace(/,/g, "") as any)
+                        : ""
+                    }
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+              </div>
             </Form.Item>
-
-            {selectDatas.prices && selectDatas.prices.length > 0 && (
-              <Form.Item name={"price"} label="Price">
-                <Slider
-                  range
-                  min={Math.min(...selectDatas.prices)}
-                  max={Math.max(...selectDatas.prices)}
-                />
-              </Form.Item>
-            )}
           </Form>
 
-          <div className="mt-4 text-right">
-            <Button type="primary" onClick={() => form.submit()}>
+          <div className="mt-3 d-flex justify-content-between">
+            <Button size="middle" onClick={handleReset}>
+              Reset
+            </Button>
+            <Button type="primary" size="middle" onClick={() => form.submit()}>
               Filter
             </Button>
           </div>

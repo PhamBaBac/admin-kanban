@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { PromotionModel } from "../models/PromotionModel";
 import { Avatar, Button, Image, Modal, Space, Table } from "antd";
 import { Edit2, Trash } from "iconsax-react";
-import AddPromotion from "../modals/AddPromotion ";
+import AddPromotion from "../modals/AddPromotion";
 import { usePromotions } from "../hooks/usePromotions";
 
 const { confirm } = Modal;
@@ -24,9 +24,15 @@ const PromotionScreen = () => {
   const fetchPromotions = async () => {
     try {
       const response = await getPromotions();
-      setPromotions(response);
+      const list = Array.isArray(response)
+        ? response
+        : Array.isArray((response as any)?.data)
+        ? (response as any).data
+        : [];
+      setPromotions(list);
     } catch (error) {
       console.log(error);
+      setPromotions([]);
     }
   };
 
@@ -79,10 +85,10 @@ const PromotionScreen = () => {
     },
     {
       key: "btn",
-      dataIndex: "",
+      title: "Actions",
       align: "right",
       fixed: "right",
-      render: (item: PromotionModel) => (
+      render: (_: any, item: PromotionModel) => (
         <Space>
           <Button
             onClick={() => {
@@ -97,7 +103,7 @@ const PromotionScreen = () => {
               confirm({
                 title: "Confirm",
                 content: "Are you sure you want to remove this promotion?",
-                onOk: () => handleRemovePromotion(item.id),
+                onOk: () => item?.id && handleRemovePromotion(item.id),
               })
             }
             type="text"
@@ -118,7 +124,12 @@ const PromotionScreen = () => {
           Add new promotion
         </Button>
         <div className="mt-3"></div>
-        <Table loading={loading} columns={columns} dataSource={promotions} />
+        <Table
+          rowKey={(record) => record.id}
+          loading={loading}
+          columns={columns}
+          dataSource={Array.isArray(promotions) ? promotions : []}
+        />
       </div>
 
       <AddPromotion
@@ -127,13 +138,13 @@ const PromotionScreen = () => {
           if (promotionSelected) {
             // Update: thay thế promotion cũ
             setPromotions((prev) =>
-              prev.map((p) =>
+              (prev || []).map((p) =>
                 p.id === promotionSelected.id ? newPromotion : p
               )
             );
           } else {
             // Add: thêm promotion mới
-            setPromotions((prev) => [...prev, newPromotion]);
+            setPromotions((prev) => [...(prev || []), newPromotion]);
           }
           setPromotionSelected(undefined);
           setIsVisibleModalAddPromotion(false);

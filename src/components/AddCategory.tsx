@@ -6,6 +6,8 @@ import { replaceName } from "../utils/replaceName";
 import { useCategories } from "../hooks/useCategories";
 import { TreeModel } from "../models/FormModel";
 import { CategoyModel } from "../models/Products";
+import { BsStars } from "react-icons/bs";
+import { aiService } from "../services";
 
 interface Props {
   onAddNew: (val: any) => void;
@@ -17,6 +19,8 @@ interface Props {
 const AddCategory = (props: Props) => {
   const { values, onAddNew, seleted, onClose } = props;
   const { createCategory, updateCategory, loading } = useCategories();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (seleted) {
@@ -24,14 +28,12 @@ const AddCategory = (props: Props) => {
     } else {
       form.resetFields();
     }
-  }, [seleted]);
+  }, [seleted, form]);
 
   // Reset parentId khi values (treeValues) thay đổi để TreeSelect nhận dữ liệu mới
   useEffect(() => {
     form.setFieldsValue({ parentId: undefined });
-  }, [values]);
-
-  const [form] = Form.useForm();
+  }, [values, form]);
 
   const handleCategory = async (values: any) => {
     const data: any = {};
@@ -60,6 +62,31 @@ const AddCategory = (props: Props) => {
       form.resetFields();
     } catch (error: any) {
       message.error(error.message);
+    }
+  };
+
+  const handleAiGenerate = async () => {
+    const title = form.getFieldValue("title");
+    if (!title || !title.trim()) {
+      message.warning("Vui lòng nhập tên danh mục trước khi dùng AI viết mô tả!");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      const res = await aiService.generateContent({
+        type: "category_description",
+        title: title.trim(),
+      });
+      if (res) {
+        form.setFieldValue("description", res);
+        message.success("AI đã viết xong mô tả danh mục!");
+      }
+    } catch (error: any) {
+      console.error("AI generate category description error:", error);
+      message.error(error?.message || "Lỗi khi AI tạo mô tả danh mục");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -92,7 +119,33 @@ const AddCategory = (props: Props) => {
         >
           <Input allowClear />
         </Form.Item>
-        <Form.Item name={"description"} label="Description">
+        <Form.Item
+          name={"description"}
+          label={
+            <div className="d-flex align-items-center" style={{ gap: 8 }}>
+              <span>Description</span>
+              <Button
+                type="link"
+                size="small"
+                icon={<BsStars size={16} />}
+                loading={isGenerating}
+                onClick={handleAiGenerate}
+                style={{
+                  padding: 0,
+                  height: "auto",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#7928CA",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                AI viết mô tả
+              </Button>
+            </div>
+          }
+        >
           <Input.TextArea rows={4} />
         </Form.Item>
       </Form>

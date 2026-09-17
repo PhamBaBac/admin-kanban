@@ -22,9 +22,9 @@ const ModalCategory = (props: Props) => {
 		<Modal
 			title={'Add category'}
 			open={visible}
+			destroyOnClose
 			onCancel={handleClose}
-			onClose={handleClose}
-			footer={[null]}>
+			footer={null}>
 			<AddCategory
 				values={values}
 				onAddNew={(val) => {

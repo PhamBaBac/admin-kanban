@@ -104,7 +104,6 @@ const ModalExportData = (props: Props) => {
       loading={isGetting}
       open={visible}
       onCancel={onClose}
-      onClose={onClose}
       onOk={handleExport}
       okButtonProps={{
         loading: isLoading,

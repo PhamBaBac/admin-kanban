@@ -29,6 +29,8 @@ import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
 import { mapCategoriesToCategoyModels } from "../../utils/categoryMapper";
 import { uploadFile } from "../../utils/uploadFile";
+import { BsStars } from "react-icons/bs";
+import { aiService } from "../../services";
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -53,6 +55,8 @@ const AddProduct = () => {
   const [fileUrl, setFileUrl] = useState("");
   const [fileList, setFileList] = useState<any[]>([]);
   const [isVisibleAddSupplier, setIsVisibleAddSupplier] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -63,6 +67,7 @@ const AddProduct = () => {
 
   const editorRef = useRef<any>(null);
   const [form] = Form.useForm();
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
     getData();
@@ -96,10 +101,12 @@ const AddProduct = () => {
 
   const getData = async () => {
     try {
-      await getSuppliers();
-      await getCategories();
+      setIsInitialLoading(true);
+      await Promise.all([getSuppliers(), getCategories()]);
     } catch (error: any) {
       message.error(error.message);
+    } finally {
+      setIsInitialLoading(false);
     }
   };
 
@@ -167,8 +174,18 @@ const AddProduct = () => {
     } else {
       data.categories = [];
     }
-
-    const fileListSafe = fileList || [];
+    const fileListSafe = [...(fileList || [])];
+    if (
+      fileUrl &&
+      fileUrl.trim() &&
+      (fileUrl.startsWith("http://") || fileUrl.startsWith("https://"))
+    ) {
+      fileListSafe.push({
+        uid: `${Date.now()}`,
+        url: fileUrl.trim(),
+        status: "done",
+      });
+    }
 
     if (fileListSafe.length > 0) {
       try {
@@ -250,20 +267,99 @@ const AddProduct = () => {
 
     setFileList(items);
   };
+
+  const handleAddImageUrlToProduct = () => {
+    if (!fileUrl || !fileUrl.trim()) {
+      message.warning("Vui lòng nhập đường link ảnh hợp lệ!");
+      return;
+    }
+    const url = fileUrl.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      message.warning("Đường link ảnh phải bắt đầu bằng http:// hoặc https://");
+      return;
+    }
+    const newItem = {
+      uid: `${Date.now()}`,
+      name: `image-${(fileList || []).length + 1}.png`,
+      status: "done",
+      url: url,
+    };
+    setFileList((prev) => [...(prev || []), newItem]);
+    setFileUrl("");
+    message.success("Đã nạp ảnh từ đường link thành công!");
+  };
+
   // Add this handler function near other handlers
   const handleAddNewSupplier = async (val: any) => {
     await getSuppliers(); // Refresh the supplier list
     setIsVisibleAddSupplier(false);
   };
 
-  const isLoading = productsLoading || categoriesLoading || suppliersLoading;
+  const handleAiGenerateDescription = async () => {
+    const title = form.getFieldValue("title");
+    if (!title || !title.trim()) {
+      message.warning("Vui lòng nhập tên sản phẩm trước khi dùng AI viết mô tả!");
+      return;
+    }
 
-  return isLoading ? (
-    <Spin />
+    try {
+      setIsGeneratingDesc(true);
+      const res = await aiService.generateContent({
+        type: "product_description",
+        title: title.trim(),
+      });
+      if (res) {
+        form.setFieldValue("description", res);
+        message.success("AI đã viết xong mô tả sản phẩm!");
+      }
+    } catch (error: any) {
+      console.error("AI generate description error:", error);
+      message.error(error?.message || "Lỗi khi AI tạo mô tả sản phẩm");
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  };
+
+  const handleAiGenerateContent = async () => {
+    const title = form.getFieldValue("title");
+    if (!title || !title.trim()) {
+      message.warning("Vui lòng nhập tên sản phẩm trước khi dùng AI viết bài chi tiết!");
+      return;
+    }
+
+    try {
+      setIsGeneratingContent(true);
+      const desc = form.getFieldValue("description");
+      const res = await aiService.generateContent({
+        type: "product_content",
+        title: title.trim(),
+        context: desc ? `Mô tả ngắn: ${desc}` : undefined,
+      });
+      if (res) {
+        setcontent(res);
+        if (editorRef.current) {
+          editorRef.current.setContent(res);
+        }
+        message.success("AI đã viết xong bài viết chi tiết!");
+      }
+    } catch (error: any) {
+      console.error("AI generate content error:", error);
+      message.error(error?.message || "Lỗi khi AI tạo bài viết chi tiết");
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
+  return isInitialLoading ? (
+    <div
+      className="d-flex justify-content-center align-items-center"
+      style={{ minHeight: "60vh" }}
+    >
+      <Spin size="large" />
+    </div>
   ) : (
     <div>
       <div className="container">
-        <Title level={3}>Add new Product</Title>
         <Form
           disabled={isCreating}
           size="large"
@@ -271,11 +367,34 @@ const AddProduct = () => {
           onFinish={handleAddNewProduct}
           layout="vertical"
         >
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <Title level={3} style={{ margin: 0 }}>
+              {id ? "Update Product" : "Add new Product"}
+            </Title>
+            <Space>
+              <Button
+                loading={isCreating}
+                size="middle"
+                onClick={() => navigate("/inventory")}
+              >
+                Cancel
+              </Button>
+              <Button
+                loading={isCreating}
+                type="primary"
+                size="middle"
+                onClick={() => form.submit()}
+              >
+                {id ? "Update" : "Submit"}
+              </Button>
+            </Space>
+          </div>
+
           <div className="row">
             <div className="col-8">
               <Form.Item
                 name={"title"}
-                label="Title"
+                label={<Text strong>Title</Text>}
                 rules={[
                   {
                     required: true,
@@ -285,7 +404,33 @@ const AddProduct = () => {
               >
                 <Input allowClear maxLength={150} showCount />
               </Form.Item>
-              <Form.Item name={"description"} label="Description">
+              <Form.Item
+                name={"description"}
+                label={
+                  <div className="d-flex align-items-center" style={{ gap: 8 }}>
+                    <Text strong>Description</Text>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<BsStars size={16} />}
+                      loading={isGeneratingDesc}
+                      onClick={handleAiGenerateDescription}
+                      style={{
+                        padding: 0,
+                        height: "auto",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#7928CA",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      AI viết mô tả
+                    </Button>
+                  </div>
+                }
+              >
                 <Input.TextArea
                   maxLength={1000}
                   showCount
@@ -293,8 +438,30 @@ const AddProduct = () => {
                   allowClear
                 />
               </Form.Item>
+              <div className="d-flex align-items-center mb-2" style={{ gap: 8 }}>
+                <Text strong>Content (Chi tiết sản phẩm)</Text>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<BsStars size={16} />}
+                  loading={isGeneratingContent}
+                  onClick={handleAiGenerateContent}
+                  style={{
+                    padding: 0,
+                    height: "auto",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#7928CA",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  AI viết bài chi tiết
+                </Button>
+              </div>
               <Editor
-                disabled={isLoading || isCreating}
+                disabled={isCreating}
                 apiKey="ikfkh2oosyq8z4b77hhj1ssxu7js46chtdrcq9j5lqum494c"
                 onInit={(evt, editor) => (editorRef.current = editor)}
                 initialValue={content !== "" ? content : ""}
@@ -332,26 +499,7 @@ const AddProduct = () => {
               />
             </div>
             <div className="col-4">
-              <Card size="small" className="mt-4">
-                <Space>
-                  <Button
-                    loading={isCreating}
-                    size="middle"
-                    onClick={() => navigate("/inventory")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    loading={isCreating}
-                    type="primary"
-                    size="middle"
-                    onClick={() => form.submit()}
-                  >
-                    {id ? "Update" : "Submit"}
-                  </Button>
-                </Space>
-              </Card>
-              <Card size="small" className="mt-3" title="Categories">
+              <Card size="small" title="Categories">
                 <Form.Item name={"categories"} initialValue={[]}>
                   <TreeSelect
                     treeData={categories}
@@ -362,7 +510,12 @@ const AddProduct = () => {
 
                         <Divider className="m-0" />
                         <Button
-                          onClick={() => setIsVisibleAddCategory(true)}
+                          htmlType="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsVisibleAddCategory(true);
+                          }}
                           type="link"
                           icon={<Add size={20} />}
                           style={{
@@ -381,8 +534,8 @@ const AddProduct = () => {
                   name={"supplier"}
                   rules={[
                     {
-                      required: false,
-                      message: "Required",
+                      required: true,
+                      message: "Please select a supplier",
                     },
                   ]}
                 >
@@ -393,7 +546,12 @@ const AddProduct = () => {
                         {menu}
                         <Divider className="m-0" />
                         <Button
-                          onClick={() => setIsVisibleAddSupplier(true)}
+                          htmlType="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsVisibleAddSupplier(true);
+                          }}
                           type="link"
                           icon={<Add size={20} />}
                           style={{
@@ -413,36 +571,44 @@ const AddProduct = () => {
                   />
                 </Form.Item>
               </Card>
-              <Card size="small" className="mt-3" title="Images">
+              <Card size="small" className="mt-3" title="Images (Hình ảnh sản phẩm)">
                 <Upload
                   multiple
                   fileList={fileList}
                   accept="image/*"
                   listType="picture-card"
                   onChange={handleChange}
-                >
-                  Upload
-                </Upload>
-              </Card>
-              <Card className="mt-3">
-                <Input
-                  allowClear
-                  value={fileUrl}
-                  onChange={(val) => setFileUrl(val.target.value)}
-                  className="mb-3"
-                />
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (files: any) => {
-                    const file = files.target.files[0];
-
-                    if (file) {
-                      const donwloadUrl = await uploadFile(file);
-                      donwloadUrl && setFileUrl(donwloadUrl);
-                    }
+                  onRemove={(file) => {
+                    setFileList((prev) =>
+                      (prev || []).filter((item) => item.uid !== file.uid)
+                    );
                   }}
-                />
+                >
+                  <div>
+                    <div style={{ fontSize: 20, lineHeight: 1 }}>+</div>
+                    <div style={{ marginTop: 4, fontSize: 13 }}>Chọn ảnh</div>
+                  </div>
+                </Upload>
+                <div className="mt-3">
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Hoặc dán trực tiếp đường link (URL) của ảnh:
+                  </Text>
+                  <Space.Compact style={{ width: "100%", marginTop: 6 }}>
+                    <Input
+                      placeholder="https://example.com/image.png"
+                      value={fileUrl}
+                      onChange={(e) => setFileUrl(e.target.value)}
+                      onPressEnter={(e) => {
+                        e.preventDefault();
+                        handleAddImageUrlToProduct();
+                      }}
+                      allowClear
+                    />
+                    <Button type="primary" onClick={handleAddImageUrlToProduct}>
+                      Dán link
+                    </Button>
+                  </Space.Compact>
+                </div>
               </Card>
             </div>
           </div>
@@ -466,7 +632,7 @@ const AddProduct = () => {
       <ToogleSupplier
         visible={isVisibleAddSupplier}
         onClose={() => setIsVisibleAddSupplier(false)}
-        onAddNew={async (val: any) => {
+        onAddNew={async (val?: any) => {
           await getSuppliers();
           // Nếu val là supplier vừa thêm và có id, tự động chọn luôn
           if (val && val.id) {

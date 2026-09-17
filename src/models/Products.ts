@@ -28,8 +28,9 @@ export interface ProductModel {
 }
 
 export interface SubProductModel {
-	size: string;
-	color: string;
+	size?: string;
+	color?: string;
+	attributes?: Record<string, string>;
 	price: number;
 	qty: number;
   stock: number;
