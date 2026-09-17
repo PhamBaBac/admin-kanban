@@ -25,6 +25,12 @@ import {
   Col,
   Statistic,
   Select,
+  Timeline,
+  Spin,
+  Descriptions,
+  Divider,
+  Alert,
+  Steps,
 } from "antd";
 import {
   Edit2,
@@ -33,10 +39,40 @@ import {
   ShoppingCart,
   DollarCircle,
   Clock,
+  TruckFast,
+  Location,
 } from "iconsax-react";
+import { orderService } from "../../services/orderService";
 import { colors } from "../../constants/colors";
 
 const { confirm } = Modal;
+
+const PRESET_CANCEL_REASONS = [
+  "Khách hàng liên hệ yêu cầu hủy",
+  "Sản phẩm trong kho hết hàng / hỏng hóc",
+  "Không thể liên lạc số điện thoại người nhận",
+  "Nghi ngờ đơn hàng spam / giả mạo",
+  "Khác",
+];
+
+const isTerminalStatus = (status?: string) => {
+  return status === "CANCELLED" || status === "REFUNDED";
+};
+
+const getNextAvailableStatuses = (currentStatus?: string): string[] => {
+  switch (currentStatus) {
+    case "PENDING":
+      return ["PROCESSING", "CANCELLED"];
+    case "PROCESSING":
+      return ["COMPLETED", "CANCELLED"];
+    case "COMPLETED":
+      return ["REFUNDED"];
+    case "CANCELLED":
+    case "REFUNDED":
+    default:
+      return [];
+  }
+};
 
 const OrdersScreen = () => {
   const { getOrders, deleteOrder, updateOrderStatus, loading, error } =
@@ -49,17 +85,47 @@ const OrdersScreen = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
   const [searchKey, setSearchKey] = useState("");
   const [isModalStatusOpen, setIsModalStatusOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<BillModel | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
-  const [editingStatus, setEditingStatus] = useState<string>("");
-  const orderStatusOptions = [
-    "PENDING",
-    "PROCESSING",
-    "COMPLETED",
-    "CANCELLED",
-    "REFUNDED",
-  ];
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [customReason, setCustomReason] = useState<string>("");
+  const [trackingCode, setTrackingCode] = useState<string>("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingOrder, setTrackingOrder] = useState<BillModel | null>(null);
+
+  const finalCancelReason = cancelReason === "Khác" ? customReason : cancelReason;
+
+  const openStatusModal = (order: BillModel) => {
+    setSelectedOrder(order);
+    setSelectedStatus("");
+    setTrackingCode(order.trackingCode || "");
+    setCancelReason("");
+    setCustomReason("");
+    setIsModalStatusOpen(true);
+  };
+
+  const handleOpenTracking = async (order: BillModel) => {
+    if (!order.trackingCode) {
+      message.info("Đơn hàng này chưa có mã vận đơn GHN");
+      return;
+    }
+    setTrackingOrder(order);
+    setIsTrackingModalOpen(true);
+    setTrackingLoading(true);
+    setTrackingData(null);
+    try {
+      const data = await orderService.getTrackingByCode(order.trackingCode);
+      setTrackingData(data);
+    } catch (err: any) {
+      message.error(err.message || "Không thể lấy thông tin hành trình GHN");
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!searchKey) {
@@ -118,18 +184,48 @@ const OrdersScreen = () => {
     }
   };
 
+  const hasStatusChange = Boolean(
+    selectedStatus && selectedStatus !== selectedOrder?.orderStatus
+  );
+  const hasTrackingChange =
+    trackingCode.trim() !== (selectedOrder?.trackingCode || "").trim();
+  const isCancelWithoutReason =
+    selectedStatus === "CANCELLED" && !finalCancelReason.trim();
+  const isSubmitDisabled =
+    (!hasStatusChange && !hasTrackingChange) || isCancelWithoutReason;
+
   const handleUpdateStatusOrder = async () => {
-    if (!selectedOrderId || !selectedStatus) return;
+    if (!selectedOrder) return;
+    if (selectedStatus === "CANCELLED" && !finalCancelReason.trim()) {
+      message.warning("Vui lòng nhập hoặc chọn lý do hủy đơn");
+      return;
+    }
+    setIsUpdatingStatus(true);
     try {
-      await updateOrderStatus(selectedOrderId, selectedStatus);
-      message.success("Order status updated successfully");
+      const statusToSend = selectedStatus || selectedOrder.orderStatus;
+      await updateOrderStatus(
+        selectedOrder.id,
+        statusToSend,
+        selectedStatus === "CANCELLED" ? finalCancelReason : undefined,
+        trackingCode.trim() ? trackingCode.trim() : undefined
+      );
+      if (selectedStatus === "PROCESSING" && !trackingCode.trim()) {
+        message.success("Đơn hàng đã chuyển sang PROCESSING & tự động tạo vận đơn GHN thành công!");
+      } else {
+        message.success("Cập nhật đơn hàng thành công");
+      }
       setIsModalStatusOpen(false);
-      setSelectedOrderId(null);
+      setSelectedOrder(null);
       setSelectedStatus("");
+      setTrackingCode("");
+      setCancelReason("");
+      setCustomReason("");
       // reload bills
       getBills(api || `/orders/all?page=${page}&pageSize=${limit}`);
     } catch (error: any) {
       message.error(error.message || "Failed to update order status");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -231,7 +327,25 @@ const OrdersScreen = () => {
                   </div>
                 </Tooltip>
                 <div style={{ color: "#666" }}>
-                  {item.size} - Qty: {item.qty}
+                  {(() => {
+                    const descParts: string[] = [];
+                    if (item.attributes && typeof item.attributes === "object") {
+                      Object.entries(item.attributes).forEach(([k, v]) => {
+                        if (v) descParts.push(`${k}: ${v}`);
+                      });
+                    }
+                    if (descParts.length === 0) {
+                      if (item.color) descParts.push(item.color);
+                      if (item.size) descParts.push(`Size ${item.size}`);
+                    }
+                    const specStr = descParts.join(" | ");
+                    return (
+                      <>
+                        {specStr && <span>{specStr} - </span>}
+                        <span>Qty: {item.qty}</span>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -253,48 +367,66 @@ const OrdersScreen = () => {
       title: "Order Status",
       dataIndex: "orderStatus",
       key: "orderStatus",
-      width: 120,
+      width: 140,
       align: "center",
-      render: (orderStatus: string, record: BillModel) =>
-        editingOrderId === record.id ? (
-          <Select
-            value={editingStatus}
-            onChange={setEditingStatus}
-            style={{ width: 120 }}
-            size="small"
-            onBlur={() => setEditingOrderId(null)}
-            dropdownMatchSelectWidth={false}
-            autoFocus
-            onSelect={async (status) => {
-              try {
-                await updateOrderStatus(record.id, status);
-                message.success("Order status updated successfully");
-                setEditingOrderId(null);
-                setEditingStatus("");
-                getBills(api || `/orders/all?page=${page}&pageSize=${limit}`);
-              } catch (error: any) {
-                message.error(error.message || "Failed to update order status");
-              }
-            }}
-          >
-            {orderStatusOptions.map((status) => (
-              <Select.Option key={status} value={status}>
-                {status}
-              </Select.Option>
-            ))}
-          </Select>
-        ) : (
+      render: (orderStatus: string, record: BillModel) => {
+        const isTerminal = isTerminalStatus(orderStatus);
+        const tag = (
           <Tag
             color={getOrderStatusColor(orderStatus)}
-            style={{ cursor: "pointer" }}
+            style={{
+              cursor: isTerminal ? "default" : "pointer",
+              padding: "4px 8px",
+            }}
             onClick={() => {
-              setEditingOrderId(record.id);
-              setEditingStatus(orderStatus);
+              if (!isTerminal) {
+                openStatusModal(record);
+              }
             }}
           >
             {orderStatus}
           </Tag>
-        ),
+        );
+
+        return (
+          <Space direction="vertical" size={2} align="center">
+            {tag}
+            {record.trackingCode ? (
+              <Tag
+                color="cyan"
+                style={{
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  margin: 0,
+                  fontSize: 11,
+                }}
+                onClick={() => handleOpenTracking(record)}
+              >
+                <TruckFast size={12} /> {record.trackingCode}
+              </Tag>
+            ) : null}
+            {record.cancelReason && (
+              <Tooltip title={`Lý do: ${record.cancelReason}`}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: "#888",
+                    maxWidth: 120,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    display: "block",
+                  }}
+                >
+                  {record.cancelReason}
+                </span>
+              </Tooltip>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: "Total Amount",
@@ -349,19 +481,40 @@ const OrdersScreen = () => {
       title: "Actions",
       dataIndex: "",
       fixed: "right",
-      width: 120,
+      width: 130,
       align: "center",
       render: (item: BillModel) => (
         <Space>
-          <Tooltip title="Edit Status Order">
+          {item.trackingCode && (
+            <Tooltip title="Xem hành trình vận chuyển GHN">
+              <Button
+                icon={<TruckFast color="#13c2c2" size={18} />}
+                type="text"
+                onClick={() => handleOpenTracking(item)}
+              />
+            </Tooltip>
+          )}
+          <Tooltip
+            title={
+              isTerminalStatus(item.orderStatus)
+                ? "Đơn hàng đã kết thúc, không thể đổi trạng thái"
+                : "Cập nhật trạng thái"
+            }
+          >
             <Button
-              icon={<Edit2 color={colors.primary500} size={18} />}
+              icon={
+                <Edit2
+                  color={
+                    isTerminalStatus(item.orderStatus)
+                      ? "#bbb"
+                      : colors.primary500
+                  }
+                  size={18}
+                />
+              }
               type="text"
-              onClick={() => {
-                setSelectedOrderId(item.id);
-                setSelectedStatus(item.orderStatus);
-                setIsModalStatusOpen(true);
-              }}
+              disabled={isTerminalStatus(item.orderStatus)}
+              onClick={() => openStatusModal(item)}
             />
           </Tooltip>
           <Tooltip title="Delete bill">
@@ -489,24 +642,332 @@ const OrdersScreen = () => {
       </Card>
 
       <Modal
-        title="Edit Order Status"
+        title={
+          selectedOrder
+            ? `Cập nhật trạng thái đơn #${selectedOrder.id.substring(0, 8)}`
+            : "Edit Order Status"
+        }
         open={isModalStatusOpen}
-        onCancel={() => setIsModalStatusOpen(false)}
+        onCancel={() => {
+          setIsModalStatusOpen(false);
+          setSelectedOrder(null);
+          setSelectedStatus("");
+          setCancelReason("");
+          setCustomReason("");
+        }}
         onOk={handleUpdateStatusOrder}
-        okText="Update"
-        cancelText="Cancel"
+        okText="Cập nhật"
+        cancelText="Hủy"
+        okButtonProps={{
+          disabled: isSubmitDisabled,
+          danger: selectedStatus === "CANCELLED",
+          loading: isUpdatingStatus,
+        }}
       >
-        <Select
-          value={selectedStatus}
-          onChange={setSelectedStatus}
-          style={{ width: "100%" }}
-        >
-          {orderStatusOptions.map((status) => (
-            <Select.Option key={status} value={status}>
-              {status}
-            </Select.Option>
-          ))}
-        </Select>
+        {selectedOrder && (
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <div>
+              <span style={{ marginRight: 8, color: "#666" }}>
+                Trạng thái hiện tại:
+              </span>
+              <Tag color={getOrderStatusColor(selectedOrder.orderStatus)}>
+                {selectedOrder.orderStatus}
+              </Tag>
+            </div>
+
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                Chọn trạng thái mới:
+              </div>
+              <Select
+                value={selectedStatus || undefined}
+                onChange={(value) => setSelectedStatus(value)}
+                placeholder={`Giữ nguyên (${selectedOrder.orderStatus}) hoặc chọn mới`}
+                allowClear
+                style={{ width: "100%" }}
+              >
+                {getNextAvailableStatuses(selectedOrder.orderStatus).map(
+                  (status) => (
+                    <Select.Option key={status} value={status}>
+                      <Space>
+                        <Tag color={getOrderStatusColor(status)}>{status}</Tag>
+                        <span style={{ fontSize: "12px", color: "#666" }}>
+                          {status === "PROCESSING" && "(Xác nhận / Đang chuẩn bị)"}
+                          {status === "COMPLETED" && "(Giao thành công)"}
+                          {status === "CANCELLED" && "(Hủy đơn / Hoàn kho)"}
+                          {status === "REFUNDED" && "(Hoàn tiền / Đổi trả)"}
+                        </span>
+                      </Space>
+                    </Select.Option>
+                  )
+                )}
+              </Select>
+            </div>
+
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                Mã vận đơn Giao Hàng Nhanh (GHN):
+              </div>
+              <Input
+                prefix={<TruckFast size={16} color="#888" />}
+                placeholder="Nhập mã vận đơn GHN (VD: L5G7S1...)"
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value)}
+                allowClear
+              />
+              <div style={{ fontSize: "12px", color: "#888", marginTop: 4 }}>
+                Cập nhật mã vận đơn để cả Admin và Khách hàng theo dõi lộ trình đơn hàng thời gian thực.
+              </div>
+              {selectedStatus === "PROCESSING" && !trackingCode.trim() && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginTop: 8 }}
+                  message="Tự động tạo đơn GHN"
+                  description="Hệ thống sẽ tự động gọi GHN Open API để tạo vận đơn và gán mã tự động nếu bạn để trống ô này."
+                />
+              )}
+            </div>
+
+            {selectedStatus === "CANCELLED" && (
+              <div>
+                <div
+                  style={{
+                    marginBottom: 8,
+                    fontWeight: 500,
+                    color: "#ff4d4f",
+                  }}
+                >
+                  Lý do hủy đơn hàng: <span style={{ color: "red" }}>*</span>
+                </div>
+                <Select
+                  value={cancelReason || undefined}
+                  onChange={(value) => setCancelReason(value)}
+                  placeholder="Chọn lý do hủy"
+                  style={{ width: "100%", marginBottom: 8 }}
+                >
+                  {PRESET_CANCEL_REASONS.map((reason) => (
+                    <Select.Option key={reason} value={reason}>
+                      {reason}
+                    </Select.Option>
+                  ))}
+                </Select>
+                {cancelReason === "Khác" && (
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="Nhập lý do chi tiết..."
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                  />
+                )}
+              </div>
+            )}
+          </Space>
+        )}
+      </Modal>
+
+      {/* Modal xem lộ trình vận chuyển GHN */}
+      <Modal
+        title={
+          <Space>
+            <TruckFast color="#13c2c2" size={22} />
+            <span>Chi tiết lộ trình vận chuyển GHN</span>
+            {trackingOrder?.trackingCode && (
+              <Tag color="cyan">{trackingOrder.trackingCode}</Tag>
+            )}
+          </Space>
+        }
+        open={isTrackingModalOpen}
+        onCancel={() => {
+          setIsTrackingModalOpen(false);
+          setTrackingData(null);
+          setTrackingOrder(null);
+        }}
+        footer={[
+          <Button
+            key="ghnLink"
+            type="default"
+            onClick={() => {
+              const code = trackingData?.orderCode || trackingOrder?.trackingCode;
+              if (code) {
+                window.open(`https://tracking.ghn.dev/?order_code=${code}`, "_blank");
+              }
+            }}
+          >
+            Mở trên GHN Tracking
+          </Button>,
+          <Button
+            key="close"
+            type="primary"
+            onClick={() => {
+              setIsTrackingModalOpen(false);
+              setTrackingData(null);
+              setTrackingOrder(null);
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={680}
+      >
+        {trackingLoading ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <Spin tip="Đang lấy dữ liệu từ hệ thống GHN..." size="large" />
+          </div>
+        ) : trackingData ? (
+          <div>
+            {/* Progress Steps */}
+            {(() => {
+              const currentStatus = (trackingData.status || "").toLowerCase();
+              let currentStep = 0;
+              let isFailed = false;
+
+              if (["ready_to_pick", "picking", "money_collect_picking"].includes(currentStatus)) {
+                currentStep = 0;
+              } else if (["picked", "storing", "transporting", "sorting"].includes(currentStatus)) {
+                currentStep = 1;
+              } else if (["delivering", "money_collect_delivering"].includes(currentStatus)) {
+                currentStep = 2;
+              } else if (["delivered"].includes(currentStatus)) {
+                currentStep = 3;
+              } else if (["cancel", "return", "return_transporting", "return_sorting", "returning", "return_fail", "returned", "delivery_fail", "damage", "lost"].includes(currentStatus)) {
+                currentStep = 1;
+                isFailed = true;
+              }
+
+              return (
+                <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", marginBottom: "16px", border: "1px solid #e2e8f0" }}>
+                  <Steps
+                    size="small"
+                    current={currentStep}
+                    status={isFailed ? "error" : undefined}
+                    items={[
+                      { title: "Chờ lấy hàng", description: "GHN tiếp nhận" },
+                      { title: "Đang luân chuyển", description: "Đã nhập kho" },
+                      { title: "Đang giao", description: "Shipper đang giao" },
+                      { title: "Thành công", description: "Đã giao hàng" },
+                    ]}
+                  />
+                </div>
+              );
+            })()}
+
+            <Descriptions
+              bordered
+              size="small"
+              column={2}
+              style={{ marginBottom: 20 }}
+            >
+              <Descriptions.Item label="Mã vận đơn">
+                <strong>{trackingData.orderCode || trackingOrder?.trackingCode}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag color="processing">
+                  {trackingData.statusName || trackingData.status || "Đang xử lý"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Người nhận">
+                {trackingData.toName || trackingOrder?.nameRecipient || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số điện thoại">
+                {trackingData.toPhone || trackingOrder?.phoneNumber || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Địa chỉ giao" span={2}>
+                {trackingData.toAddress || trackingOrder?.address || "N/A"}
+              </Descriptions.Item>
+              {trackingData.expectedDeliveryTime && (
+                <Descriptions.Item label="Dự kiến giao" span={2}>
+                  <Space>
+                    <Clock size={16} color="#52c41a" />
+                    <span>
+                      {new Date(trackingData.expectedDeliveryTime).toLocaleString("vi-VN")}
+                    </span>
+                  </Space>
+                </Descriptions.Item>
+              )}
+              {trackingData.shippingFee ? (
+                <Descriptions.Item label="Cước phí GHN" span={2}>
+                  {trackingData.shippingFee.toLocaleString("vi-VN")} ₫
+                </Descriptions.Item>
+              ) : null}
+            </Descriptions>
+
+            <Divider orientation="left" style={{ fontSize: "14px" }}>
+              Lịch sử hành trình (Timeline)
+            </Divider>
+
+            <Timeline
+              mode="left"
+              style={{ marginTop: 16 }}
+              items={
+                trackingData.logs && trackingData.logs.length > 0
+                  ? trackingData.logs.map((log: any, index: number) => {
+                      const isLatest = index === 0;
+                      return {
+                        color: isLatest ? "green" : "blue",
+                        children: (
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: isLatest ? 600 : 500,
+                                color: isLatest ? "#52c41a" : "#333",
+                              }}
+                            >
+                              {log.statusName || log.status}
+                            </div>
+                            {log.location && (
+                              <div style={{ fontSize: "12px", color: "#666" }}>
+                                <Location
+                                  size={12}
+                                  style={{ marginRight: 4, verticalAlign: "middle" }}
+                                />
+                                {log.location}
+                              </div>
+                            )}
+                            {(log.updatedDate || log.action_at) && (
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#999",
+                                  marginTop: 2,
+                                }}
+                              >
+                                {new Date(log.updatedDate || log.action_at).toLocaleString("vi-VN")}
+                              </div>
+                            )}
+                          </div>
+                        ),
+                      };
+                    })
+                  : [
+                      {
+                        color: "green",
+                        children: (
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#52c41a" }}>
+                              {trackingData.statusName || "Mới tạo đơn - Chờ lấy hàng"}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#666" }}>
+                              Đơn hàng đã được tạo thành công trên hệ thống GHN. Bưu tá sẽ sớm đến lấy hàng tại shop.
+                            </div>
+                          </div>
+                        ),
+                      },
+                    ]
+              }
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#888",
+              padding: "30px 0",
+            }}
+          >
+            Không tìm thấy thông tin vận đơn trên GHN hoặc mã không hợp lệ.
+          </div>
+        )}
       </Modal>
     </div>
   );

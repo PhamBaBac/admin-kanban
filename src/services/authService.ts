@@ -51,7 +51,9 @@ login: async (data: LoginRequest): Promise<AuthResponse> => {
   },
 
   refreshToken: async (): Promise<AuthResponse> => {
-    const response = await handleAPI("/auth/refresh-token", undefined, "post");
+    const response = await handleAPI("/auth/refresh-token", undefined, "post", {
+      "X-Client-Type": "admin",
+    });
     return response.data;
   },
 };

@@ -3,13 +3,15 @@ import axiosClient from "./axiosClient";
 const handleAPI = async (
   url: string,
   data?: any,
-  method: "post" | "put" | "get" | "delete" | "patch" = "get"
+  method: "post" | "put" | "get" | "delete" | "patch" = "get",
+  headers?: any
 ) => {
   try {
     let config: any = {
       method,
       headers: {
         "Content-Type": "application/json",
+        ...headers,
       },
       withCredentials: true,
       credentials: "include",

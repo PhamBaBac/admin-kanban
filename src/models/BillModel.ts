@@ -10,13 +10,18 @@ export interface BillModel {
   paymentType: string;
   orderStatus: string;
   orderResponses: OrderItem[];
+  cancelReason?: string;
+  trackingCode?: string;
+  shippingStatus?: string;
   createdAt: string;
 }
 
 export interface OrderItem {
   image: string;
   title: string;
-  size: string;
+  size?: string;
+  color?: string;
+  attributes?: Record<string, any>;
   qty: number;
   price: number;
   totalPrice: number;

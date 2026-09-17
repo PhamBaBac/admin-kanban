@@ -50,7 +50,12 @@ const refreshToken = async (): Promise<string | null> => {
     const response: any = await axios.post(
       `${baseURL}/auth/refresh-token`,
       {},
-      { withCredentials: true }
+      {
+        withCredentials: true,
+        headers: {
+          "X-Client-Type": "admin",
+        },
+      }
     );
 
     const newToken = response.data.accessToken;

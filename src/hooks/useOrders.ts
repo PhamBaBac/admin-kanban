@@ -19,19 +19,32 @@ export const useOrders = () => {
     }
   }, []);
 
-  const updateOrderStatus = useCallback(async (id: string, status: string): Promise<Order> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await orderService.updateOrderStatus(id, status);
-      return response;
-    } catch (err: any) {
-      setError(err.message || 'Failed to update order status');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const updateOrderStatus = useCallback(
+    async (
+      id: string,
+      status: string,
+      cancelReason?: string,
+      trackingCode?: string
+    ): Promise<Order> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await orderService.updateOrderStatus(
+          id,
+          status,
+          cancelReason,
+          trackingCode
+        );
+        return response;
+      } catch (err: any) {
+        setError(err.message || 'Failed to update order status');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   const deleteOrder = useCallback(async (id: string): Promise<void> => {
     setLoading(true);

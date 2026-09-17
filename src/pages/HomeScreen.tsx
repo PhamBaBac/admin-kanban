@@ -33,9 +33,12 @@ const HomeScreen = () => {
   };
 
   const sales = statictisValues?.sales || [];
-  const totalSales = sales.length;
-  const revenue = sales.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-  const cost = sales.reduce((sum, item) => sum + (item.cost || 0), 0);
+  const completedSales = sales.filter(
+    (item) => item.orderStatus === "COMPLETED"
+  );
+  const totalSales = completedSales.length;
+  const revenue = completedSales.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+  const cost = completedSales.reduce((sum, item) => sum + (item.cost || 0), 0);
   const profit = revenue - cost;
   const cancel = sales.filter(
     (item) => item.orderStatus === "CANCELLED"

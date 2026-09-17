@@ -30,13 +30,28 @@ export const orderService = {
     return response.data;
   },
 
-  updateOrderStatus: async (id: string, status: string): Promise<Order> => {
+  updateOrderStatus: async (
+    id: string,
+    status: string,
+    cancelReason?: string,
+    trackingCode?: string
+  ): Promise<Order> => {
     const response = await handleAPI(
       `/orders/${id}/status`,
-      { orderStatus: status },
+      { orderStatus: status, cancelReason, trackingCode },
       "patch"
     );
     return response.data;
+  },
+
+  getOrderTracking: async (orderId: string): Promise<any> => {
+    const response: any = await handleAPI(`/shipping/order/${orderId}`);
+    return response?.data !== undefined ? response.data : response;
+  },
+
+  getTrackingByCode: async (trackingCode: string): Promise<any> => {
+    const response: any = await handleAPI(`/shipping/tracking/${trackingCode}`);
+    return response?.data !== undefined ? response.data : response;
   },
 
   deleteOrder: async (id: string): Promise<void> => {
