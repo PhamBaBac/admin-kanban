@@ -7,5 +7,8 @@ import ProductDetail from "./inventories/ProductDetail";
 import Suppliers from "./Suppliers";
 import PromotionScreen from "./PromotionScreen";
 import OrdersScreen from "./orders";
+import MediaScreen from "./media/MediaScreen";
+import ShipmentsScreen from "./shipments/ShipmentsScreen";
+import ReportScreen from "./ReportScreen";
 
-export { Login, SignUp, HomeScreen, Inventories, ProductDetail,Categories, Suppliers,PromotionScreen,OrdersScreen};
+export { Login, SignUp, HomeScreen, Inventories, ProductDetail, Categories, Suppliers, PromotionScreen, OrdersScreen, MediaScreen, ShipmentsScreen, ReportScreen };

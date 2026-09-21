@@ -1,5 +1,6 @@
 /** @format */
 
+import { useState } from "react";
 import { Affix, Layout } from "antd";
 import {
   BarElement,
@@ -23,6 +24,9 @@ import {
   ProductDetail,
   PromotionScreen,
   Suppliers,
+  MediaScreen,
+  ShipmentsScreen,
+  ReportScreen,
 } from "../pages";
 
 ChartJS.register(
@@ -40,13 +44,15 @@ ChartJS.register(
 const { Content, Footer } = Layout;
 
 const MainRouter = () => {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <SiderComponent />
-      <Layout style={{ backgroundColor: "#fff", height: "100vh", overflow: "auto" }}>
-        <HeaderComponent />
+      <SiderComponent collapsed={collapsed} onCollapse={setCollapsed} />
+      <Layout style={{ backgroundColor: "var(--bg-app, #f8fafc)", height: "100vh", overflow: "auto" }}>
+        <HeaderComponent collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
 
-        <Content className="pt-3 container-fluid">
+        <Content className="p-4" style={{ minHeight: "calc(100vh - 120px)" }}>
           <Routes>
             {/* Dashboard */}
             <Route path="/" element={<HomeScreen />} />
@@ -65,9 +71,12 @@ const MainRouter = () => {
             </Route>
 
             {/* Other pages */}
+            <Route path="/media" element={<MediaScreen />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/promotions" element={<PromotionScreen />} />
+            <Route path="/report" element={<ReportScreen />} />
             <Route path="/orders" element={<OrdersScreen />} />
+            <Route path="/shipments" element={<ShipmentsScreen />} />
 
             {/* Redirect auth routes if already authenticated */}
             <Route path="/login" element={<Navigate to="/" replace />} />

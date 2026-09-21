@@ -101,8 +101,11 @@ const Suppliers = () => {
             <Button
               onClick={() =>
                 confirm({
-                  title: "Comfirm",
-                  content: "Are you sure you want to remove this supplier?",
+                  title: "Xác nhận xóa",
+                  content: `Bạn có chắc chắn muốn xóa nhà cung cấp "${item.name}"?`,
+                  okText: "Xóa",
+                  cancelText: "Hủy",
+                  okType: "danger",
                   onOk: () => removeSuppiler(item.id),
                 })
               }

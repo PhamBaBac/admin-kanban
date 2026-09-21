@@ -41,6 +41,22 @@ export const uploadFile = async (file: any) => {
   const data = await response.json();
 
   if (data.secure_url) {
+    // Tự động lưu metadata vào Thư viện Media ở Backend
+    try {
+      const { mediaAPI } = await import("../apis/mediaAPI");
+      mediaAPI.saveMedia({
+        url: data.secure_url,
+        publicId: data.public_id,
+        fileName: file.name || filename,
+        fileType: data.format || file.type,
+        fileSize: data.bytes || file.size,
+        width: data.width,
+        height: data.height,
+      }).catch((err) => console.warn("Auto save media failed:", err));
+    } catch (e) {
+      console.warn("Could not import mediaAPI:", e);
+    }
+
     return data.secure_url as string;
   }
 

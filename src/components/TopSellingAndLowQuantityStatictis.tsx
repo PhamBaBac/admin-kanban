@@ -48,19 +48,21 @@ const TopSellingAndLowQuantityStatictis = () => {
   };
 
   return (
-    <div className="row mt-4">
+    <div className="row mt-2">
       <div className="col-sm-12 col-md-8">
         <Card
+          className="app-card mb-4"
+          bordered={false}
           loading={isLoading || statisticsLoading}
-          title="Top selling stock"
-          extra={<Link to={`/bills`}>See all</Link>}
+          title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Sản phẩm bán chạy nhất</span>}
+          extra={<Link to={`/inventory`} style={{ color: "#1570EF", fontWeight: 500 }}>Xem tất cả</Link>}
         >
           <Table
             dataSource={
               datas?.topSelling
                 ? datas.topSelling.map((item, idx) => ({
                     ...item,
-                    key: item.title + item.color + item.size + idx, // hoặc nếu có id thì dùng item.id
+                    key: item.title + item.color + item.size + idx,
                   }))
                 : []
             }
@@ -78,7 +80,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                 render: (value, record, index) => index + 1,
               },
               {
-                title: "Image",
+                title: "Ảnh",
                 dataIndex: "images",
                 key: "images",
                 align: "center",
@@ -89,7 +91,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                   ) : null,
               },
               {
-                title: "Product Name",
+                title: "Tên sản phẩm",
                 dataIndex: "title",
                 key: "title",
                 render: (value) => (
@@ -103,7 +105,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                 ),
               },
               {
-                title: "Color",
+                title: "Màu",
                 dataIndex: "color",
                 key: "color",
                 align: "center",
@@ -132,7 +134,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                 render: (size) => <Tag>{size}</Tag>,
               },
               {
-                title: "Sold Qty",
+                title: "Đã bán",
                 dataIndex: "soldQuantity",
                 key: "soldQuantity",
                 align: "center",
@@ -144,7 +146,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                 ),
               },
               {
-                title: "Remaining",
+                title: "Còn lại",
                 dataIndex: "stock",
                 key: "stock",
                 align: "center",
@@ -156,7 +158,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                 ),
               },
               {
-                title: "Price",
+                title: "Đơn giá",
                 dataIndex: "price",
                 key: "price",
                 align: "right",
@@ -164,7 +166,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                 render: (value) => VND.format(value),
               },
               {
-                title: "Total Revenue",
+                title: "Tổng thu",
                 dataIndex: "",
                 key: "totalRevenue",
                 align: "right",
@@ -178,14 +180,16 @@ const TopSellingAndLowQuantityStatictis = () => {
       </div>
       <div className="col-sm-12 col-md-4">
         <Card
+          className="app-card mb-4"
+          bordered={false}
           loading={isLoading || statisticsLoading}
-          title="Low quantity stock"
-          extra={<Link to={`/inventory`}>See all</Link>}
+          title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Hàng sắp hết trong kho</span>}
+          extra={<Link to={`/inventory`} style={{ color: "#1570EF", fontWeight: 500 }}>Xem tất cả</Link>}
         >
           <List
             dataSource={datas?.lowQuantity}
             renderItem={(item) => (
-              <List.Item key={item.name} extra={<Tag color="red">Low</Tag>}>
+              <List.Item key={item.name} extra={<Tag color="red">Thấp</Tag>}>
                 <List.Item.Meta
                   avatar={
                     <Avatar
@@ -204,7 +208,7 @@ const TopSellingAndLowQuantityStatictis = () => {
                   }
                   description={
                     <div style={{ fontSize: "11px", color: "#666" }}>
-                      Remaining:{" "}
+                      Số lượng còn:{" "}
                       <span style={{ color: "#ff4d4f", fontWeight: "bold" }}>
                         {item.remainingQuantity}
                       </span>

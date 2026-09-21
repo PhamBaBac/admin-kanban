@@ -7,6 +7,7 @@ import {
   PaymentTypeColor,
 } from "../../models/BillModel";
 import { useOrders } from "../../hooks/useOrders";
+import { useSearchParams } from "react-router-dom";
 import { ColumnProps, TableProps } from "antd/es/table";
 import {
   DatePicker,
@@ -31,6 +32,7 @@ import {
   Divider,
   Alert,
   Steps,
+  Badge,
 } from "antd";
 import {
   Edit2,
@@ -41,9 +43,15 @@ import {
   Clock,
   TruckFast,
   Location,
+  Box,
+  Call,
+  Sms,
+  FilterSearch,
 } from "iconsax-react";
 import { orderService } from "../../services/orderService";
 import { colors } from "../../constants/colors";
+import { CreateShipmentModal } from "../../modals";
+import { ColorBadge, getColorName } from "../../utils/colorHelper";
 
 const { confirm } = Modal;
 
@@ -62,7 +70,8 @@ const isTerminalStatus = (status?: string) => {
 const getNextAvailableStatuses = (currentStatus?: string): string[] => {
   switch (currentStatus) {
     case "PENDING":
-      return ["PROCESSING", "CANCELLED"];
+      // Đơn PENDING muốn chuyển sang PROCESSING phải qua bước Đóng gói & Kê khai kiện hàng (GHN)
+      return ["CANCELLED"];
     case "PROCESSING":
       return ["COMPLETED", "CANCELLED"];
     case "COMPLETED":
@@ -97,7 +106,15 @@ const OrdersScreen = () => {
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingOrder, setTrackingOrder] = useState<BillModel | null>(null);
 
+  const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false);
+  const [shipmentOrder, setShipmentOrder] = useState<BillModel | null>(null);
+
   const finalCancelReason = cancelReason === "Khác" ? customReason : cancelReason;
+
+  const handleOpenCreateShipment = (order: BillModel) => {
+    setShipmentOrder(order);
+    setIsShipmentModalOpen(true);
+  };
 
   const openStatusModal = (order: BillModel) => {
     setSelectedOrder(order);
@@ -126,6 +143,16 @@ const OrdersScreen = () => {
       setTrackingLoading(false);
     }
   };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get("status");
+  const [filterStatus, setFilterStatus] = useState<string>(statusFromUrl || "ALL");
+
+  useEffect(() => {
+    if (statusFromUrl) {
+      setFilterStatus(statusFromUrl);
+    }
+  }, [statusFromUrl]);
 
   useEffect(() => {
     if (!searchKey) {
@@ -266,86 +293,95 @@ const OrdersScreen = () => {
 
   const columns: ColumnProps<BillModel>[] = [
     {
-      title: "Customer",
-      dataIndex: "userName",
-      key: "customer",
+      title: "Mã đơn & Ngày đặt",
+      key: "orderInfo",
+      width: 170,
+      render: (_: any, record: BillModel) => (
+        <div>
+          <div style={{ fontWeight: 700, color: "#1570ef" }}>
+            #{record.id ? record.id.substring(0, 8) : "—"}
+          </div>
+          <div style={{ fontSize: "12px", color: "#64748b", marginTop: 2 }}>
+            {record.createdAt ? new Date(record.createdAt).toLocaleDateString("vi-VN") : "—"}
+            {" "}
+            <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+              {record.createdAt ? new Date(record.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""}
+            </span>
+          </div>
+        </div>
+      ),
+      sorter: (a: BillModel, b: BillModel) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    },
+    {
+      title: "Khách hàng & Người nhận",
+      key: "customerAndRecipient",
       width: 200,
-      render: (userName: string, record: BillModel) => (
+      render: (_: any, record: BillModel) => (
         <div>
           <div>
-            <strong>{userName}</strong>
+            <strong>{record.nameRecipient || record.userName || "Khách lẻ"}</strong>
           </div>
-          <div style={{ fontSize: "12px", color: "#666" }}>{record.email}</div>
+          {record.phoneNumber && (
+            <div style={{ fontSize: "12px", color: "#166534", fontWeight: 500, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+              <Call size={13} color="#166534" />
+              {record.phoneNumber}
+            </div>
+          )}
+          {record.email && (
+            <div style={{ fontSize: "11px", color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+              <Sms size={13} color="#94a3b8" />
+              {record.email}
+            </div>
+          )}
         </div>
       ),
     },
     {
-      title: "Recipient",
-      dataIndex: "nameRecipient",
-      key: "recipient",
-      width: 180,
-      render: (nameRecipient: string | null, record: BillModel) => (
-        <div>
-          <div>{nameRecipient || "N/A"}</div>
-          <div style={{ fontSize: "12px", color: "#666" }}>
-            {record.phoneNumber || "N/A"}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Shipping Address",
+      title: "Địa chỉ giao hàng",
       dataIndex: "address",
       key: "shippingAddress",
-      width: 250,
+      width: 220,
       render: (address: string | null) => (
-        <Tooltip title={address || "N/A"}>
-          <div className="text-2-line">{address || "N/A"}</div>
+        <Tooltip title={address || "Chưa có địa chỉ"}>
+          <div className="text-2-line" style={{ fontSize: 13, color: "#334155" }}>
+            {address || "N/A"}
+          </div>
         </Tooltip>
       ),
       ellipsis: true,
     },
     {
-      title: "Products",
+      title: "Sản phẩm đặt",
       dataIndex: "orderResponses",
       key: "products",
-      width: 300,
+      width: 280,
       render: (orderResponses: any[]) => (
         <Space direction="vertical" size="small">
-          {orderResponses.map((item, index) => (
+          {(orderResponses || []).map((item, index) => (
             <div
               key={index}
               style={{ display: "flex", alignItems: "center", gap: "8px" }}
             >
-              <Avatar size="small" src={item.image} />
+              <Avatar size="small" src={item.image} shape="square" />
               <div style={{ fontSize: "12px" }}>
                 <Tooltip title={item.title}>
-                  <div className="text-2-line">
-                    {item.title.length > 30
-                      ? `${item.title.substring(0, 30)}...`
+                  <div className="text-2-line" style={{ fontWeight: 500 }}>
+                    {item.title.length > 28
+                      ? `${item.title.substring(0, 28)}...`
                       : item.title}
                   </div>
                 </Tooltip>
-                <div style={{ color: "#666" }}>
-                  {(() => {
-                    const descParts: string[] = [];
-                    if (item.attributes && typeof item.attributes === "object") {
-                      Object.entries(item.attributes).forEach(([k, v]) => {
-                        if (v) descParts.push(`${k}: ${v}`);
-                      });
-                    }
-                    if (descParts.length === 0) {
-                      if (item.color) descParts.push(item.color);
-                      if (item.size) descParts.push(`Size ${item.size}`);
-                    }
-                    const specStr = descParts.join(" | ");
-                    return (
-                      <>
-                        {specStr && <span>{specStr} - </span>}
-                        <span>Qty: {item.qty}</span>
-                      </>
-                    );
-                  })()}
+                <div style={{ color: "#64748b", fontSize: 11, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                  {item.color && (
+                    <ColorBadge color={item.color} size={11} />
+                  )}
+                  {item.size && (
+                    <span style={{ background: "#f1f5f9", padding: "1px 5px", borderRadius: 4, fontWeight: 500 }}>
+                      Size {item.size}
+                    </span>
+                  )}
+                  <span>• SL: <strong style={{ color: "#1570ef" }}>x{item.qty}</strong></span>
                 </div>
               </div>
             </div>
@@ -354,20 +390,44 @@ const OrdersScreen = () => {
       ),
     },
     {
-      title: "Payment Type",
+      title: "Tổng tiền",
+      key: "total",
+      width: 140,
+      align: "right",
+      render: (_, record: BillModel) => {
+        const total = (record.orderResponses || []).reduce(
+          (sum, item) => sum + item.totalPrice,
+          0
+        );
+        return (
+          <Typography.Text strong style={{ color: "#166534", fontSize: 14 }}>
+            {total.toLocaleString("vi-VN")} ₫
+          </Typography.Text>
+        );
+      },
+      sorter: (a: BillModel, b: BillModel) => {
+        const totalA = (a.orderResponses || []).reduce((sum, item) => sum + item.totalPrice, 0);
+        const totalB = (b.orderResponses || []).reduce((sum, item) => sum + item.totalPrice, 0);
+        return totalA - totalB;
+      },
+    },
+    {
+      title: "Thanh toán",
       dataIndex: "paymentType",
       key: "paymentType",
       width: 120,
       align: "center",
       render: (paymentType: string) => (
-        <Tag color={getPaymentTypeColor(paymentType)}>{paymentType}</Tag>
+        <Tag color={getPaymentTypeColor(paymentType)} style={{ margin: 0, fontWeight: 500 }}>
+          {paymentType || "COD"}
+        </Tag>
       ),
     },
     {
-      title: "Order Status",
+      title: "Trạng thái",
       dataIndex: "orderStatus",
       key: "orderStatus",
-      width: 140,
+      width: 160,
       align: "center",
       render: (orderStatus: string, record: BillModel) => {
         const isTerminal = isTerminalStatus(orderStatus);
@@ -376,7 +436,8 @@ const OrdersScreen = () => {
             color={getOrderStatusColor(orderStatus)}
             style={{
               cursor: isTerminal ? "default" : "pointer",
-              padding: "4px 8px",
+              padding: "3px 8px",
+              margin: 0,
             }}
             onClick={() => {
               if (!isTerminal) {
@@ -389,7 +450,7 @@ const OrdersScreen = () => {
         );
 
         return (
-          <Space direction="vertical" size={2} align="center">
+          <Space direction="vertical" size={3} align="center">
             {tag}
             {record.trackingCode ? (
               <Tag
@@ -408,12 +469,12 @@ const OrdersScreen = () => {
               </Tag>
             ) : null}
             {record.cancelReason && (
-              <Tooltip title={`Lý do: ${record.cancelReason}`}>
+              <Tooltip title={`Lý do hủy: ${record.cancelReason}`}>
                 <span
                   style={{
                     fontSize: "11px",
-                    color: "#888",
-                    maxWidth: 120,
+                    color: "#dc2626",
+                    maxWidth: 130,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -429,67 +490,42 @@ const OrdersScreen = () => {
       },
     },
     {
-      title: "Total Amount",
-      key: "total",
-      width: 150,
-      align: "right",
-      render: (_, record: BillModel) => {
-        const total = record.orderResponses.reduce(
-          (sum, item) => sum + item.totalPrice,
-          0
-        );
-        return (
-          <Typography.Text strong style={{ color: colors.primary500 }}>
-            {total.toLocaleString("vi-VN")} ₫
-          </Typography.Text>
-        );
-      },
-      sorter: (a: BillModel, b: BillModel) => {
-        const totalA = a.orderResponses.reduce(
-          (sum, item) => sum + item.totalPrice,
-          0
-        );
-        const totalB = b.orderResponses.reduce(
-          (sum, item) => sum + item.totalPrice,
-          0
-        );
-        return totalA - totalB;
-      },
-    },
-    {
-      title: "Created Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 120,
-      align: "center",
-      render: (createdAt: string) => (
-        <div>
-          <div>{new Date(createdAt).toLocaleDateString("vi-VN")}</div>
-          <div style={{ fontSize: "11px", color: "#999" }}>
-            {new Date(createdAt).toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </div>
-        </div>
-      ),
-      sorter: (a: BillModel, b: BillModel) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    },
-    {
       key: "actions",
-      title: "Actions",
+      title: "Thao tác",
       dataIndex: "",
       fixed: "right",
-      width: 130,
-      align: "center",
+      width: 180,
+      align: "left",
       render: (item: BillModel) => (
-        <Space>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            gap: "12px",
+            flexWrap: "nowrap",
+            whiteSpace: "nowrap",
+            padding: "2px 4px",
+          }}
+        >
+          {/* Nút Đóng gói & Kê khai Ship */}
+          {!isTerminalStatus(item.orderStatus) && item.orderStatus !== "COMPLETED" && (
+            <Tooltip title="Đóng gói & Tạo vận đơn GHN">
+              <Button
+                icon={<Box color="#1570ef" size={18} />}
+                type="text"
+                size="small"
+                onClick={() => handleOpenCreateShipment(item)}
+              />
+            </Tooltip>
+          )}
+
           {item.trackingCode && (
             <Tooltip title="Xem hành trình vận chuyển GHN">
               <Button
                 icon={<TruckFast color="#13c2c2" size={18} />}
                 type="text"
+                size="small"
                 onClick={() => handleOpenTracking(item)}
               />
             </Tooltip>
@@ -513,27 +549,29 @@ const OrdersScreen = () => {
                 />
               }
               type="text"
+              size="small"
               disabled={isTerminalStatus(item.orderStatus)}
               onClick={() => openStatusModal(item)}
             />
           </Tooltip>
-          <Tooltip title="Delete bill">
+          <Tooltip title="Xóa đơn hàng">
             <Button
               icon={<Trash className="text-danger" size={18} />}
               type="text"
+              size="small"
               onClick={() =>
                 confirm({
-                  title: "Confirm Delete",
-                  content: "Are you sure you want to delete this bill?",
-                  okText: "Delete",
+                  title: "Xác nhận xóa",
+                  content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
+                  okText: "Xóa",
                   okType: "danger",
-                  cancelText: "Cancel",
+                  cancelText: "Hủy",
                   onOk: () => handleRemoveBill(item.id),
                 })
               }
             />
           </Tooltip>
-        </Space>
+        </div>
       ),
     },
   ];
@@ -553,29 +591,30 @@ const OrdersScreen = () => {
   ).length;
 
   return (
-    <div style={{ padding: "24px" }}>
-      <Card style={{ marginBottom: "16px" }}>
+    <div style={{ padding: "8px 0" }}>
+      <Card className="app-card" style={{ marginBottom: "16px" }} bordered={false}>
         <Row justify="space-between" align="middle">
           <Col>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              Orders Management
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
+              Quản lý đơn hàng
             </Typography.Title>
           </Col>
           <Col>
             <Space>
               {selectedRowKeys.length > 0 && (
                 <Space>
-                  <Tooltip title="Delete selected orders">
+                  <Tooltip title="Xóa các đơn hàng đã chọn">
                     <Button
                       danger
+                      type="primary"
                       icon={<Trash size={16} />}
                       onClick={() =>
                         confirm({
-                          title: "Confirm Delete",
-                          content: `Are you sure you want to delete ${selectedRowKeys.length} selected orders?`,
-                          okText: "Delete",
+                          title: "Xác nhận xóa hàng loạt",
+                          content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} đơn hàng đã chọn?`,
+                          okText: "Xóa",
                           okType: "danger",
-                          cancelText: "Cancel",
+                          cancelText: "Hủy",
                           onOk: async () => {
                             await Promise.all(
                               selectedRowKeys.map((id) => handleRemoveBill(id))
@@ -589,7 +628,7 @@ const OrdersScreen = () => {
                         })
                       }
                     >
-                      Delete ({selectedRowKeys.length})
+                      Xóa ({selectedRowKeys.length})
                     </Button>
                   </Tooltip>
                 </Space>
@@ -598,29 +637,103 @@ const OrdersScreen = () => {
                 value={searchKey}
                 onChange={(e) => setSearchKey(e.target.value)}
                 onSearch={handleSearchBills}
-                placeholder="Search orders by customer name, email..."
+                placeholder="Tìm kiếm theo tên khách, email..."
                 allowClear
-                style={{ width: 300 }}
+                style={{ width: 280 }}
+              />
+              <Select
+                value={filterStatus}
+                onChange={(val) => {
+                  setFilterStatus(val);
+                  if (val === "ALL") {
+                    searchParams.delete("status");
+                    setSearchParams(searchParams);
+                  } else {
+                    setSearchParams({ status: val });
+                  }
+                }}
+                style={{ width: 180 }}
+                options={[
+                  { value: "ALL", label: "Tất cả trạng thái" },
+                  {
+                    value: "PENDING",
+                    label: (
+                      <Space size={6}>
+                        <Badge color="#f79009" /> Chờ xử lý
+                      </Space>
+                    ),
+                  },
+                  {
+                    value: "PROCESSING",
+                    label: (
+                      <Space size={6}>
+                        <Badge color="#1570ef" /> Đang chuẩn bị
+                      </Space>
+                    ),
+                  },
+                  {
+                    value: "COMPLETED",
+                    label: (
+                      <Space size={6}>
+                        <Badge color="#12b76a" /> Hoàn thành
+                      </Space>
+                    ),
+                  },
+                  {
+                    value: "CANCELLED",
+                    label: (
+                      <Space size={6}>
+                        <Badge color="#f04438" /> Đã hủy
+                      </Space>
+                    ),
+                  },
+                ]}
               />
               <DatePicker.RangePicker
-                placeholder={["Start Date", "End Date"]}
-                style={{ width: 250 }}
+                placeholder={["Từ ngày", "Đến ngày"]}
+                style={{ width: 240 }}
               />
             </Space>
           </Col>
         </Row>
       </Card>
 
-      <Card>
+      {filterStatus !== "ALL" && (
+        <Alert
+          message={
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <FilterSearch size={16} color="#1570ef" variant="Bold" />
+                Đang lọc danh sách theo: <strong>{filterStatus === "PENDING" ? "Đơn hàng chờ xác nhận" : filterStatus}</strong> ({bills.filter((b) => filterStatus === "ALL" || b.orderStatus === filterStatus).length} đơn)
+              </span>
+              <Button
+                size="small"
+                type="link"
+                onClick={() => {
+                  setFilterStatus("ALL");
+                  searchParams.delete("status");
+                  setSearchParams(searchParams);
+                }}
+              >
+                Xóa bộ lọc (Xem tất cả)
+              </Button>
+            </div>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: 16, borderRadius: 8 }}
+        />
+      )}
+
+      <Card className="app-card" bordered={false}>
         <Table
           rowKey={(record) => record.id}
           rowSelection={rowSelection}
           loading={loading}
-          dataSource={bills}
+          dataSource={bills.filter((b) => filterStatus === "ALL" || b.orderStatus === filterStatus)}
           columns={columns}
           size="middle"
           scroll={{ x: 1400 }}
-          bordered
           pagination={{
             total,
             showSizeChanger: true,
@@ -629,7 +742,7 @@ const OrdersScreen = () => {
               setLimit(size);
             },
             showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} orders`,
+              `${range[0]}-${range[1]} trong tổng số ${total} đơn hàng`,
             pageSize: limit,
             current: page,
             onChange: (page, limit) => {
@@ -704,30 +817,37 @@ const OrdersScreen = () => {
               </Select>
             </div>
 
-            <div>
-              <div style={{ marginBottom: 8, fontWeight: 500 }}>
-                Mã vận đơn Giao Hàng Nhanh (GHN):
-              </div>
-              <Input
-                prefix={<TruckFast size={16} color="#888" />}
-                placeholder="Nhập mã vận đơn GHN (VD: L5G7S1...)"
-                value={trackingCode}
-                onChange={(e) => setTrackingCode(e.target.value)}
-                allowClear
+            {selectedOrder.orderStatus === "PENDING" && (
+              <Alert
+                type="info"
+                showIcon
+                message="Đơn hàng đang chờ xử lý"
+                description={
+                  <span>
+                    Để xác nhận đơn và giao hàng, vui lòng sử dụng tính năng{" "}
+                    <strong>Đóng gói & Tạo vận đơn</strong> ở danh sách đơn hàng. Modal này chỉ dùng để <strong>Hủy đơn hàng</strong>.
+                  </span>
+                }
               />
-              <div style={{ fontSize: "12px", color: "#888", marginTop: 4 }}>
-                Cập nhật mã vận đơn để cả Admin và Khách hàng theo dõi lộ trình đơn hàng thời gian thực.
-              </div>
-              {selectedStatus === "PROCESSING" && !trackingCode.trim() && (
-                <Alert
-                  type="info"
-                  showIcon
-                  style={{ marginTop: 8 }}
-                  message="Tự động tạo đơn GHN"
-                  description="Hệ thống sẽ tự động gọi GHN Open API để tạo vận đơn và gán mã tự động nếu bạn để trống ô này."
+            )}
+
+            {selectedOrder.orderStatus !== "PENDING" && (
+              <div>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                  Mã vận đơn Giao Hàng Nhanh (GHN):
+                </div>
+                <Input
+                  prefix={<TruckFast size={16} color="#888" />}
+                  placeholder="Nhập mã vận đơn GHN (VD: L5G7S1...)"
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value)}
+                  allowClear
                 />
-              )}
-            </div>
+                <div style={{ fontSize: "12px", color: "#888", marginTop: 4 }}>
+                  Cập nhật mã vận đơn để cả Admin và Khách hàng theo dõi lộ trình đơn hàng thời gian thực.
+                </div>
+              </div>
+            )}
 
             {selectedStatus === "CANCELLED" && (
               <div>
@@ -969,6 +1089,19 @@ const OrdersScreen = () => {
           </div>
         )}
       </Modal>
+
+      {/* Modal Kê khai cân nặng, kích thước & Tạo vận đơn GHN */}
+      <CreateShipmentModal
+        visible={isShipmentModalOpen}
+        order={shipmentOrder}
+        onClose={() => {
+          setIsShipmentModalOpen(false);
+          setShipmentOrder(null);
+        }}
+        onSuccess={() => {
+          getBills(`/orders/all?page=${page}&pageSize=${limit}`);
+        }}
+      />
     </div>
   );
 };

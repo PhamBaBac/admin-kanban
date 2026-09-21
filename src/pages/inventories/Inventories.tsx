@@ -54,7 +54,38 @@ const Inventories = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Đọc query param ?search= từ URL khi bấm từ Tổng quan
   useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const searchFromUrl = urlParams.get("search");
+    if (searchFromUrl) {
+      setSearchKey(searchFromUrl);
+      const key = replaceName(searchFromUrl);
+      getProducts({ title: key, page: 1, pageSize }).then(async (res) => {
+        if (res && res.data) {
+          const subProductMap: { [key: string]: SubProductModel[] } = {};
+          await Promise.all(
+            res.data.map(async (product: ProductModel) => {
+              const resSubs = await productService.getSubProducts(product.id);
+              subProductMap[product.id] = resSubs || [];
+            })
+          );
+          const enriched = res.data.map((item: any) => ({
+            ...item,
+            key: item.id,
+            subProducts: subProductMap[item.id] || [],
+          }));
+          setProducts(enriched);
+          setTotal(res.totalElements);
+        }
+      });
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get("search")) return; // Ưu tiên search từ URL
+
     if (isFilting) {
       executeFilter(filterValues, page, pageSize);
     } else if (!searchKey) {
@@ -231,31 +262,31 @@ const Inventories = () => {
   const columns: ColumnProps<ProductModel>[] = [
     {
       key: "title",
-      title: "Title",
+      title: "Tên sản phẩm",
       dataIndex: "",
-      width: 300,
+      width: 280,
       render: (item: ProductModel) => (
-        <Link to={`/inventory/detail/${item.slug}?id=${item.id}`}>
+        <Link to={`/inventory/detail/${item.slug}?id=${item.id}`} style={{ fontWeight: 600 }}>
           {item.title}
         </Link>
       ),
     },
     {
       key: "description",
-      title: "Description",
+      title: "Mô tả",
       dataIndex: "description",
-      width: 400,
+      width: 350,
       render: (desc: string) => (
         <Tooltip title={desc}>
-          <div className="text-2-line">{desc}</div>
+          <div className="text-2-line">{desc || "Chưa có mô tả"}</div>
         </Tooltip>
       ),
     },
     {
       key: "categories",
-      title: "Categories",
+      title: "Danh mục",
       dataIndex: "categories",
-      width: 300,
+      width: 250,
       render: (cats: CategoyModel[] = []) => (
         <Space wrap>
           {cats.map((cat) => (
@@ -277,18 +308,18 @@ const Inventories = () => {
     },
     {
       key: "images",
-      title: "Images",
+      title: "Hình ảnh",
       dataIndex: "images",
-      width: 300,
+      width: 220,
       render: (imgs: string[] = []) =>
         imgs?.length ? (
           <Avatar.Group>
             {imgs.map((img, idx) => (
               <Avatar
                 src={img}
-                size={40}
+                size={36}
                 key={idx}
-                style={{ marginRight: 8 }}
+                style={{ marginRight: 6 }}
               />
             ))}
           </Avatar.Group>
@@ -296,9 +327,9 @@ const Inventories = () => {
     },
     {
       key: "colors",
-      title: "Color",
+      title: "Màu sắc",
       dataIndex: "subProducts",
-      width: 150,
+      width: 140,
       render: (items: SubProductModel[] = []) => (
         <Space>
           {Array.from(new Set(items.map((sub) => sub.color))).map(
@@ -306,10 +337,11 @@ const Inventories = () => {
               <div
                 key={idx}
                 style={{
-                  width: 24,
-                  height: 24,
+                  width: 22,
+                  height: 22,
                   backgroundColor: color,
                   borderRadius: "50%",
+                  border: "1px solid #e2e8f0",
                 }}
               />
             )
@@ -319,9 +351,9 @@ const Inventories = () => {
     },
     {
       key: "sizes",
-      title: "Sizes",
+      title: "Kích cỡ",
       dataIndex: "subProducts",
-      width: 300,
+      width: 220,
       render: (items: SubProductModel[] = []) => (
         <Space wrap>
           {items.map((item, idx) => (
@@ -332,16 +364,16 @@ const Inventories = () => {
     },
     {
       key: "price",
-      title: "Price",
+      title: "Khoảng giá (VNĐ)",
       dataIndex: "subProducts",
-      width: 200,
+      width: 180,
       render: (items: SubProductModel[] = []) => (
-        <Typography.Text>{getMinMaxValues(items)}</Typography.Text>
+        <Typography.Text strong>{getMinMaxValues(items)}</Typography.Text>
       ),
     },
     {
       key: "stock",
-      title: "Stock",
+      title: "Tồn kho",
       dataIndex: "subProducts",
       width: 100,
       align: "right",
@@ -350,16 +382,16 @@ const Inventories = () => {
     },
     {
       key: "actions",
-      title: "Actions",
+      title: "Thao tác",
       dataIndex: "",
       fixed: "right",
-      width: 150,
+      width: 140,
       align: "right",
       render: (item: ProductModel) => (
         <Space>
-          <Tooltip title="Add sub product">
+          <Tooltip title="Thêm biến thể sản phẩm">
             <Button
-              icon={<MdLibraryAdd color={colors.primary500} size={20} />}
+              icon={<MdLibraryAdd color={colors.primary500} size={18} />}
               type="text"
               onClick={() => {
                 setProductSelected(item);
@@ -367,26 +399,29 @@ const Inventories = () => {
               }}
             />
           </Tooltip>
-          <Tooltip title="Delete product">
+          <Tooltip title="Chỉnh sửa sản phẩm">
             <Button
-              icon={<Trash className="text-danger" size={20} />}
-              type="text"
-              onClick={() =>
-                confirm({
-                  title: "Confirm?",
-                  content: "Are you sure you want to delete this item?",
-                  onOk: () => handleRemoveProduct(item.id),
-                })
-              }
-            />
-          </Tooltip>
-          <Tooltip title="Edit product">
-            <Button
-              icon={<Edit2 color={colors.primary500} size={20} />}
+              icon={<Edit2 color={colors.primary500} size={18} />}
               type="text"
               onClick={() =>
                 navigate(`/inventory/add-product?id=${item.id}`, {
                   state: { slug: item.slug, product: item },
+                })
+              }
+            />
+          </Tooltip>
+          <Tooltip title="Xóa sản phẩm">
+            <Button
+              icon={<Trash color={colors.error500} size={18} />}
+              type="text"
+              onClick={() =>
+                confirm({
+                  title: "Xác nhận xóa",
+                  content: `Bạn có chắc muốn xóa sản phẩm "${item.title}"?`,
+                  okText: "Xóa",
+                  cancelText: "Hủy",
+                  okType: "danger",
+                  onOk: () => handleRemoveProduct(item.id),
                 })
               }
             />
@@ -398,23 +433,27 @@ const Inventories = () => {
 
   return (
     <div>
-      <div className="row mb-2">
+      <div className="row mb-3 align-items-center">
         <div className="col">
-          <Typography.Title level={4}>Product</Typography.Title>
+          <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
+            Quản lý sản phẩm
+          </Typography.Title>
         </div>
         <div className="col">
           {selectedRowKeys.length > 0 && (
             <Space>
-              <Tooltip title="Delete product">
+              <Tooltip title="Xóa các mục đã chọn">
                 <Button
                   danger
-                  type="text"
-                  icon={<Trash size={18} className="text-danger" />}
+                  type="primary"
+                  icon={<Trash size={16} />}
                   onClick={() =>
                     confirm({
-                      title: "Confirm?",
-                      content:
-                        "Are you sure you want to delete selected items?",
+                      title: "Xác nhận xóa hàng loạt",
+                      content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} sản phẩm đã chọn?`,
+                      okText: "Xóa",
+                      cancelText: "Hủy",
+                      okType: "danger",
                       onOk: async () => {
                         await Promise.all(
                           selectedRowKeys.map((id) => handleRemoveProduct(id))
@@ -428,15 +467,12 @@ const Inventories = () => {
                     })
                   }
                 >
-                  Delete
+                  Xóa ({selectedRowKeys.length})
                 </Button>
               </Tooltip>
-              <Typography.Text>
-                {selectedRowKeys.length} items selected
-              </Typography.Text>
               {selectedRowKeys.length < total && (
                 <Button type="link" onClick={handleSelectAllProduct}>
-                  Select all
+                  Chọn tất cả
                 </Button>
               )}
             </Space>
@@ -447,7 +483,7 @@ const Inventories = () => {
             <Space>
               {isFilting && (
                 <Button onClick={handleClearFilter}>
-                  Clear filter values
+                  Xóa bộ lọc
                 </Button>
               )}
               <Input.Search
@@ -462,7 +498,7 @@ const Inventories = () => {
                   }
                 }}
                 onSearch={handleSearchProducts}
-                placeholder="Search"
+                placeholder="Tìm kiếm sản phẩm..."
                 allowClear
               />
               <Dropdown
@@ -478,36 +514,39 @@ const Inventories = () => {
                 )}
               >
                 <Button
-                  icon={<Sort size={20} />}
+                  icon={<Sort size={18} />}
                   type={isFilting ? "primary" : "default"}
                 >
-                  Filter {isFilting ? "(Active)" : ""}
+                  Bộ lọc {isFilting ? "(Đang bật)" : ""}
                 </Button>
               </Dropdown>
             </Space>
           </div>
         </div>
       </div>
-      <Table
-        rowKey={(record) => record.id}
-        rowSelection={rowSelection}
-        pagination={{
-          showSizeChanger: true,
-          current: page,
-          pageSize: pageSize,
-          total,
-          onChange: (page, size) => {
-            setPage(page);
-            setPageSize(size);
-          },
-        }}
-        columns={columns}
-        dataSource={products}
-        loading={loading}
-        scroll={{ x: "100%" }}
-        bordered
-        size="small"
-      />
+
+      <div className="app-card p-3">
+        <Table
+          rowKey={(record) => record.id}
+          rowSelection={rowSelection}
+          pagination={{
+            showSizeChanger: true,
+            current: page,
+            pageSize: pageSize,
+            total,
+            showTotal: (total, range) => `${range[0]}-${range[1]} trong tổng số ${total} sản phẩm`,
+            onChange: (page, size) => {
+              setPage(page);
+              setPageSize(size);
+            },
+          }}
+          columns={columns}
+          dataSource={products}
+          loading={loading}
+          scroll={{ x: 1000 }}
+          size="middle"
+        />
+      </div>
 
       <AddSubProductModal
         product={productSelected}

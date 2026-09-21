@@ -23,6 +23,7 @@ import { Edit2, Trash } from "iconsax-react";
 import { VND } from "../../utils/handleCurrency";
 import { colors } from "../../constants/colors";
 import { AddSubProductModal } from "../../modals";
+import { ColorBadge } from "../../utils/colorHelper";
 
 const ProductDetail = () => {
   const { getSubProducts, deleteSubProduct, loading, error } = useProducts();
@@ -126,9 +127,9 @@ const ProductDetail = () => {
           );
         }
         return (
-          <Space wrap size={[4, 4]}>
-            {item.color && <Tag color={item.color}>{item.color}</Tag>}
-            {item.size && <Tag>{item.size}</Tag>}
+          <Space wrap size={[6, 4]}>
+            {item.color && <ColorBadge color={item.color} size={14} />}
+            {item.size && <Tag style={{ margin: 0 }}>Size {item.size}</Tag>}
           </Space>
         );
       },

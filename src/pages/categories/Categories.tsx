@@ -23,9 +23,10 @@ import { AddCategory } from "../../components";
 import { useCategories } from "../../hooks/useCategories";
 const { confirm } = Modal;
 
-// Function để build tree structure từ flat data
+// Function để build tree structure từ flat data, đảm bảo không làm mất danh mục nào
 const buildCategoryTree = (categories: CategoyModel[]): CategoyModel[] => {
   const categoryMap = new Map<string, CategoyModel>();
+  const idSet = new Set(categories.map((c) => c.id));
   const rootCategories: CategoyModel[] = [];
 
   // Tạo map để truy cập nhanh
@@ -36,22 +37,37 @@ const buildCategoryTree = (categories: CategoyModel[]): CategoyModel[] => {
   // Build tree structure
   categories.forEach((category) => {
     const categoryWithChildren = categoryMap.get(category.id)!;
+    const pId = category.parentId ? String(category.parentId).trim() : "";
 
-    if (!category.parentId) {
-      // Root category
+    // Nếu không có parentId (hoặc rỗng), HOẶC parentId trùng với chính nó, HOẶC parentId không tồn tại trong db:
+    // Chắc chắn đây là Root Category!
+    if (!pId || pId === "" || pId === category.id || !categoryMap.has(pId)) {
       rootCategories.push(categoryWithChildren);
     } else {
-      // Child category
-      const parent = categoryMap.get(category.parentId);
+      const parent = categoryMap.get(pId);
       if (parent) {
         if (!parent.children) {
           parent.children = [];
         }
         parent.children.push(categoryWithChildren);
+      } else {
+        rootCategories.push(categoryWithChildren);
       }
     }
   });
 
+  // Dọn dẹp các mảng children rỗng để Ant Design Table không hiện icon expand thừa
+  const cleanEmptyChildren = (items: CategoyModel[]) => {
+    items.forEach((item) => {
+      if (item.children && item.children.length === 0) {
+        delete item.children;
+      } else if (item.children && item.children.length > 0) {
+        cleanEmptyChildren(item.children);
+      }
+    });
+  };
+
+  cleanEmptyChildren(rootCategories);
   return rootCategories;
 };
 
@@ -60,57 +76,27 @@ const Categories = () => {
     useCategories();
   const [categories, setCategories] = useState<CategoyModel[]>([]);
   const [treeCategories, setTreeCategories] = useState<CategoyModel[]>([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [treeValues, setTreeValues] = useState<TreeModel[]>([]);
   const [categorySelected, setCategorySelected] = useState<CategoyModel>();
-  const [total, setTotal] = useState<number>(10);
-  const [tableLoading, setTableLoading] = useState(false); // Loading riêng cho table
-  const [initialLoad, setInitialLoad] = useState(false); // Track initial load
-  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [allCategoriesList, setAllCategoriesList] = useState<CategoyModel[]>([]);
 
   useEffect(() => {
-    fetchAllCategories();
-    fetchCategories(); // Load data lần đầu
-    setInitialLoad(true);
+    fetchCategories();
   }, []);
-
-  useEffect(() => {
-    // Chỉ fetch khi đã load lần đầu và page/pageSize thay đổi
-    if (initialLoad) {
-      fetchCategories();
-    }
-  }, [page, pageSize, initialLoad]);
-
-  const fetchAllCategories = async () => {
-    try {
-      const res = await getAllCategories();
-      setTreeValues(getTreeValues(res, true));
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   const fetchCategories = async () => {
     try {
-      setTableLoading(true); // Chỉ set loading cho table
-      console.log(
-        "Fetching categories with page:",
-        page,
-        "pageSize:",
-        pageSize
-      );
-      const res = await getCategories({ page, pageSize });
-      console.log("Categories response:", res);
-      // Map Category[] to CategoyModel[] format
-      const mappedCategories = mapCategoriesToCategoyModels(res.data);
-      setCategories(mappedCategories);
+      setTableLoading(true);
+      const res = await getAllCategories();
+      const mapped = mapCategoriesToCategoyModels(res);
+      setAllCategoriesList(mapped);
+      setTreeValues(getTreeValues(res, true));
 
-      // Build tree structure
-      const treeData = buildCategoryTree(mappedCategories);
-      setTreeCategories(treeData);
-
-      setTotal(res.totalElements);
+      const fullTree = buildCategoryTree(mapped);
+      setTreeCategories(fullTree);
+      setTotal(mapped.length);
     } catch (error) {
       console.log(error);
     } finally {
@@ -118,53 +104,42 @@ const Categories = () => {
     }
   };
 
+  // Map parentId sang tên danh mục cha thực tế
+  const getParentName = (parentId: string) => {
+    if (!parentId) return "None (Root)";
+    const found = allCategoriesList.find((c) => c.id === parentId) || categories.find((c) => c.id === parentId);
+    return found ? found.title : "Root Category";
+  };
+
   const columns: ColumnProps<CategoyModel>[] = [
     {
       key: "title",
-      title: "Name",
+      title: "Tên danh mục",
       dataIndex: "title",
       render: (title: string, record: CategoyModel) => {
         const isParent =
           Array.isArray(record.children) && record.children.length > 0;
-        const isExpanded = expandedRowKeys.includes(record.id);
         return (
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {isParent && (
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isExpanded) {
-                    setExpandedRowKeys(
-                      expandedRowKeys.filter((k) => k !== record.id)
-                    );
-                  } else {
-                    setExpandedRowKeys([...expandedRowKeys, record.id]);
-                  }
-                }}
-                style={{
-                  cursor: "pointer",
-                  marginRight: 8,
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  color: colors.primary500,
-                  userSelect: "none",
-                }}
-              >
-                {isExpanded ? "-" : "+"}
-              </span>
-            )}
-            <Link to={`/categories/detail/${record.slug}?id=${record.id}`}>
+          <div style={{ display: "inline-flex", alignItems: "center" }}>
+            <Link
+              to={`/categories/detail/${record.slug}?id=${record.id}`}
+              style={{ fontWeight: isParent ? 600 : 400, color: "#1e293b" }}
+            >
               {title}
             </Link>
             {isParent && (
               <span
                 style={{
-                  color: colors.gray600,
-                  fontSize: "12px",
+                  color: "#64748b",
+                  backgroundColor: "#f1f5f9",
+                  padding: "1px 6px",
+                  borderRadius: 4,
+                  fontSize: "11px",
                   marginLeft: "8px",
+                  fontWeight: 500,
                 }}
               >
-                ({isParent ? record.children!.length : 0} sub-categories)
+                {record.children!.length} mục con
               </span>
             )}
           </div>
@@ -173,47 +148,57 @@ const Categories = () => {
     },
     {
       key: "description",
-      title: "Description",
+      title: "Mô tả",
       dataIndex: "description",
-      render: (description: string) => (
-        <span style={{ color: colors.gray600 }}>
-          {description || "No description"}
-        </span>
-      ),
-    },
-    {
-      key: "parentId",
-      title: "Parent Category",
-      dataIndex: "parentId",
-      render: (parentId: string) => (
-        <span style={{ color: colors.gray600 }}>
-          {parentId ? "Sub-category" : "Root Category"}
-        </span>
-      ),
+      ellipsis: true,
+      render: (description: string) => {
+        if (!description) {
+          return <span style={{ color: colors.gray600 }}>Chưa có mô tả</span>;
+        }
+        return (
+          <Tooltip title={description} placement="topLeft">
+            <div
+              style={{
+                color: colors.gray600,
+                maxWidth: 400,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+              }}
+            >
+              {description}
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       key: "btnContainer",
-      title: "Actions",
+      title: "Thao tác",
       dataIndex: "",
       render: (item: any) => (
         <Space>
-          <Tooltip title="Edit categories" key={"btnEdit"}>
+          <Tooltip title="Chỉnh sửa danh mục" key={"btnEdit"}>
             <Button
               onClick={() => setCategorySelected(item)}
-              icon={<Edit2 size={20} color={colors.gray600} />}
+              icon={<Edit2 size={18} color={colors.gray600} />}
               type="text"
             />
           </Tooltip>
-          <Tooltip title="Xoá categories" key={"btnDelete"}>
+          <Tooltip title="Xoá danh mục" key={"btnDelete"}>
             <Button
               onClick={() =>
                 confirm({
-                  title: "Confirm",
-                  content: "What are you sure you want to remove this item?",
+                  title: "Xác nhận xóa",
+                  content: "Bạn có chắc chắn muốn xóa danh mục này?",
+                  okText: "Xóa",
+                  cancelText: "Hủy",
+                  okType: "danger",
                   onOk: async () => handleRemove(item.id),
                 })
               }
-              icon={<Trash size={20} className="text-danger" />}
+              icon={<Trash size={18} className="text-danger" />}
               type="text"
             />
           </Tooltip>
@@ -276,57 +261,58 @@ const Categories = () => {
   }
 
   return (
-    <div>
-      <div className="container">
-        <div className="row">
-          <div className="col-md-4">
-            <Card title={"Add new"}>
-              <AddCategory
-                onClose={() => setCategorySelected(undefined)}
-                seleted={categorySelected}
-                values={treeValues}
-                onAddNew={async (val) => {
-                  await fetchAllCategories();
-                  await fetchCategories();
-                  // Reset selected category after add/update
-                  setCategorySelected(undefined);
-                }}
-              />
-            </Card>
-          </div>
-          <div className="col-md-8">
-            <Card>
-              <Table
-                size="small"
-                dataSource={treeCategories}
-                columns={columns}
-                rowKey={(record) => record.id}
-                loading={tableLoading} // Chỉ loading cho table
-                expandable={{
-                  expandedRowKeys,
-                  onExpandedRowsChange: (keys) =>
-                    setExpandedRowKeys(keys as string[]),
-                  expandIcon: () => null, // Ẩn icon mặc định
-                  indentSize: 32, // Thụt vào 32px cho mỗi cấp con
-                }}
-                pagination={{
-                  showSizeChanger: true,
-                  onShowSizeChange: (current, size) => {
-                    setPageSize(size);
-                    setPage(1); // Reset về trang 1 khi thay đổi page size
-                  },
-                  total,
-                  current: page,
-                  pageSize: pageSize,
-                  onChange(page, pageSize) {
-                    setPage(page);
-                    setPageSize(pageSize);
-                  },
-                  showQuickJumper: true,
-                }}
-              />
-            </Card>
-          </div>
+    <div className="pb-4">
+      <div className="row g-4">
+        <div className="col-lg-4 col-md-5">
+          <Card
+            className="app-card"
+            bordered={false}
+            title={
+              <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 15 }}>
+                {categorySelected ? "Cập nhật danh mục" : "Thêm danh mục mới"}
+              </span>
+            }
+          >
+            <AddCategory
+              onClose={() => setCategorySelected(undefined)}
+              seleted={categorySelected}
+              values={treeValues}
+              onAddNew={async (val) => {
+                await fetchCategories();
+                // Reset selected category after add/update
+                setCategorySelected(undefined);
+              }}
+            />
+          </Card>
+        </div>
+        <div className="col-lg-8 col-md-7">
+          <Card
+            className="app-card"
+            bordered={false}
+            title={
+              <div className="d-flex align-items-center justify-content-between">
+                <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 15 }}>
+                  Cây phân cấp danh mục
+                </span>
+                <span style={{ fontSize: 13, color: "#64748b", fontWeight: 400 }}>
+                  Tổng cộng: <strong>{total}</strong> danh mục
+                </span>
+              </div>
+            }
+          >
+            <Table
+              size="middle"
+              dataSource={treeCategories}
+              columns={columns}
+              rowKey={(record) => record.id}
+              loading={tableLoading}
+              expandable={{
+                indentSize: 20,
+                defaultExpandAllRows: true,
+              }}
+              pagination={false}
+            />
+          </Card>
         </div>
       </div>
     </div>

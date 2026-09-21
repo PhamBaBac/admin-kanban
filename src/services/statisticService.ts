@@ -20,10 +20,13 @@ export interface TopSellingProduct {
 }
 
 export interface LowQuantityProduct {
-  id: string;
+  id?: string;
+  slug?: string;
   name: string;
-  quantity: number;
-  threshold: number;
+  remainingQuantity: number;
+  quantity?: number;
+  threshold?: number;
+  images?: string[];
 }
 
 export interface SalesAndPurchaseData {

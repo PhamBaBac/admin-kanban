@@ -15,9 +15,10 @@ import {
   Upload,
   UploadProps,
 } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined, PictureOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import handleAPI from "../apis/handleAPI";
+import mediaAPI from "../apis/mediaAPI";
 import { colors } from "../constants/colors";
 import { ProductModel, SubProductModel } from "../models/Products";
 import { useSelector } from "react-redux";
@@ -26,6 +27,7 @@ import { SelectModel } from "../models/FormModel";
 import { uploadFile } from "../utils/uploadFile";
 import { useSearchParams } from "react-router-dom";
 import { useProducts } from "../hooks/useProducts";
+import MediaPickerModal from "./MediaPickerModal";
 
 interface Props {
   visible: boolean;
@@ -49,6 +51,7 @@ const AddSubProductModal = (props: Props) => {
   const [fileUrl, setFileUrl] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [options, setOptions] = useState<SelectModel[]>();
 
   const [form] = Form.useForm();
@@ -79,6 +82,10 @@ const AddSubProductModal = (props: Props) => {
 
         form.setFieldsValue({
           ...subProduct,
+          qty:
+            subProduct.qty !== undefined && subProduct.qty !== null
+              ? subProduct.qty
+              : subProduct.stock,
           customAttributes:
             customAttributes.length > 0
               ? customAttributes
@@ -291,6 +298,14 @@ const AddSubProductModal = (props: Props) => {
       url: url,
     };
     setFileList((prev) => [...(prev || []), newItem]);
+    
+    // Tự động lưu link ảnh này vào Thư viện Media ở Backend
+    mediaAPI.saveMedia({
+      url: url,
+      fileName: `image-${(fileList || []).length + 1}.png`,
+      fileType: "image/url",
+    }).catch((err) => console.warn("Lưu media ngầm thất bại:", err));
+
     setFileUrl("");
     message.success("Đã nạp ảnh từ đường link thành công!");
   };
@@ -446,7 +461,17 @@ const AddSubProductModal = (props: Props) => {
         </Form.Item>
       </Form>
       <div className="mb-3">
-        <Typography.Text strong>Hình ảnh phân loại (Images)</Typography.Text>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography.Text strong>Hình ảnh phân loại (Images)</Typography.Text>
+          <Button
+            type="link"
+            icon={<PictureOutlined />}
+            onClick={() => setMediaPickerOpen(true)}
+            disabled={isLoading}
+          >
+            Chọn từ thư viện ảnh
+          </Button>
+        </div>
         <div style={{ marginTop: 8 }}>
           <Upload
             multiple
@@ -506,6 +531,22 @@ const AddSubProductModal = (props: Props) => {
           src={previewImage}
         />
       )}
+
+      {/* Modal chọn ảnh từ thư viện */}
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(media) => {
+          const newItem = {
+            uid: `media-${media.id || Date.now()}`,
+            name: media.fileName || `image-${(fileList || []).length + 1}.png`,
+            status: "done",
+            url: media.url,
+          };
+          setFileList((prev) => [...(prev || []), newItem]);
+          message.success("Đã thêm ảnh từ thư viện");
+        }}
+      />
     </Modal>
   );
 };

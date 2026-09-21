@@ -17,6 +17,7 @@ export interface BillModel {
 }
 
 export interface OrderItem {
+  orderItemId?: string;
   image: string;
   title: string;
   size?: string;
@@ -26,6 +27,37 @@ export interface OrderItem {
   price: number;
   totalPrice: number;
   status?: string | null;
+}
+
+export interface ShipmentItemModel {
+  id: string;
+  orderItemId: string;
+  productTitle: string;
+  variantName: string;
+  quantity: number;
+  price: number;
+}
+
+export interface ShipmentModel {
+  id: string;
+  orderId: string;
+  shipmentCode: string;
+  carrier: string;
+  trackingCode?: string;
+  shippingStatus?: string;
+  shippingStatusName?: string;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+  codAmount: number;
+  shippingFee: number;
+  note?: string;
+  requiredNote?: string;
+  pickedDate?: string;
+  deliveredDate?: string;
+  createdAt: string;
+  items: ShipmentItemModel[];
 }
 
 // Legacy interface for backward compatibility

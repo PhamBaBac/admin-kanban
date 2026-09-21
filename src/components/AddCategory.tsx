@@ -30,10 +30,12 @@ const AddCategory = (props: Props) => {
     }
   }, [seleted, form]);
 
-  // Reset parentId khi values (treeValues) thay đổi để TreeSelect nhận dữ liệu mới
+  // Chỉ reset parentId khi values thay đổi NẾU đang ở chế độ thêm mới (không có seleted)
   useEffect(() => {
-    form.setFieldsValue({ parentId: undefined });
-  }, [values, form]);
+    if (!seleted) {
+      form.setFieldsValue({ parentId: undefined });
+    }
+  }, [values, form, seleted]);
 
   const handleCategory = async (values: any) => {
     const data: any = {};
@@ -42,6 +44,8 @@ const AddCategory = (props: Props) => {
       data[i] = values[i] ?? "";
     }
 
+    // Nếu không chọn parentId hoặc xóa parentId thì đặt là rỗng để xác định là Root
+    data.parentId = values.parentId ? String(values.parentId).trim() : "";
     data.slug = replaceName(values.title);
 
     try {
@@ -99,9 +103,10 @@ const AddCategory = (props: Props) => {
         onFinish={handleCategory}
         size="large"
       >
-        <Form.Item name={"parentId"} label="Parent category">
+        <Form.Item name={"parentId"} label="Danh mục cha (để trống nếu là danh mục gốc)">
           <TreeSelect
             treeData={values}
+            placeholder="Chọn danh mục cha hoặc để trống"
             allowClear
             showSearch
             treeDefaultExpandAll
@@ -112,18 +117,18 @@ const AddCategory = (props: Props) => {
           rules={[
             {
               required: true,
-              message: "Enter category title",
+              message: "Vui lòng nhập tên danh mục",
             },
           ]}
-          label="Title"
+          label="Tên danh mục"
         >
-          <Input allowClear />
+          <Input placeholder="Nhập tên danh mục..." allowClear />
         </Form.Item>
         <Form.Item
           name={"description"}
           label={
             <div className="d-flex align-items-center" style={{ gap: 8 }}>
-              <span>Description</span>
+              <span>Mô tả chi tiết</span>
               <Button
                 type="link"
                 size="small"
@@ -146,7 +151,7 @@ const AddCategory = (props: Props) => {
             </div>
           }
         >
-          <Input.TextArea rows={4} />
+          <Input.TextArea placeholder="Nhập mô tả danh mục..." rows={4} />
         </Form.Item>
       </Form>
 
@@ -161,7 +166,7 @@ const AddCategory = (props: Props) => {
                 onClose();
               }}
             >
-              Cancel
+              Hủy bỏ
             </Button>
           )}
           <Button
@@ -170,7 +175,7 @@ const AddCategory = (props: Props) => {
             type="primary"
             onClick={() => form.submit()}
           >
-            {seleted ? "Update" : "Submit"}
+            {seleted ? "Cập nhật" : "Tạo mới"}
           </Button>
         </Space>
       </div>

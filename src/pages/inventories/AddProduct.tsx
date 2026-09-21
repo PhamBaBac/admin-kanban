@@ -24,11 +24,13 @@ import { useCategories } from "../../hooks/useCategories";
 import { useSuppliers } from "../../hooks/useSuppliers";
 import { replaceName } from "../../utils/replaceName";
 import { Add } from "iconsax-react";
-import { ModalCategory, ToogleSupplier } from "../../modals";
+import { PictureOutlined } from "@ant-design/icons";
+import { ModalCategory, ToogleSupplier, MediaPickerModal } from "../../modals";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
 import { mapCategoriesToCategoyModels } from "../../utils/categoryMapper";
 import { uploadFile } from "../../utils/uploadFile";
+import { mediaAPI } from "../../apis/mediaAPI";
 import { BsStars } from "react-icons/bs";
 import { aiService } from "../../services";
 
@@ -55,6 +57,7 @@ const AddProduct = () => {
   const [fileUrl, setFileUrl] = useState("");
   const [fileList, setFileList] = useState<any[]>([]);
   const [isVisibleAddSupplier, setIsVisibleAddSupplier] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
@@ -285,6 +288,14 @@ const AddProduct = () => {
       url: url,
     };
     setFileList((prev) => [...(prev || []), newItem]);
+
+    // Tự động lưu link ảnh vào Thư viện Media ở Backend
+    mediaAPI.saveMedia({
+      url: url,
+      fileName: `image-${(fileList || []).length + 1}.png`,
+      fileType: "image/url",
+    }).catch((err) => console.warn("Lưu media ngầm thất bại:", err));
+
     setFileUrl("");
     message.success("Đã nạp ảnh từ đường link thành công!");
   };
@@ -571,7 +582,21 @@ const AddProduct = () => {
                   />
                 </Form.Item>
               </Card>
-              <Card size="small" className="mt-3" title="Images (Hình ảnh sản phẩm)">
+              <Card
+                size="small"
+                className="mt-3"
+                title="Images (Hình ảnh sản phẩm)"
+                extra={
+                  <Button
+                    type="link"
+                    icon={<PictureOutlined />}
+                    onClick={() => setMediaPickerOpen(true)}
+                    style={{ padding: 0 }}
+                  >
+                    Chọn từ thư viện
+                  </Button>
+                }
+              >
                 <Upload
                   multiple
                   fileList={fileList}
@@ -641,6 +666,20 @@ const AddProduct = () => {
             });
           }
           setIsVisibleAddSupplier(false);
+        }}
+      />
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(media) => {
+          const newItem = {
+            uid: `media-${media.id || Date.now()}`,
+            name: media.fileName || `image-${(fileList || []).length + 1}.png`,
+            status: "done",
+            url: media.url,
+          };
+          setFileList((prev) => [...(prev || []), newItem]);
+          message.success("Đã thêm ảnh từ thư viện");
         }}
       />
     </div>

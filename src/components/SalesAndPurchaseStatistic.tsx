@@ -98,24 +98,19 @@ const SalesAndPurchaseStatistic = () => {
     <div className="row mt-4">
       <div className="col-sm-12 col-md-6">
         <Card
-          title="Purchase & Order"
+          className="app-card mb-4"
+          bordered={false}
+          title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Mua hàng & Đơn hàng</span>}
           extra={
             <Radio.Group
               value={timeTypeSelected}
-              onChange={(e) => setTimeTypeSelected(e.target.value)}
-              options={[
-                { label: "Weekly", value: "weekly" },
-                {
-                  label: "Monthly",
-                  value: "monthly",
-                },
-                {
-                  label: "Yearly",
-                  value: "yearly",
-                },
-              ]}
-              optionType="button"
-            />
+              onChange={(val) => setTimeTypeSelected(val.target.value)}
+              buttonStyle="solid"
+              size="middle"
+            >
+              <Radio.Button value="monthly">Theo tháng</Radio.Button>
+              <Radio.Button value="weekly">Theo tuần</Radio.Button>
+            </Radio.Group>
           }
         >
           <Spin spinning={loading}>
@@ -125,14 +120,18 @@ const SalesAndPurchaseStatistic = () => {
                   <Bar data={chartData} options={options} />
                 </div>
               ) : (
-                <Empty description="No data" />
+                <Empty description="Không có dữ liệu thống kê" />
               )}
             </div>
           </Spin>
         </Card>
       </div>
       <div className="col-sm-12 col-md-6">
-        <Card title="Sales summary">
+        <Card
+          className="app-card mb-4"
+          title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Xu hướng doanh số bán</span>}
+          bordered={false}
+        >
           <Spin spinning={loading}>
             <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {hasData ? (
@@ -140,7 +139,7 @@ const SalesAndPurchaseStatistic = () => {
                   <Line data={chartData} options={options} />
                 </div>
               ) : (
-                <Empty description="No data" />
+                <Empty description="Không có dữ liệu thống kê" />
               )}
             </div>
           </Spin>

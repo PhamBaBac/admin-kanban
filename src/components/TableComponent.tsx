@@ -1,12 +1,9 @@
-/** @format */
-
-import { Button, Space, Table, Typography } from "antd";
+import { Button, Space, Table, Tag, Typography } from "antd";
 import { FormModel } from "../models/FormModel";
 import { useEffect, useState } from "react";
 import { ColumnProps } from "antd/es/table";
 import { Sort } from "iconsax-react";
 import { colors } from "../constants/colors";
-import { Resizable } from "re-resizable";
 import { ModalExportData } from "../modals";
 
 interface Props {
@@ -54,46 +51,131 @@ const TableComponent = (props: Props) => {
     if (forms && forms.formItems && forms.formItems.length > 0) {
       const items: any[] = [];
 
+      const COLUMN_LABEL_VI: Record<string, string> = {
+        name: "Tên nhà cung cấp",
+        email: "Email",
+        active: "Kích hoạt",
+        products: "Sản phẩm",
+        categories: "Danh mục",
+        price: "Giá nhập",
+        contact: "Số điện thoại",
+        type: "Hợp tác",
+        isTaking: "Hợp tác",
+      };
+
+      const COLUMN_WIDTH_CONFIG: Record<string, number> = {
+        name: 240,
+        email: 200,
+        active: 110,
+        products: 320,
+        categories: 200,
+        price: 140,
+        contact: 150,
+        type: 140,
+        isTaking: 140,
+      };
+
       forms.formItems.forEach((item: any) => {
+        const viTitle = COLUMN_LABEL_VI[item.key] || COLUMN_LABEL_VI[item.value] || item.label;
+        const colWidth = COLUMN_WIDTH_CONFIG[item.key] || COLUMN_WIDTH_CONFIG[item.value] || item.displayLength || 160;
+
         if (item.key === "products" || item.key === "categories") {
           items.push({
             key: item.key,
             dataIndex: item.value,
-            title: item.label,
-            width: item.displayLength,
-            render: (value: string[] | any[]) => (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                {value?.map((subItem, index) => {
-                  const itemKey =
-                    typeof subItem === "string"
-                      ? subItem
-                      : subItem.id || subItem._id || `${item.key}-${index}`;
-                  return (
-                    <div
-                      key={itemKey}
-                      style={{
-                        padding: "2px 4px",
-                        border: "1px solid #d9d9d9",
-                        borderRadius: "4px",
-                        marginRight: "4px",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      {typeof subItem === "string"
+            title: viTitle,
+            width: colWidth,
+            render: (value: string[] | any[]) => {
+              if (!value || (Array.isArray(value) && value.length === 0)) {
+                return <span style={{ color: "#94a3b8" }}>—</span>;
+              }
+              const list = Array.isArray(value) ? value : [value];
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {list.map((subItem, index) => {
+                    const itemKey =
+                      typeof subItem === "string"
                         ? subItem
-                        : subItem.title || subItem.name}
-                    </div>
-                  );
-                })}
-              </div>
-            ),
+                        : subItem?.id || subItem?._id || `${item.key}-${index}`;
+                    const labelText =
+                      typeof subItem === "string"
+                        ? subItem
+                        : subItem?.title || subItem?.name || "";
+                    if (!labelText) return null;
+                    return (
+                      <Tag
+                        color={item.key === "categories" ? "purple" : "blue"}
+                        key={itemKey}
+                        style={{
+                          margin: 0,
+                          maxWidth: "100%",
+                          whiteSpace: "normal",
+                          wordBreak: "break-word",
+                          lineHeight: "1.4",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        {labelText}
+                      </Tag>
+                    );
+                  })}
+                </div>
+              );
+            },
+          });
+        } else if (item.value === "isTaking" || item.key === "type") {
+          items.push({
+            key: item.key,
+            dataIndex: item.value,
+            title: viTitle,
+            width: colWidth,
+            align: "center",
+            render: (val: any) =>
+              val === 1 || val === true ? (
+                <Tag color="success">Đang lấy hàng</Tag>
+              ) : (
+                <Tag color="default">Ngừng lấy</Tag>
+              ),
+          });
+        } else if (item.key === "price") {
+          items.push({
+            key: item.key,
+            dataIndex: item.value,
+            title: viTitle,
+            width: colWidth,
+            align: "right",
+            render: (val: any) =>
+              val !== undefined && val !== null && val !== ""
+                ? `${Number(val).toLocaleString("vi-VN")} đ`
+                : "—",
+          });
+        } else if (item.key === "active") {
+          items.push({
+            key: item.key,
+            dataIndex: item.value,
+            title: viTitle,
+            width: colWidth,
+            align: "center",
+            render: (val: any) =>
+              val === 1 || val === "1" ? (
+                <Tag color="processing">Hoạt động</Tag>
+              ) : (
+                <Tag color="error">Khóa</Tag>
+              ),
           });
         } else {
           items.push({
             key: item.key,
             dataIndex: item.value,
-            title: item.label,
-            width: item.displayLength,
+            title: viTitle,
+            width: colWidth,
+            render: (val: any) =>
+              val ? (
+                <span style={{ wordBreak: "break-word" }}>{val}</span>
+              ) : (
+                <span style={{ color: "#94a3b8" }}>—</span>
+              ),
           });
         }
       });
@@ -103,7 +185,7 @@ const TableComponent = (props: Props) => {
         dataIndex: "index",
         title: "#",
         align: "center",
-        width: 100,
+        width: 60,
         render: (_: any, __: any, index: number) =>
           (pageInfo.page - 1) * pageInfo.pageSize + index + 1,
       });
@@ -113,8 +195,8 @@ const TableComponent = (props: Props) => {
           key: "actions",
           dataIndex: "",
           fixed: "right",
-          title: "Action",
-          align: "right",
+          title: "Thao tác",
+          align: "center",
           render: (item: any) => extraColumn(item),
           width: 100,
         });
@@ -123,42 +205,6 @@ const TableComponent = (props: Props) => {
       setColumns(items);
     }
   }, [forms, pageInfo, extraColumn]);
-
-  const RenderTitle = (props: any) => {
-    const { children, ...restProps } = props;
-    return (
-      <th
-        {...restProps}
-        style={{
-          padding: "6px 12px",
-        }}
-      >
-        <Resizable
-          enable={{ right: true }}
-          onResizeStop={(_e, _direction, _ref, d) => {
-            const item = columns.find(
-              (element) => element.title === children[1]
-            );
-            if (item) {
-              const items = [...columns];
-              const newWidth = (item.width as number) + d.width;
-              const index = columns.findIndex(
-                (element) => element.key === item.key
-              );
-
-              if (index !== -1) {
-                items[index].width = newWidth;
-              }
-
-              setColumns(items);
-            }
-          }}
-        >
-          {children}
-        </Resizable>
-      </th>
-    );
-  };
 
   return (
     <>
@@ -169,6 +215,7 @@ const TableComponent = (props: Props) => {
             setPageInfo({ ...pageInfo, pageSize: size });
           },
           total,
+          showTotal: (tot, range) => `${range[0]}-${range[1]} trong tổng số ${tot} nhà cung cấp`,
           onChange(page, pageSize) {
             setPageInfo({
               ...pageInfo,
@@ -178,6 +225,7 @@ const TableComponent = (props: Props) => {
           showQuickJumper: true,
         }}
         scroll={{
+          x: 1600,
           y: scrollHeight ? scrollHeight : "calc(100vh - 300px)",
         }}
         loading={loading}
@@ -195,27 +243,22 @@ const TableComponent = (props: Props) => {
               alignItems: "center",
             }}
           >
-            <Title level={5} style={{ margin: 0 }}>
-              {forms.title}
+            <Title level={5} style={{ margin: 0, fontWeight: 700 }}>
+              {forms.title === "Suppliers" || forms.title === "Supplier" ? "Danh sách nhà cung cấp" : forms.title}
             </Title>
             <Space>
               <Button type="primary" onClick={onAddNew}>
-                Add Supplier
+                Thêm nhà cung cấp
               </Button>
-              <Button icon={<Sort size={20} color={colors.gray600} />}>
-                Filters
+              <Button icon={<Sort size={18} color={colors.gray600} />}>
+                Bộ lọc
               </Button>
               <Button onClick={() => setIsVisibleModalExport(true)}>
-                Export Excel
+                Xuất Excel
               </Button>
             </Space>
           </div>
         )}
-        components={{
-          header: {
-            cell: RenderTitle,
-          },
-        }}
       />
       <ModalExportData
         visible={isVisibleModalExport}

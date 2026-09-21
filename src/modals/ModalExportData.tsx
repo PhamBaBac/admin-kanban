@@ -108,7 +108,9 @@ const ModalExportData = (props: Props) => {
       okButtonProps={{
         loading: isLoading,
       }}
-      title="Export to excel"
+      title="Xuất dữ liệu Excel"
+      okText="Xuất file"
+      cancelText="Hủy bỏ"
     >
       <div>
         <div>
@@ -118,7 +120,7 @@ const ModalExportData = (props: Props) => {
               setTimeSelected(timeSelected === "all" ? "ranger" : "all")
             }
           >
-            Get all
+            Tất cả thời gian
           </Checkbox>
         </div>
         <div className="mt-2">
@@ -128,13 +130,14 @@ const ModalExportData = (props: Props) => {
               setTimeSelected(timeSelected === "all" ? "ranger" : "all")
             }
           >
-            Date ranger
+            Theo khoảng thời gian
           </Checkbox>
         </div>
         <div className="mt-2">
           {timeSelected === "ranger" && (
             <Space>
               <RangePicker
+                placeholder={["Từ ngày", "Đến ngày"]}
                 onChange={(val: any) =>
                   setDates(
                     val && val[0] && val[1]
@@ -157,16 +160,31 @@ const ModalExportData = (props: Props) => {
       <div className="mt-2">
         <List
           dataSource={forms?.formItems}
-          renderItem={(item) => (
-            <List.Item key={item.key}>
-              <Checkbox
-                checked={checkedValues.includes(item.value)}
-                onChange={() => handleChangeCheckedValue(item.value)}
-              >
-                {item.label}
-              </Checkbox>
-            </List.Item>
-          )}
+          renderItem={(item) => {
+            const FIELD_NAMES_VI: Record<string, string> = {
+              name: "Tên nhà cung cấp",
+              email: "Email",
+              active: "Kích hoạt",
+              products: "Sản phẩm",
+              categories: "Danh mục",
+              price: "Giá nhập",
+              contact: "Số điện thoại",
+              type: "Hợp tác",
+              isTaking: "Hợp tác",
+            };
+            const labelVi = FIELD_NAMES_VI[item.key] || FIELD_NAMES_VI[item.value] || item.label;
+
+            return (
+              <List.Item key={item.key}>
+                <Checkbox
+                  checked={checkedValues.includes(item.value)}
+                  onChange={() => handleChangeCheckedValue(item.value)}
+                >
+                  {labelVi}
+                </Checkbox>
+              </List.Item>
+            );
+          }}
         />
       </div>
     </Modal>
