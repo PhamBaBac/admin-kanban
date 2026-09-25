@@ -13,20 +13,60 @@ export interface BillModel {
   cancelReason?: string;
   trackingCode?: string;
   shippingStatus?: string;
+  subtotal?: number;
+  shippingFee?: number;
+  discountAmount?: number;
+  shippingProvince?: string;
+  shippingDistrict?: string;
+  shippingWard?: string;
   createdAt: string;
 }
 
 export interface OrderItem {
   orderItemId?: string;
+  subProductId?: string;
+  skuCode?: string;
   image: string;
   title: string;
+  productTitle?: string;
   size?: string;
   color?: string;
   attributes?: Record<string, any>;
+  attributesSnapshot?: Record<string, any>;
   qty: number;
   price: number;
+  originalPrice?: number;
+  cost?: number;
+  discountAmount?: number;
   totalPrice: number;
   status?: string | null;
+}
+
+export interface OrderStatusHistoryModel {
+  id: string;
+  orderId: string;
+  fromStatus: string | null;
+  toStatus: string;
+  changedById: string;
+  changedByRole: string; // CUSTOMER, ADMIN, SHIPPER, SYSTEM
+  reason?: string | null;
+  metadata?: string | null;
+  createdAt: string;
+}
+
+export interface PaymentTransactionModel {
+  id: string;
+  orderId: string;
+  transactionCode: string;
+  gatewayTransactionNo?: string | null;
+  paymentType: string;
+  transactionType: "PAYMENT" | "REFUND" | "COD_COLLECTION" | "ADJUSTMENT" | string;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "SUCCESS" | "FAILED" | string;
+  rawResponse?: string | null;
+  note?: string | null;
+  createdAt: string;
 }
 
 export interface ShipmentItemModel {

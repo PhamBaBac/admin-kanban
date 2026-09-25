@@ -21,7 +21,17 @@ export interface OrderListResponse {
 
 export const orderService = {
   getOrders: async (params?: any): Promise<OrderListResponse> => {
-    const response = await handleAPI("/orders/all", params);
+    const response = await handleAPI("/orders/filter", params);
+    return response.data;
+  },
+
+  getStatusCounts: async (): Promise<Record<string, number>> => {
+    const response = await handleAPI("/orders/status-counts");
+    return response.data;
+  },
+
+  filterOrders: async (params?: any): Promise<OrderListResponse> => {
+    const response = await handleAPI("/orders/filter", params);
     return response.data;
   },
 
@@ -60,6 +70,21 @@ export const orderService = {
 
   exportOrders: async (data: any): Promise<any> => {
     const response = await handleAPI("/orders/export", data, "post");
+    return response.data;
+  },
+
+  getOrderStatusHistory: async (orderId: string): Promise<any[]> => {
+    const response = await handleAPI(`/orders/${orderId}/status-history`);
+    return response.data;
+  },
+
+  getOrderTransactions: async (orderId: string): Promise<any[]> => {
+    const response = await handleAPI(`/orders/${orderId}/transactions`);
+    return response.data;
+  },
+
+  getAdminTransactions: async (params?: { page?: number; pageSize?: number }): Promise<any> => {
+    const response = await handleAPI("/orders/admin/transactions", params);
     return response.data;
   },
 };

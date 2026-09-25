@@ -27,7 +27,11 @@ import {
   MediaScreen,
   ShipmentsScreen,
   ReportScreen,
+  FinanceScreen,
+  AccountsScreen,
 } from "../pages";
+import AdminRoute from "./AdminRoute";
+
 
 ChartJS.register(
   CategoryScale,
@@ -74,9 +78,19 @@ const MainRouter = () => {
             <Route path="/media" element={<MediaScreen />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/promotions" element={<PromotionScreen />} />
-            <Route path="/report" element={<ReportScreen />} />
+            <Route path="/report" element={<AdminRoute roles={["ADMIN", "MANAGER"]}><ReportScreen /></AdminRoute>} />
             <Route path="/orders" element={<OrdersScreen />} />
             <Route path="/shipments" element={<ShipmentsScreen />} />
+            <Route path="/finance" element={<AdminRoute><FinanceScreen /></AdminRoute>} />
+            <Route
+              path="/accounts"
+              element={
+                <AdminRoute>
+                  <AccountsScreen />
+                </AdminRoute>
+              }
+            />
+
 
             {/* Redirect auth routes if already authenticated */}
             <Route path="/login" element={<Navigate to="/" replace />} />

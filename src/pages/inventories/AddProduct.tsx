@@ -2,18 +2,23 @@
 
 import { Editor } from "@tinymce/tinymce-react";
 import {
+  Avatar,
   Button,
   Card,
   Divider,
+  Empty,
   Form,
   Input,
   message,
+  Modal,
   Select,
   Space,
   Spin,
+  Table,
+  Tag,
+  Tooltip,
   TreeSelect,
   Typography,
-  Image,
   Upload,
   UploadProps,
 } from "antd";
@@ -23,9 +28,18 @@ import { useProducts } from "../../hooks/useProducts";
 import { useCategories } from "../../hooks/useCategories";
 import { useSuppliers } from "../../hooks/useSuppliers";
 import { replaceName } from "../../utils/replaceName";
-import { Add } from "iconsax-react";
-import { PictureOutlined } from "@ant-design/icons";
-import { ModalCategory, ToogleSupplier, MediaPickerModal } from "../../modals";
+import { Add, Edit2, Trash } from "iconsax-react";
+import {
+  CopyOutlined,
+  PictureOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import {
+  ModalCategory,
+  ToogleSupplier,
+  MediaPickerModal,
+  AddSubProductModal,
+} from "../../modals";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { getTreeValues } from "../../utils/getTreeValues";
 import { mapCategoriesToCategoyModels } from "../../utils/categoryMapper";
@@ -33,6 +47,10 @@ import { uploadFile } from "../../utils/uploadFile";
 import { mediaAPI } from "../../apis/mediaAPI";
 import { BsStars } from "react-icons/bs";
 import { aiService } from "../../services";
+import { ProductModel, SubProductModel } from "../../models/Products";
+import { VND } from "../../utils/handleCurrency";
+import { colors } from "../../constants/colors";
+import { ColorBadge } from "../../utils/colorHelper";
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -42,6 +60,8 @@ const AddProduct = () => {
     getProductById,
     createProduct,
     updateProduct,
+    getSubProducts,
+    deleteSubProduct,
     loading: productsLoading,
   } = useProducts();
   const { getAllCategories: fetchCategories, loading: categoriesLoading } =
@@ -61,6 +81,18 @@ const AddProduct = () => {
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
+  // SubProducts variant management state
+  const [subProducts, setSubProducts] = useState<SubProductModel[]>([]);
+  const [loadingSubProducts, setLoadingSubProducts] = useState(false);
+  const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
+  const [selectedSubProduct, setSelectedSubProduct] = useState<
+    SubProductModel | undefined
+  >();
+  const [cloneVariant, setCloneVariant] = useState<
+    Partial<SubProductModel> | undefined
+  >();
+  const [currentProduct, setCurrentProduct] = useState<ProductModel | undefined>();
+
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
@@ -75,23 +107,42 @@ const AddProduct = () => {
   useEffect(() => {
     getData();
   }, []);
+
   useEffect(() => {
     if (id && productFromState) {
-      // Sử dụng data từ state thay vì gọi API
       setProductDetailFromState(productFromState);
-    } else if (id && slug) {
+      setCurrentProduct(productFromState);
+      fetchSubProducts(id);
+    } else if (id) {
       getProductDetail(id);
+      fetchSubProducts(id);
     } else if (!id) {
       form.resetFields();
+      setSubProducts([]);
+      setCurrentProduct(undefined);
     }
   }, [id, slug, productFromState]);
+
+  const fetchSubProducts = async (productId: string) => {
+    try {
+      setLoadingSubProducts(true);
+      const res = await getSubProducts(productId);
+      if (Array.isArray(res)) {
+        setSubProducts(res);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách biến thể:", error);
+    } finally {
+      setLoadingSubProducts(false);
+    }
+  };
 
   const setProductDetailFromState = (product: any) => {
     form.setFieldsValue({
       title: product.title || "",
       description: product.description || "",
       categories: product.categories?.map((category: any) => category.id) || [],
-      supplier: product.supplierId || null, // Sử dụng supplierId thay vì supplier
+      supplier: product.supplierId || null,
     });
     setcontent(product.content || "");
     setFileList(
@@ -114,54 +165,53 @@ const AddProduct = () => {
   };
 
   const getProductDetail = async (id: string) => {
-    if (!slug) {
-      return;
-    }
-
     try {
-      const response = await getProductById(slug, id);
+      const response = await getProductById(slug || "product", id);
 
       if (response && response.product) {
         const item = response.product;
+        setCurrentProduct(item);
         form.setFieldsValue({
           title: item.title || "",
           description: item.description || "",
           categories:
             item.categories?.map((category: any) => category.id) || [],
-          supplier: item.supplier || null,
+          supplier: item.supplierId || item.supplier || null,
         });
-        setcontent("");
-        setFileList([]);
-      } else {
-        console.log("Response format is not as expected:", response);
+        setcontent(item.content || "");
+        if (item.images && item.images.length > 0) {
+          setFileList(
+            item.images.map((image: any, index: number) => ({
+              url: image,
+              uid: index,
+            }))
+          );
+        } else {
+          setFileList([]);
+        }
       }
     } catch (error) {
       console.log("Error fetching product detail:", error);
-      // Thử fallback API nếu cần
     }
   };
+
   const handleAddNewProduct = async (values: any) => {
-    const content = editorRef.current?.getContent() || "";
+    const detailContent = editorRef.current?.getContent() || content || "";
     const data: any = {};
     setIsCreating(true);
 
-    // Xử lý dữ liệu cơ bản
     data.title = values.title || "";
     data.description = values.description || "";
-    data.content = content;
+    data.content = detailContent;
     data.slug = replaceName(values.title);
     data.images = [];
-
-    // Xử lý supplierId - chỉ gửi supplierId cho backend
     data.supplierId = values.supplier || null;
 
-    // Xử lý categories - đảm bảo là array và đúng format
     if (
       values.categories &&
       Array.isArray(values.categories) &&
       values.categories.length > 0
     ) {
-      // TreeSelect có thể trả về array của objects hoặc strings
       data.categories = values.categories
         .map((cat: any) => {
           if (typeof cat === "string") {
@@ -173,10 +223,11 @@ const AddProduct = () => {
           }
           return cat;
         })
-        .filter(Boolean); // Lọc bỏ giá trị null/undefined
+        .filter(Boolean);
     } else {
       data.categories = [];
     }
+
     const fileListSafe = [...(fileList || [])];
     if (
       fileUrl &&
@@ -201,7 +252,7 @@ const AddProduct = () => {
         });
 
         const urls = await Promise.all(uploadPromises);
-        data.images = urls.filter((url) => url); // Lọc bỏ giá trị null/undefined
+        data.images = urls.filter((url) => url);
       } catch (error) {
         console.error("Error uploading files:", error);
         setIsCreating(false);
@@ -212,19 +263,47 @@ const AddProduct = () => {
     try {
       if (id) {
         await updateProduct({ ...data, id }, slug);
-        message.success("Product updated successfully!");
+        message.success("Cập nhật thông tin sản phẩm thành công!");
+        navigate("/inventory", { state: { refresh: true } });
       } else {
-        await createProduct(data);
-        message.success("Product created successfully!");
-      }
+        const createdProd: any = await createProduct(data);
+        message.success("Tạo sản phẩm mới thành công!");
 
-      // Refresh data khi quay lại Inventories
-      navigate("/inventory", { state: { refresh: true } });
+        Modal.confirm({
+          title: "Sản phẩm đã tạo thành công!",
+          content:
+            "Bạn có muốn thiết lập các biến thể phân loại (Mã SKU, Màu sắc, Dung lượng/Size, Giá bán & Tồn kho) cho sản phẩm này ngay không?",
+          okText: "Thêm biến thể ngay",
+          cancelText: "Về danh sách kho",
+          onOk: () => {
+            if (createdProd && createdProd.id) {
+              const targetSlug = createdProd.slug || data.slug || "product";
+              navigate(`/inventory/detail/${targetSlug}?id=${createdProd.id}`);
+            } else {
+              navigate("/inventory", { state: { refresh: true } });
+            }
+          },
+          onCancel: () => {
+            navigate("/inventory", { state: { refresh: true } });
+          },
+        });
+      }
     } catch (error) {
       console.log("Error creating/updating product:", error);
-      message.error("Failed to save product");
+      message.error("Lưu sản phẩm thất bại, vui lòng kiểm tra lại thông tin");
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleRemoveSubProduct = async (subProductId: string) => {
+    try {
+      await deleteSubProduct(subProductId);
+      setSubProducts((prev) => prev.filter((item) => item.id !== subProductId));
+      message.success("Đã xóa biến thể thành công!");
+    } catch (error) {
+      console.error(error);
+      message.error("Xóa biến thể thất bại");
     }
   };
 
@@ -267,7 +346,6 @@ const AddProduct = () => {
           }
         : { ...item }
     );
-
     setFileList(items);
   };
 
@@ -289,21 +367,16 @@ const AddProduct = () => {
     };
     setFileList((prev) => [...(prev || []), newItem]);
 
-    // Tự động lưu link ảnh vào Thư viện Media ở Backend
-    mediaAPI.saveMedia({
-      url: url,
-      fileName: `image-${(fileList || []).length + 1}.png`,
-      fileType: "image/url",
-    }).catch((err) => console.warn("Lưu media ngầm thất bại:", err));
+    mediaAPI
+      .saveMedia({
+        url: url,
+        fileName: `image-${(fileList || []).length + 1}.png`,
+        fileType: "image/url",
+      })
+      .catch((err) => console.warn("Lưu media ngầm thất bại:", err));
 
     setFileUrl("");
     message.success("Đã nạp ảnh từ đường link thành công!");
-  };
-
-  // Add this handler function near other handlers
-  const handleAddNewSupplier = async (val: any) => {
-    await getSuppliers(); // Refresh the supplier list
-    setIsVisibleAddSupplier(false);
   };
 
   const handleAiGenerateDescription = async () => {
@@ -361,6 +434,211 @@ const AddProduct = () => {
     }
   };
 
+  // Subproduct columns for inline table
+  const subProductColumns = [
+    {
+      key: "images",
+      title: "Ảnh",
+      dataIndex: "images",
+      width: 60,
+      render: (imgs: string[] | null | undefined) => (
+        <Avatar
+          src={imgs && imgs.length > 0 ? imgs[0] : undefined}
+          size={36}
+          shape="square"
+        />
+      ),
+    },
+    {
+      title: "Mã SKU",
+      key: "sku",
+      dataIndex: "sku",
+      render: (sku: string, item: SubProductModel) => (
+        <Text copyable strong style={{ fontSize: 12, color: colors.primary500 }}>
+          {sku || item.id?.substring(0, 8).toUpperCase() || "—"}
+        </Text>
+      ),
+    },
+    {
+      title: "Phân loại",
+      key: "attributes",
+      render: (_: any, item: SubProductModel) => {
+        const attrs = item.attributes;
+        if (attrs && Object.keys(attrs).length > 0) {
+          return (
+            <Space wrap size={[4, 4]}>
+              {Object.entries(attrs).map(([key, val]) => {
+                const isColor =
+                  key.toLowerCase() === "color" || key.toLowerCase() === "màu sắc";
+                const isHexColor = isColor && val.startsWith("#");
+                return (
+                  <Tag
+                    key={key}
+                    color={isHexColor ? val : undefined}
+                    style={{
+                      border: isHexColor ? "1px solid #bbb" : undefined,
+                      fontSize: 11,
+                    }}
+                  >
+                    {key}: {val}
+                  </Tag>
+                );
+              })}
+            </Space>
+          );
+        }
+        return (
+          <Space wrap size={[4, 4]}>
+            {item.color && <ColorBadge color={item.color} size={14} />}
+            {item.size && <Tag style={{ margin: 0 }}>Size {item.size}</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
+      key: "cost",
+      title: "Giá vốn",
+      dataIndex: "cost",
+      render: (cost: number) => (cost ? VND.format(cost) : "—"),
+      align: "right" as const,
+    },
+    {
+      key: "price",
+      title: "Giá gốc",
+      dataIndex: "price",
+      render: (price: number, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        return (
+          <Text style={{ textDecoration: hasDiscount ? "line-through" : undefined, color: hasDiscount ? "#8c8c8c" : undefined }}>
+            {VND.format(price)}
+          </Text>
+        );
+      },
+      align: "right" as const,
+    },
+    {
+      key: "discount",
+      title: "Khuyến mãi",
+      render: (_: any, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        if (!hasDiscount || item.discount === undefined) return <Text type="secondary">—</Text>;
+        const discountAmount = item.price - item.discount;
+        const discountPercent = Math.round((discountAmount / item.price) * 100);
+        return (
+          <Space direction="vertical" size={0} align="end">
+            <Text style={{ color: "#cf1322", fontWeight: 500, fontSize: 11 }}>
+              -{VND.format(discountAmount)}
+            </Text>
+            <Tag color="red" style={{ margin: 0, fontSize: 10 }}>
+              -{discountPercent}%
+            </Tag>
+          </Space>
+        );
+      },
+      align: "right" as const,
+    },
+    {
+      key: "salePrice",
+      title: "Giá bán thực tế",
+      render: (_: any, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        const actualPrice = hasDiscount && item.discount !== undefined ? item.discount : item.price;
+        return (
+          <Text strong style={{ color: "#1677ff", fontSize: 12 }}>
+            {VND.format(actualPrice)}
+          </Text>
+        );
+      },
+      align: "right" as const,
+    },
+    {
+      key: "profit",
+      title: "Lãi gộp ước tính",
+      render: (_: any, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        const actualPrice = hasDiscount && item.discount !== undefined ? item.discount : item.price;
+        const cost = item.cost || 0;
+        const profit = actualPrice - cost;
+        const margin = actualPrice > 0 ? (profit / actualPrice) * 100 : 0;
+        if (!item.cost) return <Text type="secondary">—</Text>;
+        return (
+          <Space direction="vertical" size={0} align="end">
+            <Text style={{ fontWeight: 600, color: profit >= 0 ? "#52c41a" : "#cf1322", fontSize: 12 }}>
+              {profit >= 0 ? `+${VND.format(profit)}` : VND.format(profit)}
+            </Text>
+            <Tag color={profit < 0 ? "error" : margin < 15 ? "warning" : "success"} style={{ margin: 0, fontSize: 10 }}>
+              {margin.toFixed(0)}%
+            </Tag>
+          </Space>
+        );
+      },
+      align: "right" as const,
+    },
+    {
+      key: "stock",
+      title: "Tồn kho",
+      dataIndex: "stock",
+      render: (stock: number) => stock?.toLocaleString() ?? 0,
+      align: "right" as const,
+    },
+    {
+      key: "actions",
+      title: "Thao tác",
+      align: "center" as const,
+      render: (item: SubProductModel) => (
+        <Space size={4}>
+          <Tooltip title="Nhân bản">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined style={{ color: colors.primary500 }} />}
+              onClick={() => {
+                const { id: _, ...rest } = item;
+                setCloneVariant({
+                  ...rest,
+                  images: item.images ? [...item.images] : [],
+                  attributes: item.attributes ? { ...item.attributes } : undefined,
+                });
+                setSelectedSubProduct(undefined);
+                setIsVisibleAddSubProduct(true);
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              size="small"
+              icon={<Edit2 variant="Bold" color={colors.primary500} size={15} />}
+              onClick={() => {
+                setCloneVariant(undefined);
+                setSelectedSubProduct(item);
+                setIsVisibleAddSubProduct(true);
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Xóa">
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<Trash variant="Bold" size={15} />}
+              onClick={() =>
+                Modal.confirm({
+                  title: "Xác nhận xóa biến thể",
+                  content: "Bạn có chắc chắn muốn xóa biến thể phân loại này không?",
+                  okText: "Xóa",
+                  cancelText: "Hủy",
+                  okButtonProps: { danger: true },
+                  onOk: () => handleRemoveSubProduct(item.id),
+                })
+              }
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
   return isInitialLoading ? (
     <div
       className="d-flex justify-content-center align-items-center"
@@ -380,7 +658,7 @@ const AddProduct = () => {
         >
           <div className="d-flex justify-content-between align-items-center mb-3">
             <Title level={3} style={{ margin: 0 }}>
-              {id ? "Update Product" : "Add new Product"}
+              {id ? "Cập nhật sản phẩm" : "Thêm mới sản phẩm"}
             </Title>
             <Space>
               <Button
@@ -388,7 +666,7 @@ const AddProduct = () => {
                 size="middle"
                 onClick={() => navigate("/inventory")}
               >
-                Cancel
+                Hủy bỏ
               </Button>
               <Button
                 loading={isCreating}
@@ -396,7 +674,7 @@ const AddProduct = () => {
                 size="middle"
                 onClick={() => form.submit()}
               >
-                {id ? "Update" : "Submit"}
+                {id ? "Lưu thay đổi" : "Tạo sản phẩm"}
               </Button>
             </Space>
           </div>
@@ -405,21 +683,26 @@ const AddProduct = () => {
             <div className="col-8">
               <Form.Item
                 name={"title"}
-                label={<Text strong>Title</Text>}
+                label={<Text strong>Tên sản phẩm</Text>}
                 rules={[
                   {
                     required: true,
-                    message: "Please enter product title",
+                    message: "Vui lòng nhập tên sản phẩm",
                   },
                 ]}
               >
-                <Input allowClear maxLength={150} showCount />
+                <Input
+                  allowClear
+                  maxLength={150}
+                  showCount
+                  placeholder="Nhập tên sản phẩm (VD: iPhone 15 Pro Max 256GB)"
+                />
               </Form.Item>
               <Form.Item
                 name={"description"}
                 label={
                   <div className="d-flex align-items-center" style={{ gap: 8 }}>
-                    <Text strong>Description</Text>
+                    <Text strong>Mô tả ngắn</Text>
                     <Button
                       type="link"
                       size="small"
@@ -447,10 +730,11 @@ const AddProduct = () => {
                   showCount
                   rows={4}
                   allowClear
+                  placeholder="Mô tả tóm tắt đặc điểm nổi bật của sản phẩm..."
                 />
               </Form.Item>
               <div className="d-flex align-items-center mb-2" style={{ gap: 8 }}>
-                <Text strong>Content (Chi tiết sản phẩm)</Text>
+                <Text strong>Nội dung chi tiết sản phẩm</Text>
                 <Button
                   type="link"
                   size="small"
@@ -477,7 +761,7 @@ const AddProduct = () => {
                 onInit={(evt, editor) => (editorRef.current = editor)}
                 initialValue={content !== "" ? content : ""}
                 init={{
-                  height: 500,
+                  height: 450,
                   menubar: true,
                   plugins: [
                     "advlist",
@@ -508,17 +792,71 @@ const AddProduct = () => {
                     "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
                 }}
               />
+
+              {/* CARD QUẢN LÝ BIẾN THỂ TRỰC TIẾP KHI Ở CHẾ ĐỘ SỬA SẢN PHẨM */}
+              {id && (
+                <Card
+                  title={
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text strong>Danh sách biến thể phân loại (SKU & Tồn kho)</Text>
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        size="small"
+                        onClick={() => {
+                          setSelectedSubProduct(undefined);
+                          setCloneVariant(undefined);
+                          setIsVisibleAddSubProduct(true);
+                        }}
+                      >
+                        Thêm biến thể mới
+                      </Button>
+                    </div>
+                  }
+                  style={{ marginTop: 20 }}
+                >
+                  <Table
+                    columns={subProductColumns}
+                    dataSource={subProducts}
+                    rowKey="id"
+                    loading={loadingSubProducts}
+                    pagination={false}
+                    size="small"
+                    locale={{
+                      emptyText: (
+                        <Empty
+                          description="Sản phẩm này chưa có biến thể phân loại nào"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        >
+                          <Button
+                            type="dashed"
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                              setSelectedSubProduct(undefined);
+                              setCloneVariant(undefined);
+                              setIsVisibleAddSubProduct(true);
+                            }}
+                          >
+                            Tạo biến thể đầu tiên
+                          </Button>
+                        </Empty>
+                      ),
+                    }}
+                  />
+                </Card>
+              )}
             </div>
+
             <div className="col-4">
-              <Card size="small" title="Categories">
+              <Card size="small" title="Danh mục ngành hàng">
                 <Form.Item name={"categories"} initialValue={[]}>
                   <TreeSelect
                     treeData={categories}
                     multiple
+                    placeholder="Chọn danh mục"
                     popupRender={(menu) => (
                       <>
                         {menu}
-
                         <Divider className="m-0" />
                         <Button
                           htmlType="button"
@@ -529,29 +867,29 @@ const AddProduct = () => {
                           }}
                           type="link"
                           icon={<Add size={20} />}
-                          style={{
-                            padding: "0 16px",
-                          }}
+                          style={{ padding: "0 16px" }}
                         >
-                          Add new
+                          Thêm danh mục mới
                         </Button>
                       </>
                     )}
                   />
                 </Form.Item>
               </Card>
-              <Card size="small" className="mt-3" title="Suppliers">
+
+              <Card size="small" className="mt-3" title="Nhà cung cấp">
                 <Form.Item
                   name={"supplier"}
                   rules={[
                     {
                       required: true,
-                      message: "Please select a supplier",
+                      message: "Vui lòng chọn nhà cung cấp",
                     },
                   ]}
                 >
                   <Select
                     showSearch
+                    placeholder="Chọn nhà cung cấp"
                     popupRender={(menu) => (
                       <>
                         {menu}
@@ -565,16 +903,14 @@ const AddProduct = () => {
                           }}
                           type="link"
                           icon={<Add size={20} />}
-                          style={{
-                            padding: "0 16px",
-                          }}
+                          style={{ padding: "0 16px" }}
                         >
-                          Add new
+                          Thêm nhà cung cấp mới
                         </Button>
                       </>
                     )}
                     filterOption={(input, option) =>
-                      replaceName(option?.label ? option.label : "").includes(
+                      replaceName(option?.label ? String(option.label) : "").includes(
                         replaceName(input)
                       )
                     }
@@ -582,10 +918,11 @@ const AddProduct = () => {
                   />
                 </Form.Item>
               </Card>
+
               <Card
                 size="small"
                 className="mt-3"
-                title="Images (Hình ảnh sản phẩm)"
+                title="Hình ảnh đại diện sản phẩm"
                 extra={
                   <Button
                     type="link"
@@ -593,7 +930,7 @@ const AddProduct = () => {
                     onClick={() => setMediaPickerOpen(true)}
                     style={{ padding: 0 }}
                   >
-                    Chọn từ thư viện
+                    Thư viện ảnh
                   </Button>
                 }
               >
@@ -615,8 +952,8 @@ const AddProduct = () => {
                   </div>
                 </Upload>
                 <div className="mt-3">
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    Hoặc dán trực tiếp đường link (URL) của ảnh:
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Hoặc dán trực tiếp đường link ảnh (URL):
                   </Text>
                   <Space.Compact style={{ width: "100%", marginTop: 6 }}>
                     <Input
@@ -645,7 +982,6 @@ const AddProduct = () => {
         onClose={() => setIsVisibleAddCategory(false)}
         onAddNew={async (val) => {
           await getCategories();
-          // Nếu val là category vừa thêm và có id, tự động chọn luôn
           if (val && val.id) {
             form.setFieldsValue({
               categories: [...(form.getFieldValue("categories") || []), val.id],
@@ -654,12 +990,12 @@ const AddProduct = () => {
         }}
         values={categories}
       />
+
       <ToogleSupplier
         visible={isVisibleAddSupplier}
         onClose={() => setIsVisibleAddSupplier(false)}
         onAddNew={async (val?: any) => {
           await getSuppliers();
-          // Nếu val là supplier vừa thêm và có id, tự động chọn luôn
           if (val && val.id) {
             form.setFieldsValue({
               supplier: val.id,
@@ -668,6 +1004,7 @@ const AddProduct = () => {
           setIsVisibleAddSupplier(false);
         }}
       />
+
       <MediaPickerModal
         open={mediaPickerOpen}
         onClose={() => setMediaPickerOpen(false)}
@@ -682,6 +1019,26 @@ const AddProduct = () => {
           message.success("Đã thêm ảnh từ thư viện");
         }}
       />
+
+      {/* Modal thêm/sửa biến thể trực tiếp */}
+      {id && (
+        <AddSubProductModal
+          visible={isVisibleAddSubProduct}
+          onClose={() => {
+            setSelectedSubProduct(undefined);
+            setCloneVariant(undefined);
+            setIsVisibleAddSubProduct(false);
+          }}
+          product={currentProduct || ({ id, title: form.getFieldValue("title") } as any)}
+          subProduct={selectedSubProduct}
+          initialValues={cloneVariant}
+          onAddNew={async () => {
+            if (id) {
+              await fetchSubProducts(id);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

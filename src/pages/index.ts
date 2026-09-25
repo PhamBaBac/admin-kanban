@@ -10,5 +10,22 @@ import OrdersScreen from "./orders";
 import MediaScreen from "./media/MediaScreen";
 import ShipmentsScreen from "./shipments/ShipmentsScreen";
 import ReportScreen from "./ReportScreen";
+import FinanceScreen from "./finance";
+import AccountsScreen from "./accounts/AccountsScreen";
 
-export { Login, SignUp, HomeScreen, Inventories, ProductDetail, Categories, Suppliers, PromotionScreen, OrdersScreen, MediaScreen, ShipmentsScreen, ReportScreen };
+export {
+  Login,
+  SignUp,
+  HomeScreen,
+  Inventories,
+  ProductDetail,
+  Categories,
+  Suppliers,
+  PromotionScreen,
+  OrdersScreen,
+  MediaScreen,
+  ShipmentsScreen,
+  ReportScreen,
+  FinanceScreen,
+  AccountsScreen,
+};

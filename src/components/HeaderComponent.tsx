@@ -37,6 +37,7 @@ const HeaderComponent = ({ collapsed, onToggleCollapse }: Props) => {
     if (path.startsWith("/promotions")) return "Chương trình khuyến mãi";
     if (path.startsWith("/report")) return "Báo cáo thống kê";
     if (path.startsWith("/support")) return "Hỗ trợ khách hàng";
+    if (path.startsWith("/accounts")) return "Quản lý tài khoản & Phân quyền";
     return "Hệ thống quản trị";
   };
 

@@ -17,29 +17,34 @@ export interface ProductModel {
   title: string;
   slug: string;
   description: string;
-  categories: string[];
-  supplier: string;
-  createdAt: string;
-  updatedAt: string;
+  content?: string;
+  categories?: CategoyModel[] | string[] | any[];
+  supplier?: string;
+  supplierId?: string;
+  images?: string[];
+  createdAt?: string;
+  updatedAt?: string;
   price?: number[];
-  __v: number;
-  isDeleted: boolean;
-  subItems: SubProductModel[];
+  __v?: number;
+  isDeleted?: boolean;
+  subItems?: SubProductModel[];
+  subProducts?: SubProductModel[];
 }
 
 export interface SubProductModel {
-	size?: string;
-	color?: string;
-	attributes?: Record<string, string>;
-	price: number;
-	qty: number;
+  id: string;
+  sku?: string;
+  size?: string;
+  color?: string;
+  attributes?: Record<string, string>;
+  price: number;
+  qty?: number;
   stock: number;
-	cost: number;
-	discount: number;
-	productId: string;
-	images: any[];
-	id: string;
-	createdAt: string;
-	updatedAt: string;
-	__v: number;
+  cost?: number;
+  discount?: number;
+  productId?: string;
+  images: any[];
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 }

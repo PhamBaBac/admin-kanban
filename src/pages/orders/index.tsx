@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   BillModel,
   PaymentStatusColor,
@@ -33,6 +33,7 @@ import {
   Alert,
   Steps,
   Badge,
+  Tabs,
 } from "antd";
 import {
   Edit2,
@@ -47,11 +48,15 @@ import {
   Call,
   Sms,
   FilterSearch,
+  WalletMoney,
+  ReceiptItem,
 } from "iconsax-react";
 import { orderService } from "../../services/orderService";
 import { colors } from "../../constants/colors";
-import { CreateShipmentModal } from "../../modals";
+import { CreateShipmentModal, OrderDetailDrawer } from "../../modals";
 import { ColorBadge, getColorName } from "../../utils/colorHelper";
+
+
 
 const { confirm } = Modal;
 
@@ -90,9 +95,9 @@ const OrdersScreen = () => {
   const [total, setTotal] = useState(0);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
-  const [api, setApi] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
   const [searchKey, setSearchKey] = useState("");
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [isModalStatusOpen, setIsModalStatusOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<BillModel | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
@@ -109,12 +114,40 @@ const OrdersScreen = () => {
   const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false);
   const [shipmentOrder, setShipmentOrder] = useState<BillModel | null>(null);
 
+  const [mainTabKey, setMainTabKey] = useState<string>("orders");
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedDetailOrder, setSelectedDetailOrder] = useState<BillModel | null>(null);
+
+  const handleOpenDetailModal = (order: BillModel) => {
+    setSelectedDetailOrder(order);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleOpenDetailById = async (orderId: string) => {
+    const found = bills.find((b) => b.id === orderId);
+    if (found) {
+      setSelectedDetailOrder(found);
+      setIsDetailModalOpen(true);
+      return;
+    }
+    try {
+      const fetched: any = await orderService.getOrderById(orderId);
+      if (fetched) {
+        setSelectedDetailOrder(fetched);
+        setIsDetailModalOpen(true);
+      }
+    } catch (err: any) {
+      message.error("Không thể tải thông tin đơn hàng này");
+    }
+  };
+
   const finalCancelReason = cancelReason === "Khác" ? customReason : cancelReason;
 
   const handleOpenCreateShipment = (order: BillModel) => {
     setShipmentOrder(order);
     setIsShipmentModalOpen(true);
   };
+
 
   const openStatusModal = (order: BillModel) => {
     setSelectedOrder(order);
@@ -148,57 +181,106 @@ const OrdersScreen = () => {
   const statusFromUrl = searchParams.get("status");
   const [filterStatus, setFilterStatus] = useState<string>(statusFromUrl || "ALL");
 
+  const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({
+    ALL: 0,
+    PENDING: 0,
+    PROCESSING: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+    REFUNDED: 0,
+  });
+
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      const counts = await orderService.getStatusCounts();
+      if (counts && typeof counts === "object") {
+        setStatusCounts((prev) => ({ ...prev, ...counts }));
+        return;
+      }
+    } catch {
+      // Fallback nếu backend endpoint chưa khởi động lại: truy vấn pageSize=1 để lấy totalElements
+      try {
+        const statuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "REFUNDED"];
+        const [allRes, ...statusResList] = await Promise.all([
+          orderService.getOrders({ pageSize: 1 }),
+          ...statuses.map((s) => orderService.getOrders({ pageSize: 1, status: s })),
+        ]);
+        const newCounts: Record<string, number> = {
+          ALL: allRes?.totalElements || 0,
+        };
+        statuses.forEach((s, i) => {
+          newCounts[s] = statusResList[i]?.totalElements || 0;
+        });
+        setStatusCounts(newCounts);
+      } catch (e) {
+        console.error("Error fetching fallback status counts:", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatusCounts();
+  }, [fetchStatusCounts]);
+
   useEffect(() => {
     if (statusFromUrl) {
       setFilterStatus(statusFromUrl);
     }
   }, [statusFromUrl]);
 
-  useEffect(() => {
-    if (!searchKey) {
-      setApi(`/orders/all?page=${page}&pageSize=${limit}`);
-    }
-  }, [searchKey, page, limit]);
+  const fetchBills = useCallback(
+    async (
+      targetPage = page,
+      targetLimit = limit,
+      targetStatus = filterStatus,
+      targetSearch = searchKey,
+      targetDates = dateRange
+    ) => {
+      try {
+        const params: any = {
+          page: targetPage,
+          pageSize: targetLimit,
+        };
+        if (targetStatus && targetStatus !== "ALL") {
+          params.status = targetStatus;
+        }
+        if (targetSearch && targetSearch.trim()) {
+          params.search = targetSearch.trim();
+        }
+        if (targetDates && targetDates[0] && targetDates[1]) {
+          params.startDate = targetDates[0];
+          params.endDate = targetDates[1];
+        }
+
+        const res = await getOrders(params);
+        const billsData = (res?.data || []).map((item: any) => ({
+          ...item,
+          key: item.id,
+        }));
+        setBills(billsData);
+        setTotal(res?.totalElements || 0);
+
+        // Đồng bộ số lượng cho tab hiện tại nếu không có search/date filter
+        if (targetStatus && res?.totalElements !== undefined && !targetSearch && !targetDates) {
+          setStatusCounts((prev) => ({
+            ...prev,
+            [targetStatus]: res.totalElements,
+          }));
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    [getOrders, page, limit, filterStatus, searchKey, dateRange]
+  );
 
   useEffect(() => {
-    api && getBills(api);
-  }, [api]);
-
-  const getBills = async (url: string) => {
-    try {
-      const params = new URLSearchParams(url.split("?")[1]);
-      const page = params.get("page") || "1";
-      const pageSize = params.get("pageSize") || "10";
-      const search = params.get("search") || "";
-
-      const res = await getOrders({
-        page: parseInt(page),
-        pageSize: parseInt(pageSize),
-        search,
-      });
-      const billsData = res.data.map((item: any) => ({
-        ...item,
-        key: item.id,
-      }));
-      setBills(billsData);
-      setTotal(res.totalElements);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+    fetchBills(page, limit, filterStatus, searchKey, dateRange);
+  }, [page, limit, filterStatus, dateRange]);
 
   const handleSearchBills = async () => {
-    try {
-      const res = await getOrders({ page, pageSize: limit, search: searchKey });
-      const billsData = res.data.map((item: any) => ({
-        ...item,
-        key: item.id,
-      }));
-      setBills(billsData);
-      setTotal(res.totalElements);
-    } catch (error) {
-      console.log(error);
-    }
+    setPage(1);
+    await fetchBills(1, limit, filterStatus, searchKey, dateRange);
   };
 
   const handleRemoveBill = async (id: string) => {
@@ -206,6 +288,7 @@ const OrdersScreen = () => {
       await deleteOrder(id);
       setBills((prev) => prev.filter((bill) => bill.id !== id));
       message.success("Bill removed successfully");
+      fetchStatusCounts();
     } catch (error: any) {
       message.error(error.message || "Failed to remove bill");
     }
@@ -247,8 +330,9 @@ const OrdersScreen = () => {
       setTrackingCode("");
       setCancelReason("");
       setCustomReason("");
-      // reload bills
-      getBills(api || `/orders/all?page=${page}&pageSize=${limit}`);
+      // reload bills and counts
+      fetchBills(page, limit, filterStatus, searchKey, dateRange);
+      fetchStatusCounts();
     } catch (error: any) {
       message.error(error.message || "Failed to update order status");
     } finally {
@@ -298,9 +382,21 @@ const OrdersScreen = () => {
       width: 170,
       render: (_: any, record: BillModel) => (
         <div>
-          <div style={{ fontWeight: 700, color: "#1570ef" }}>
-            #{record.id ? record.id.substring(0, 8) : "—"}
-          </div>
+          <Tooltip title="Nhấp để xem chi tiết Snapshot & Nhật ký đối soát">
+            <div
+              style={{
+                fontWeight: 700,
+                color: "#1570ef",
+                cursor: "pointer",
+                display: "inline-block",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+              onClick={() => handleOpenDetailModal(record)}
+            >
+              #{record.id ? record.id.substring(0, 8) : "—"}
+            </div>
+          </Tooltip>
           <div style={{ fontSize: "12px", color: "#64748b", marginTop: 2 }}>
             {record.createdAt ? new Date(record.createdAt).toLocaleDateString("vi-VN") : "—"}
             {" "}
@@ -313,6 +409,7 @@ const OrdersScreen = () => {
       sorter: (a: BillModel, b: BillModel) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
+
     {
       title: "Khách hàng & Người nhận",
       key: "customerAndRecipient",
@@ -373,6 +470,11 @@ const OrdersScreen = () => {
                   </div>
                 </Tooltip>
                 <div style={{ color: "#64748b", fontSize: 11, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                  {item.skuCode && (
+                    <span style={{ fontFamily: "monospace", color: "#1570ef", fontWeight: 600, fontSize: 11, background: "#eff6ff", padding: "0 4px", borderRadius: 3 }}>
+                      {item.skuCode}
+                    </span>
+                  )}
                   {item.color && (
                     <ColorBadge color={item.color} size={11} />
                   )}
@@ -390,27 +492,41 @@ const OrdersScreen = () => {
       ),
     },
     {
-      title: "Tổng tiền",
+      title: "Tổng tiền & Lãi gộp",
       key: "total",
-      width: 140,
+      width: 155,
       align: "right",
       render: (_, record: BillModel) => {
         const total = (record.orderResponses || []).reduce(
-          (sum, item) => sum + item.totalPrice,
+          (sum, item) => sum + (item.totalPrice || 0),
           0
         );
+        const totalCost = (record.orderResponses || []).reduce(
+          (sum, item) => sum + (item.cost || 0) * (item.qty || 1),
+          0
+        );
+        const grossProfit = total - totalCost;
+
         return (
-          <Typography.Text strong style={{ color: "#166534", fontSize: 14 }}>
-            {total.toLocaleString("vi-VN")} ₫
-          </Typography.Text>
+          <div>
+            <Typography.Text strong style={{ color: "#166534", fontSize: 14 }}>
+              {total.toLocaleString("vi-VN")} ₫
+            </Typography.Text>
+            {totalCost > 0 && grossProfit > 0 && (
+              <div style={{ fontSize: 11, color: "#1e40af", fontWeight: 500, marginTop: 2 }}>
+                Lãi: +{grossProfit.toLocaleString("vi-VN")} ₫
+              </div>
+            )}
+          </div>
         );
       },
       sorter: (a: BillModel, b: BillModel) => {
-        const totalA = (a.orderResponses || []).reduce((sum, item) => sum + item.totalPrice, 0);
-        const totalB = (b.orderResponses || []).reduce((sum, item) => sum + item.totalPrice, 0);
+        const totalA = (a.orderResponses || []).reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+        const totalB = (b.orderResponses || []).reduce((sum, item) => sum + (item.totalPrice || 0), 0);
         return totalA - totalB;
       },
     },
+
     {
       title: "Thanh toán",
       dataIndex: "paymentType",
@@ -494,7 +610,7 @@ const OrdersScreen = () => {
       title: "Thao tác",
       dataIndex: "",
       fixed: "right",
-      width: 180,
+      width: 210,
       align: "left",
       render: (item: BillModel) => (
         <div
@@ -502,14 +618,24 @@ const OrdersScreen = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-start",
-            gap: "12px",
+            gap: "8px",
             flexWrap: "nowrap",
             whiteSpace: "nowrap",
             padding: "2px 4px",
           }}
         >
-          {/* Nút Đóng gói & Kê khai Ship */}
-          {!isTerminalStatus(item.orderStatus) && item.orderStatus !== "COMPLETED" && (
+          {/* Nút Xem chi tiết đơn hàng, Snapshot & Sổ cái */}
+          <Tooltip title="Xem chi tiết đơn hàng, Snapshot & Nhật ký đối soát">
+            <Button
+              icon={<Eye color="#10b981" size={18} />}
+              type="text"
+              size="small"
+              onClick={() => handleOpenDetailModal(item)}
+            />
+          </Tooltip>
+
+          {/* Nút Đóng gói & Kê khai Ship - Chỉ hiển thị cho đơn hàng Chờ xử lý (PENDING) chưa có mã vận đơn */}
+          {!item.trackingCode && item.orderStatus === "PENDING" && (
             <Tooltip title="Đóng gói & Tạo vận đơn GHN">
               <Button
                 icon={<Box color="#1570ef" size={18} />}
@@ -519,6 +645,7 @@ const OrdersScreen = () => {
               />
             </Tooltip>
           )}
+
 
           {item.trackingCode && (
             <Tooltip title="Xem hành trình vận chuyển GHN">
@@ -576,127 +703,172 @@ const OrdersScreen = () => {
     },
   ];
 
-  const totalRevenue = bills.reduce((sum, bill) => {
+  const totalRevenue = (bills || []).reduce((sum, bill) => {
     return (
       sum +
-      bill.orderResponses.reduce(
-        (itemSum, item) => itemSum + item.totalPrice,
+      (bill?.orderResponses || []).reduce(
+        (itemSum, item) => itemSum + (item?.totalPrice || 0),
         0
       )
     );
   }, 0);
 
-  const pendingOrders = bills.filter(
-    (bill) => bill.orderStatus === "PENDING"
-  ).length;
-
   return (
     <div style={{ padding: "8px 0" }}>
       <Card className="app-card" style={{ marginBottom: "16px" }} bordered={false}>
-        <Row justify="space-between" align="middle">
+        <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
           <Col>
             <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
               Quản lý đơn hàng
             </Typography.Title>
           </Col>
           <Col>
-            <Space>
+            <Space wrap>
               {selectedRowKeys.length > 0 && (
-                <Space>
-                  <Tooltip title="Xóa các đơn hàng đã chọn">
-                    <Button
-                      danger
-                      type="primary"
-                      icon={<Trash size={16} />}
-                      onClick={() =>
-                        confirm({
-                          title: "Xác nhận xóa hàng loạt",
-                          content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} đơn hàng đã chọn?`,
-                          okText: "Xóa",
-                          okType: "danger",
-                          cancelText: "Hủy",
-                          onOk: async () => {
-                            await Promise.all(
-                              selectedRowKeys.map((id) => handleRemoveBill(id))
-                            );
-                            setSelectedRowKeys([]);
-                            await getBills(
-                              `/orders/all?page=${page}&pageSize=${limit}`
-                            );
-                          },
-                          onCancel: () => setSelectedRowKeys([]),
-                        })
-                      }
-                    >
-                      Xóa ({selectedRowKeys.length})
-                    </Button>
-                  </Tooltip>
-                </Space>
+                <Tooltip title="Xóa các đơn hàng đã chọn">
+                  <Button
+                    danger
+                    type="primary"
+                    icon={<Trash size={16} />}
+                    onClick={() =>
+                      confirm({
+                        title: "Xác nhận xóa hàng loạt",
+                        content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} đơn hàng đã chọn?`,
+                        okText: "Xóa",
+                        okType: "danger",
+                        cancelText: "Hủy",
+                        onOk: async () => {
+                          await Promise.all(
+                            selectedRowKeys.map((id) => handleRemoveBill(id))
+                          );
+                          setSelectedRowKeys([]);
+                          await fetchBills(page, limit, filterStatus, searchKey, dateRange);
+                          fetchStatusCounts();
+                        },
+                        onCancel: () => setSelectedRowKeys([]),
+                      })
+                    }
+                  >
+                    Xóa ({selectedRowKeys.length})
+                  </Button>
+                </Tooltip>
               )}
               <Input.Search
                 value={searchKey}
-                onChange={(e) => setSearchKey(e.target.value)}
-                onSearch={handleSearchBills}
-                placeholder="Tìm kiếm theo tên khách, email..."
-                allowClear
-                style={{ width: 280 }}
-              />
-              <Select
-                value={filterStatus}
-                onChange={(val) => {
-                  setFilterStatus(val);
-                  if (val === "ALL") {
-                    searchParams.delete("status");
-                    setSearchParams(searchParams);
-                  } else {
-                    setSearchParams({ status: val });
+                onChange={(e) => {
+                  setSearchKey(e.target.value);
+                  if (!e.target.value) {
+                    setPage(1);
+                    fetchBills(1, limit, filterStatus, "", dateRange);
                   }
                 }}
-                style={{ width: 180 }}
-                options={[
-                  { value: "ALL", label: "Tất cả trạng thái" },
-                  {
-                    value: "PENDING",
-                    label: (
-                      <Space size={6}>
-                        <Badge color="#f79009" /> Chờ xử lý
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: "PROCESSING",
-                    label: (
-                      <Space size={6}>
-                        <Badge color="#1570ef" /> Đang chuẩn bị
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: "COMPLETED",
-                    label: (
-                      <Space size={6}>
-                        <Badge color="#12b76a" /> Hoàn thành
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: "CANCELLED",
-                    label: (
-                      <Space size={6}>
-                        <Badge color="#f04438" /> Đã hủy
-                      </Space>
-                    ),
-                  },
-                ]}
+                onSearch={handleSearchBills}
+                placeholder="Tìm kiếm theo mã đơn, khách hàng, sản phẩm..."
+                allowClear
+                style={{ width: 320 }}
               />
               <DatePicker.RangePicker
                 placeholder={["Từ ngày", "Đến ngày"]}
                 style={{ width: 240 }}
+                onChange={(dates, dateStrings) => {
+                  setPage(1);
+                  if (dates && dateStrings[0] && dateStrings[1]) {
+                    setDateRange([dateStrings[0], dateStrings[1]]);
+                  } else {
+                    setDateRange(null);
+                  }
+                }}
               />
             </Space>
           </Col>
         </Row>
+
+        {/* Thanh Tabs Trạng thái Ngang Chuẩn Shopee */}
+        <Tabs
+          activeKey={filterStatus}
+          onChange={(val) => {
+            setFilterStatus(val);
+            setPage(1);
+            if (val === "ALL") {
+              searchParams.delete("status");
+              setSearchParams(searchParams);
+            } else {
+              setSearchParams({ status: val });
+            }
+          }}
+          items={[
+            {
+              key: "ALL",
+              label: (
+                <Space size={6}>
+                  <span>Tất cả</span>
+                  <Badge
+                    count={statusCounts["ALL"] || 0}
+                    overflowCount={999}
+                    color="#64748b"
+                  />
+                </Space>
+              ),
+            },
+            {
+              key: "PENDING",
+              label: (
+                <Space size={6}>
+                  <span>Chờ xử lý</span>
+                  {(statusCounts["PENDING"] || 0) > 0 && (
+                    <Badge count={statusCounts["PENDING"]} color="#f04438" />
+                  )}
+                </Space>
+              ),
+            },
+            {
+              key: "PROCESSING",
+              label: (
+                <Space size={6}>
+                  <span>Đang chuẩn bị</span>
+                  {(statusCounts["PROCESSING"] || 0) > 0 && (
+                    <Badge count={statusCounts["PROCESSING"]} color="#1570ef" />
+                  )}
+                </Space>
+              ),
+            },
+            {
+              key: "COMPLETED",
+              label: (
+                <Space size={6}>
+                  <span>Hoàn thành</span>
+                  {(statusCounts["COMPLETED"] || 0) > 0 && (
+                    <Badge count={statusCounts["COMPLETED"]} color="#12b76a" />
+                  )}
+                </Space>
+              ),
+            },
+            {
+              key: "CANCELLED",
+              label: (
+                <Space size={6}>
+                  <span>Đã hủy</span>
+                  {(statusCounts["CANCELLED"] || 0) > 0 && (
+                    <Badge count={statusCounts["CANCELLED"]} color="#98a2b3" />
+                  )}
+                </Space>
+              ),
+            },
+            {
+              key: "REFUNDED",
+              label: (
+                <Space size={6}>
+                  <span>Hoàn tiền</span>
+                  {(statusCounts["REFUNDED"] || 0) > 0 && (
+                    <Badge count={statusCounts["REFUNDED"]} color="#f79009" />
+                  )}
+                </Space>
+              ),
+            },
+          ]}
+        />
       </Card>
+
 
       {filterStatus !== "ALL" && (
         <Alert
@@ -704,13 +876,16 @@ const OrdersScreen = () => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <FilterSearch size={16} color="#1570ef" variant="Bold" />
-                Đang lọc danh sách theo: <strong>{filterStatus === "PENDING" ? "Đơn hàng chờ xác nhận" : filterStatus}</strong> ({bills.filter((b) => filterStatus === "ALL" || b.orderStatus === filterStatus).length} đơn)
+                Đang lọc danh sách theo: <strong>{filterStatus === "PENDING" ? "Đơn hàng chờ xác nhận" : filterStatus}</strong> ({total} đơn)
               </span>
               <Button
                 size="small"
                 type="link"
                 onClick={() => {
                   setFilterStatus("ALL");
+                  setSearchKey("");
+                  setDateRange(null);
+                  setPage(1);
                   searchParams.delete("status");
                   setSearchParams(searchParams);
                 }}
@@ -730,7 +905,7 @@ const OrdersScreen = () => {
           rowKey={(record) => record.id}
           rowSelection={rowSelection}
           loading={loading}
-          dataSource={bills.filter((b) => filterStatus === "ALL" || b.orderStatus === filterStatus)}
+          dataSource={bills}
           columns={columns}
           size="middle"
           scroll={{ x: 1400 }}
@@ -740,16 +915,16 @@ const OrdersScreen = () => {
             pageSizeOptions: ["10", "20", "50", "100"],
             onShowSizeChange(current, size) {
               setLimit(size);
+              setPage(1);
             },
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} trong tổng số ${total} đơn hàng`,
             pageSize: limit,
             current: page,
-            onChange: (page, limit) => {
-              setPage(page);
-              setLimit(limit);
+            onChange: (p, l) => {
+              setPage(p);
+              if (l && l !== limit) setLimit(l);
             },
-            showQuickJumper: true,
           }}
         />
       </Card>
@@ -757,6 +932,8 @@ const OrdersScreen = () => {
       <Modal
         title={
           selectedOrder
+
+
             ? `Cập nhật trạng thái đơn #${selectedOrder.id.substring(0, 8)}`
             : "Edit Order Status"
         }
@@ -1102,8 +1279,20 @@ const OrdersScreen = () => {
           getBills(`/orders/all?page=${page}&pageSize=${limit}`);
         }}
       />
+
+      {/* Drawer Chi tiết đơn hàng 360°, Snapshot, Audit Trail & Sổ cái */}
+      <OrderDetailDrawer
+        open={isDetailModalOpen}
+        order={selectedDetailOrder}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedDetailOrder(null);
+        }}
+      />
+
     </div>
   );
 };
+
 
 export default OrdersScreen;

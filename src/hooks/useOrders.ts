@@ -19,6 +19,20 @@ export const useOrders = () => {
     }
   }, []);
 
+  const filterOrders = useCallback(async (params?: any): Promise<OrderListResponse> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await orderService.filterOrders(params);
+      return response;
+    } catch (err: any) {
+      setError(err.message || 'Failed to filter orders');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const updateOrderStatus = useCallback(
     async (
       id: string,
@@ -75,6 +89,7 @@ export const useOrders = () => {
 
   return {
     getOrders,
+    filterOrders,
     updateOrderStatus,
     deleteOrder,
     exportOrders,

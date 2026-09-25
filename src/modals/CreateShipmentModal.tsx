@@ -15,6 +15,7 @@ import {
   Card,
   Row,
   Col,
+  Tag,
 } from "antd";
 import { Box, TruckFast, Calculator } from "iconsax-react";
 import { InfoCircleOutlined } from "@ant-design/icons";
@@ -158,26 +159,77 @@ const CreateShipmentModal: React.FC<Props> = ({
     }
   };
 
+  // Áp dụng bộ kích thước gói hàng nhanh
+  const applyPresetSize = (w: number, l: number, wi: number, h: number) => {
+    form.setFieldsValue({
+      weight: w,
+      length: l,
+      width: wi,
+      height: h,
+    });
+    handleCalculateFee(w, l, wi, h);
+  };
+
+  // Đóng gói toàn bộ sản phẩm
+  const handlePackAll = () => {
+    if (!order) return;
+    const allPacked: Record<string, number> = {};
+    let totalW = 0;
+    order.orderResponses.forEach((item, idx) => {
+      const key = item.orderItemId || `item-${idx}`;
+      allPacked[key] = item.qty;
+      totalW += item.qty * 250;
+    });
+    setPackQuantities(allPacked);
+    const finalW = Math.max(totalW, 200);
+    form.setFieldsValue({ weight: finalW });
+    handleCalculateFee(finalW);
+    message.success("Đã chọn đóng gói toàn bộ sản phẩm!");
+  };
+
+  const totalSelectedQty = Object.values(packQuantities).reduce((acc, q) => acc + (q || 0), 0);
+  const totalOrderQty = order?.orderResponses?.reduce((acc, it) => acc + (it.qty || 0), 0) || 0;
+
   const itemColumns = [
     {
       title: "Sản phẩm",
       dataIndex: "title",
       key: "title",
       render: (_: any, record: any) => (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {record.image && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {record.image ? (
             <img
               src={record.image}
               alt=""
-              style={{ width: 36, height: 36, borderRadius: 4, objectFit: "cover" }}
+              style={{ width: 42, height: 42, borderRadius: 6, objectFit: "cover", border: "1px solid #e2e8f0" }}
             />
+          ) : (
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 6,
+                backgroundColor: "#f1f5f9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#94a3b8",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <Box size={20} />
+            </div>
           )}
           <div>
-            <div style={{ fontWeight: 500, fontSize: 13 }}>{record.title}</div>
+            <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{record.title}</div>
             {(record.size || record.color) && (
-              <div style={{ fontSize: 11, color: "#64748b", display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: "#64748b", display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
                 {record.color && <ColorBadge color={record.color} size={12} />}
-                {record.size && <span>Size: {record.size}</span>}
+                {record.size && (
+                  <Tag color="cyan" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                    Size {record.size}
+                  </Tag>
+                )}
               </div>
             )}
           </div>
@@ -185,26 +237,27 @@ const CreateShipmentModal: React.FC<Props> = ({
       ),
     },
     {
-      title: "Số lượng đơn",
+      title: "SL Trong đơn",
       dataIndex: "qty",
       key: "qty",
-      width: 100,
+      width: 110,
       align: "center" as const,
+      render: (qty: number) => <span style={{ fontWeight: 600, color: "#475569" }}>{qty}</span>,
     },
     {
-      title: "Số lượng đóng gói",
+      title: "SL Đóng gói",
       key: "packQty",
       width: 140,
       align: "center" as const,
       render: (_: any, record: any, idx: number) => {
         const key = record.orderItemId || `item-${idx}`;
         return (
-          <InputNumber
+          <InputNumber<number>
             min={0}
             max={record.qty}
             value={packQuantities[key] ?? record.qty}
             onChange={(val) => handleQuantityChange(key, val || 0)}
-            style={{ width: 80 }}
+            style={{ width: 85 }}
           />
         );
       },
@@ -214,15 +267,45 @@ const CreateShipmentModal: React.FC<Props> = ({
   return (
     <Modal
       title={
-        <Space>
-          <Box size={22} color="#1570ef" />
-          <span style={{ fontWeight: 700 }}>Đóng gói & Kê khai vận đơn giao hàng</span>
-          {order && <Text type="secondary">(Đơn #{order.id.substring(0, 8)})</Text>}
-        </Space>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingRight: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: "#eff6ff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#1677ff",
+                flexShrink: 0,
+              }}
+            >
+              <TruckFast size={22} color="#1677ff" />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>
+                  Đóng gói & Tạo vận đơn giao hàng
+                </span>
+                {order && (
+                  <Tag color="processing" style={{ borderRadius: 8, margin: 0, fontWeight: 600 }}>
+                    #{order.id.substring(0, 8)}
+                  </Tag>
+                )}
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Kiểm tra sản phẩm xuất kho và gửi thông số kiện hàng sang Giao Hàng Nhanh (GHN)
+              </Text>
+            </div>
+          </div>
+        </div>
       }
       open={visible}
       onCancel={onClose}
-      width={760}
+      width={820}
+      style={{ top: 20 }}
       footer={[
         <Button key="back" onClick={onClose} disabled={loading}>
           Hủy bỏ
@@ -233,7 +316,7 @@ const CreateShipmentModal: React.FC<Props> = ({
           icon={<TruckFast size={18} />}
           loading={loading}
           onClick={handleSubmit}
-          style={{ background: "#1570ef" }}
+          style={{ background: "#1677ff", fontWeight: 600 }}
         >
           Xác nhận xuất kho & Tạo đơn GHN
         </Button>,
@@ -245,10 +328,36 @@ const CreateShipmentModal: React.FC<Props> = ({
         type="info"
         showIcon
         icon={<InfoCircleOutlined style={{ fontSize: 20 }} />}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 16, borderRadius: 6 }}
       />
 
-      <Card size="small" title="1. Danh sách sản phẩm đóng gói" style={{ marginBottom: 16 }}>
+      <Card
+        size="small"
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Space size={8}>
+              <Box size={16} color="#1677ff" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Danh sách sản phẩm xuất kho</span>
+              <Tag
+                color={totalSelectedQty > 0 ? "processing" : "default"}
+                style={{ borderRadius: 6, margin: 0, fontWeight: 500 }}
+              >
+                Đã chọn: {totalSelectedQty}/{totalOrderQty} sản phẩm
+              </Tag>
+            </Space>
+            <Button
+              size="small"
+              type="link"
+              onClick={handlePackAll}
+              style={{ padding: 0, fontWeight: 600, fontSize: 12, color: "#1677ff" }}
+            >
+              Đóng gói toàn bộ
+            </Button>
+          </div>
+        }
+        style={{ marginBottom: 16, borderRadius: 8, border: "1px solid #e2e8f0" }}
+        headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
+      >
         <Table
           dataSource={order?.orderResponses || []}
           columns={itemColumns}
@@ -258,17 +367,64 @@ const CreateShipmentModal: React.FC<Props> = ({
         />
       </Card>
 
-      <Card size="small" title="2. Kê khai cân nặng & kích thước đóng gói">
+      <Card
+        size="small"
+        title={
+          <Space size={8}>
+            <TruckFast size={16} color="#1677ff" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Thông số kiện hàng & Vận chuyển GHN</span>
+          </Space>
+        }
+        style={{ borderRadius: 8, border: "1px solid #e2e8f0" }}
+        headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
+      >
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "10px 12px",
+            backgroundColor: "#f8fafc",
+            borderRadius: 6,
+            border: "1px dashed #cbd5e1",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
+            Chọn nhanh kích cỡ đóng gói chuẩn:
+          </div>
+          <Space wrap size={8}>
+            <Button
+              size="small"
+              onClick={() => applyPresetSize(500, 20, 15, 10)}
+              style={{ borderRadius: 6, fontSize: 12 }}
+            >
+              📦 Hộp S (500g • 20x15x10cm)
+            </Button>
+            <Button
+              size="small"
+              onClick={() => applyPresetSize(1000, 30, 20, 15)}
+              style={{ borderRadius: 6, fontSize: 12 }}
+            >
+              📦 Hộp M (1kg • 30x20x15cm)
+            </Button>
+            <Button
+              size="small"
+              onClick={() => applyPresetSize(2000, 40, 30, 20)}
+              style={{ borderRadius: 6, fontSize: 12 }}
+            >
+              📦 Hộp L (2kg • 40x30x20cm)
+            </Button>
+          </Space>
+        </div>
+
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item
                 name="weight"
-                label="Cân nặng (gram)"
+                label={<span style={{ fontWeight: 600 }}>Cân nặng (gram)</span>}
                 rules={[{ required: true, message: "Vui lòng nhập cân nặng" }]}
                 tooltip="Trọng lượng thực tế cả bao bì thùng carton"
               >
-                <InputNumber
+                <InputNumber<number>
                   min={10}
                   step={50}
                   style={{ width: "100%" }}
@@ -280,10 +436,10 @@ const CreateShipmentModal: React.FC<Props> = ({
             <Col xs={8} sm={4} md={6}>
               <Form.Item
                 name="length"
-                label="Dài (cm)"
+                label={<span style={{ fontWeight: 600 }}>Dài (cm)</span>}
                 rules={[{ required: true, message: "Nhập chiều dài" }]}
               >
-                <InputNumber
+                <InputNumber<number>
                   min={1}
                   style={{ width: "100%" }}
                   addonAfter="cm"
@@ -294,10 +450,10 @@ const CreateShipmentModal: React.FC<Props> = ({
             <Col xs={8} sm={4} md={6}>
               <Form.Item
                 name="width"
-                label="Rộng (cm)"
+                label={<span style={{ fontWeight: 600 }}>Rộng (cm)</span>}
                 rules={[{ required: true, message: "Nhập chiều rộng" }]}
               >
-                <InputNumber
+                <InputNumber<number>
                   min={1}
                   style={{ width: "100%" }}
                   addonAfter="cm"
@@ -308,10 +464,10 @@ const CreateShipmentModal: React.FC<Props> = ({
             <Col xs={8} sm={4} md={6}>
               <Form.Item
                 name="height"
-                label="Cao (cm)"
+                label={<span style={{ fontWeight: 600 }}>Cao (cm)</span>}
                 rules={[{ required: true, message: "Nhập chiều cao" }]}
               >
-                <InputNumber
+                <InputNumber<number>
                   min={1}
                   style={{ width: "100%" }}
                   addonAfter="cm"
@@ -325,10 +481,10 @@ const CreateShipmentModal: React.FC<Props> = ({
             <Col xs={24} sm={12}>
               <Form.Item
                 name="codAmount"
-                label="Tiền thu hộ COD (VNĐ)"
+                label={<span style={{ fontWeight: 600 }}>Tiền thu hộ COD (VNĐ)</span>}
                 tooltip="Số tiền shipper sẽ thu khi giao hàng (0đ nếu đã thanh toán online)"
               >
-                <InputNumber
+                <InputNumber<number>
                   style={{ width: "100%" }}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0)}
@@ -339,7 +495,7 @@ const CreateShipmentModal: React.FC<Props> = ({
             <Col xs={24} sm={12}>
               <Form.Item
                 name="requiredNote"
-                label="Ghi chú xem hàng"
+                label={<span style={{ fontWeight: 600 }}>Ghi chú xem hàng</span>}
               >
                 <Select>
                   <Select.Option value="CHOXEMHANGKHONGTHU">Cho xem hàng không cho thử</Select.Option>
@@ -350,24 +506,45 @@ const CreateShipmentModal: React.FC<Props> = ({
             </Col>
           </Row>
 
-          <Form.Item name="note" label="Ghi chú cho shipper">
+          <Form.Item name="note" label={<span style={{ fontWeight: 600 }}>Ghi chú cho shipper</span>}>
             <Input.TextArea rows={2} placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao..." />
           </Form.Item>
 
-          <Divider style={{ margin: "12px 0" }} />
+          <Divider style={{ margin: "14px 0" }} />
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", padding: "12px 16px", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "#f0fdf4",
+              padding: "14px 18px",
+              borderRadius: 8,
+              border: "1px solid #bbf7d0",
+            }}
+          >
             <div>
-              <Space>
+              <Space size={8}>
                 <Calculator size={20} color="#16a34a" />
                 <span style={{ fontWeight: 600, color: "#166534" }}>Cước phí vận chuyển ước tính từ GHN:</span>
               </Space>
+              <div style={{ marginTop: 2, paddingLeft: 28 }}>
+                <Button
+                  size="small"
+                  type="link"
+                  loading={calculatingFee}
+                  onClick={() => handleCalculateFee()}
+                  style={{ padding: 0, height: "auto", fontSize: 12, color: "#15803d", fontWeight: 500 }}
+                >
+                  Tính lại cước
+                </Button>
+              </div>
             </div>
             <div>
               {calculatingFee ? (
                 <Text type="secondary">Đang tính toán cước...</Text>
               ) : estimatedFee !== null ? (
-                <span style={{ fontSize: 18, fontWeight: 700, color: "#15803d" }}>
+                <span style={{ fontSize: 20, fontWeight: 700, color: "#15803d" }}>
                   {estimatedFee.toLocaleString("vi-VN")} ₫
                 </span>
               ) : (

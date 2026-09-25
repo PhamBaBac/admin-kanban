@@ -99,6 +99,16 @@ const ProductDetail = () => {
       ),
     },
     {
+      title: "Mã SKU",
+      key: "sku",
+      dataIndex: "sku",
+      render: (sku: string, item: SubProductModel) => (
+        <Typography.Text copyable strong style={{ fontSize: 12, color: colors.primary500 }}>
+          {sku || item.id?.substring(0, 8).toUpperCase() || "—"}
+        </Typography.Text>
+      ),
+    },
+    {
       title: "Phân loại / Thuộc tính",
       key: "attributes",
       render: (_: any, item: SubProductModel) => {
@@ -135,22 +145,87 @@ const ProductDetail = () => {
       },
     },
     {
+      key: "cost",
+      title: "Giá vốn",
+      dataIndex: "cost",
+      render: (cost: number) => (cost ? VND.format(cost) : "—"),
+      align: "right",
+    },
+    {
       key: "price",
-      title: "Price",
+      title: "Giá gốc",
       dataIndex: "price",
-      render: (price: number) => VND.format(price),
+      render: (price: number, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        return (
+          <Typography.Text style={{ textDecoration: hasDiscount ? "line-through" : undefined, color: hasDiscount ? "#8c8c8c" : undefined }}>
+            {VND.format(price)}
+          </Typography.Text>
+        );
+      },
       align: "right",
     },
     {
       key: "discount",
-      title: "Discount",
-      dataIndex: "discount",
-      render: (discount: number) => (discount ? VND.format(discount) : null),
+      title: "Khuyến mãi",
+      render: (_: any, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        if (!hasDiscount || item.discount === undefined) return <Typography.Text type="secondary">—</Typography.Text>;
+        const discountAmount = item.price - item.discount;
+        const discountPercent = Math.round((discountAmount / item.price) * 100);
+        return (
+          <Space direction="vertical" size={0} align="end">
+            <Typography.Text style={{ color: "#cf1322", fontWeight: 500, fontSize: 12 }}>
+              -{VND.format(discountAmount)}
+            </Typography.Text>
+            <Tag color="red" style={{ margin: 0, fontSize: 10 }}>
+              -{discountPercent}%
+            </Tag>
+          </Space>
+        );
+      },
+      align: "right",
+    },
+    {
+      key: "salePrice",
+      title: "Giá bán thực tế",
+      render: (_: any, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        const actualPrice = hasDiscount && item.discount !== undefined ? item.discount : item.price;
+        return (
+          <Typography.Text strong style={{ color: "#1677ff", fontSize: 13 }}>
+            {VND.format(actualPrice)}
+          </Typography.Text>
+        );
+      },
+      align: "right",
+    },
+    {
+      key: "profit",
+      title: "Lãi gộp ước tính",
+      render: (_: any, item: SubProductModel) => {
+        const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
+        const actualPrice = hasDiscount && item.discount !== undefined ? item.discount : item.price;
+        const cost = item.cost || 0;
+        const profit = actualPrice - cost;
+        const margin = actualPrice > 0 ? (profit / actualPrice) * 100 : 0;
+        if (!item.cost) return <Typography.Text type="secondary">—</Typography.Text>;
+        return (
+          <Space direction="vertical" size={0} align="end">
+            <Typography.Text style={{ fontWeight: 600, color: profit >= 0 ? "#52c41a" : "#cf1322" }}>
+              {profit >= 0 ? `+${VND.format(profit)}` : VND.format(profit)}
+            </Typography.Text>
+            <Tag color={profit < 0 ? "error" : margin < 15 ? "warning" : "success"} style={{ margin: 0, fontSize: 11 }}>
+              {margin.toFixed(0)}% margin
+            </Tag>
+          </Space>
+        );
+      },
       align: "right",
     },
     {
       key: "stock",
-      title: "stock",
+      title: "Tồn kho",
       dataIndex: "stock",
       render: (stock: number) => stock.toLocaleString(),
       align: "right",
@@ -233,7 +308,7 @@ const ProductDetail = () => {
             }}
             type="primary"
           >
-            Add sub product
+            Thêm biến thể mới
           </Button>
         </div>
       </div>

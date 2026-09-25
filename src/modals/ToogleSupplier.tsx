@@ -1,4 +1,5 @@
-import { Avatar, Button, Form, message, Modal, Typography } from "antd";
+import { Avatar, Button, Form, message, Modal, Space, Typography } from "antd";
+import { ShopOutlined, CameraOutlined } from "@ant-design/icons";
 import { User } from "iconsax-react";
 import { useEffect, useRef, useState } from "react";
 import FormItem from "../components/FormItem";
@@ -12,7 +13,7 @@ import { useCategories } from "../hooks/useCategories";
 import { getTreeValues } from "../utils/getTreeValues";
 import { mapCategoriesToCategoyModels } from "../utils/categoryMapper";
 
-const { Paragraph } = Typography;
+const { Paragraph, Title, Text } = Typography;
 
 interface Props {
   visible: boolean;
@@ -146,6 +147,7 @@ const ToogleSupplier = (props: Props) => {
 
   return (
     <Modal
+      width={680}
       loading={isGetting}
       closable={!isLoading}
       open={visible}
@@ -153,37 +155,102 @@ const ToogleSupplier = (props: Props) => {
       onCancel={handleClose}
       onOk={() => form.submit()}
       okButtonProps={{
-        loading: isLoading,
+        loading: isLoading || supplierLoading,
+        style: { background: "#1677ff", fontWeight: 600 },
       }}
-      title={supplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp mới"}
-      okText={supplier ? "Cập nhật" : "Thêm nhà cung cấp"}
-      cancelText="Hủy bỏ"
-    >
-      <label htmlFor="inpFile" className="p-2 mb-3 row align-items-center">
-        {file ? (
-          <Avatar size={90} src={URL.createObjectURL(file)} />
-        ) : supplier ? (
-          <Avatar size={90} src={supplier.photoUrl} />
-        ) : (
-          <Avatar
-            size={90}
+      style={{ top: 30 }}
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
             style={{
-              backgroundColor: "white",
-              border: "1px dashed #cbd5e1",
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              backgroundColor: "#eff6ff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#1677ff",
+              flexShrink: 0,
             }}
           >
-            <User size={50} color={colors.gray600} />
-          </Avatar>
-        )}
-
-        <div className="ml-3" style={{ paddingLeft: 16 }}>
-          <Paragraph className="text-muted m-0" style={{ fontSize: 13 }}>Kéo thả ảnh đại diện vào đây</Paragraph>
-          <Paragraph className="text-muted mb-1" style={{ fontSize: 12 }}>Hoặc</Paragraph>
-          <Button onClick={() => inpRef.current.click()} type="link" style={{ padding: 0 }}>
-            Tải ảnh từ máy tính
-          </Button>
+            <ShopOutlined style={{ fontSize: 22 }} />
+          </div>
+          <div>
+            <Title level={5} style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
+              {supplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp mới"}
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Quản lý thông tin đối tác cung ứng và danh mục hàng hóa hợp tác
+            </Text>
+          </div>
         </div>
-      </label>
+      }
+      okText={supplier ? "Lưu cập nhật" : "Thêm nhà cung cấp"}
+      cancelText="Hủy bỏ"
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "16px",
+          backgroundColor: "#f8fafc",
+          borderRadius: 8,
+          border: "1px solid #e2e8f0",
+          marginBottom: 20,
+          marginTop: 14,
+        }}
+      >
+        <div style={{ position: "relative" }}>
+          {file ? (
+            <Avatar size={76} src={URL.createObjectURL(file)} style={{ border: "2px solid #1677ff" }} />
+          ) : supplier?.photoUrl ? (
+            <Avatar size={76} src={supplier.photoUrl} style={{ border: "2px solid #e2e8f0" }} />
+          ) : (
+            <Avatar
+              size={76}
+              style={{
+                backgroundColor: "#ffffff",
+                border: "1px dashed #cbd5e1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <User size={40} color={colors.gray600} />
+            </Avatar>
+          )}
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>Ảnh đại diện / Logo nhà cung cấp</div>
+          <Text type="secondary" style={{ fontSize: 12, marginTop: 2, display: "block" }}>
+            Định dạng PNG, JPG hoặc JPEG (Tối ưu hình vuông tỉ lệ 1:1)
+          </Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 6 }}>
+            <Button
+              onClick={() => inpRef.current?.click()}
+              type="link"
+              icon={<CameraOutlined />}
+              style={{ padding: 0, height: "auto", fontSize: 12, fontWeight: 500 }}
+            >
+              Tải ảnh từ thiết bị
+            </Button>
+            {file && (
+              <Button
+                type="link"
+                danger
+                size="small"
+                onClick={() => setFile(undefined)}
+                style={{ padding: 0, height: "auto", fontSize: 12 }}
+              >
+                Hủy ảnh đã chọn
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {formData && (
         <Form

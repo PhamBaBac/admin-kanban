@@ -1,5 +1,4 @@
-/** @format */
-
+import { useEffect, useState } from "react";
 import { Layout, Menu, MenuProps, Typography, Tooltip } from "antd";
 import {
   Box,
@@ -12,8 +11,12 @@ import {
   Category,
   Messages1,
   TruckFast,
+  WalletMoney,
+  ShieldSecurity,
 } from "iconsax-react";
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { authSeletor } from "../redux/reducers/authReducer";
 import { appInfo } from "../constants/appInfos";
 import { colors } from "../constants/colors";
 
@@ -29,19 +32,74 @@ interface Props {
 const SiderComponent = ({ collapsed = false, onCollapse }: Props) => {
   const location = useLocation();
 
+  const auth = useSelector(authSeletor);
+  const userRole = (auth?.role || "").toUpperCase();
+  const isAdmin = userRole === "ADMIN";
+  const canViewReport = userRole === "ADMIN" || userRole === "MANAGER";
+
   // Xác định selectedKey dựa trên pathname
   const pathname = location.pathname;
   let selectedKey = "dashboard";
   if (pathname.startsWith("/inventory/add-product")) selectedKey = "inventory-add-product";
   else if (pathname.startsWith("/inventory")) selectedKey = "inventory-all";
   else if (pathname.startsWith("/categories")) selectedKey = "Categories";
-  else if (pathname.startsWith("/media")) selectedKey = "Media";
-  else if (pathname.startsWith("/report")) selectedKey = "Report";
   else if (pathname.startsWith("/suppliers")) selectedKey = "Suppliers";
+  else if (pathname.startsWith("/media")) selectedKey = "Media";
   else if (pathname.startsWith("/orders")) selectedKey = "Orders";
   else if (pathname.startsWith("/shipments")) selectedKey = "Shipments";
+  else if (pathname.startsWith("/finance")) selectedKey = "Finance";
   else if (pathname.startsWith("/promotions")) selectedKey = "Promotions";
+  else if (pathname.startsWith("/report")) selectedKey = "Report";
   else if (pathname.startsWith("/support")) selectedKey = "Support";
+  else if (pathname.startsWith("/accounts")) selectedKey = "Accounts";
+
+  const isInventoryActive =
+    pathname.startsWith("/inventory") ||
+    pathname.startsWith("/categories") ||
+    pathname.startsWith("/suppliers") ||
+    pathname.startsWith("/media");
+
+  const isOrdersActive =
+    pathname.startsWith("/orders") ||
+    pathname.startsWith("/shipments") ||
+    pathname.startsWith("/finance");
+
+  const [openKeys, setOpenKeys] = useState<string[]>(() => {
+    const keys: string[] = [];
+    if (
+      pathname.startsWith("/inventory") ||
+      pathname.startsWith("/categories") ||
+      pathname.startsWith("/suppliers") ||
+      pathname.startsWith("/media")
+    ) {
+      keys.push("inventory-group");
+    }
+    if (
+      pathname.startsWith("/orders") ||
+      pathname.startsWith("/shipments") ||
+      pathname.startsWith("/finance")
+    ) {
+      keys.push("orders-group");
+    }
+    return keys.length > 0 ? keys : ["inventory-group", "orders-group"];
+  });
+
+  useEffect(() => {
+    if (
+      pathname.startsWith("/inventory") ||
+      pathname.startsWith("/categories") ||
+      pathname.startsWith("/suppliers") ||
+      pathname.startsWith("/media")
+    ) {
+      setOpenKeys((prev) => (prev.includes("inventory-group") ? prev : [...prev, "inventory-group"]));
+    } else if (
+      pathname.startsWith("/orders") ||
+      pathname.startsWith("/shipments") ||
+      pathname.startsWith("/finance")
+    ) {
+      setOpenKeys((prev) => (prev.includes("orders-group") ? prev : [...prev, "orders-group"]));
+    }
+  }, [pathname]);
 
   const items: MenuItem[] = [
     {
@@ -50,19 +108,9 @@ const SiderComponent = ({ collapsed = false, onCollapse }: Props) => {
       icon: <Home2 size={20} variant="Bulk" color={selectedKey === "dashboard" ? colors.primary500 : "#64748b"} />,
     },
     {
-      key: "Orders",
-      label: <Link to={"/orders"}>Đơn hàng</Link>,
-      icon: <Tag size={20} variant="Bulk" color={selectedKey === "Orders" ? colors.primary500 : "#64748b"} />,
-    },
-    {
-      key: "Shipments",
-      label: <Link to={"/shipments"}>Vận đơn & Giao hàng</Link>,
-      icon: <TruckFast size={20} variant="Bulk" color={selectedKey === "Shipments" ? colors.primary500 : "#64748b"} />,
-    },
-    {
-      key: "inventory",
+      key: "inventory-group",
       label: "Quản lý sản phẩm",
-      icon: <Box size={20} variant="Bulk" color={selectedKey.startsWith("inventory") ? colors.primary500 : "#64748b"} />,
+      icon: <Box size={20} variant="Bulk" color={isInventoryActive ? colors.primary500 : "#64748b"} />,
       children: [
         {
           key: "inventory-all",
@@ -72,38 +120,77 @@ const SiderComponent = ({ collapsed = false, onCollapse }: Props) => {
           key: "inventory-add-product",
           label: <Link to={"/inventory/add-product"}>Thêm sản phẩm</Link>,
         },
+        {
+          key: "Categories",
+          label: <Link to={"/categories"}>Danh mục sản phẩm</Link>,
+        },
+        {
+          key: "Suppliers",
+          label: <Link to={"/suppliers"}>Nhà cung cấp</Link>,
+        },
+        {
+          key: "Media",
+          label: <Link to={"/media"}>Thư viện hình ảnh</Link>,
+        },
       ],
     },
     {
-      key: "Categories",
-      label: <Link to={"/categories"}>Danh mục</Link>,
-      icon: <Category size={20} variant="Bulk" color={selectedKey === "Categories" ? colors.primary500 : "#64748b"} />,
-    },
-    {
-      key: "Suppliers",
-      label: <Link to={"/suppliers"}>Nhà cung cấp</Link>,
-      icon: <ProfileCircle size={20} variant="Bulk" color={selectedKey === "Suppliers" ? colors.primary500 : "#64748b"} />,
+      key: "orders-group",
+      label: "Đơn hàng & Giao vận",
+      icon: <Tag size={20} variant="Bulk" color={isOrdersActive ? colors.primary500 : "#64748b"} />,
+      children: [
+        {
+          key: "Orders",
+          label: <Link to={"/orders"}>Danh sách đơn hàng</Link>,
+        },
+        {
+          key: "Shipments",
+          label: <Link to={"/shipments"}>Vận đơn & Giao hàng</Link>,
+        },
+        ...(isAdmin
+          ? [
+              {
+                key: "Finance",
+                label: <Link to={"/finance"}>Tài chính & Đối soát</Link>,
+              },
+            ]
+          : []),
+      ],
     },
     {
       key: "Promotions",
       label: <Link to={"/promotions"}>Khuyến mãi</Link>,
       icon: <PercentageSquare size={20} variant="Bulk" color={selectedKey === "Promotions" ? colors.primary500 : "#64748b"} />,
     },
-    {
-      key: "Report",
-      label: <Link to={"/report"}>Báo cáo & Thống kê</Link>,
-      icon: <Chart size={20} variant="Bulk" color={selectedKey === "Report" ? colors.primary500 : "#64748b"} />,
-    },
-    {
-      key: "Media",
-      label: <Link to={"/media"}>Thư viện hình ảnh</Link>,
-      icon: <Gallery size={20} variant="Bulk" color={selectedKey === "Media" ? colors.primary500 : "#64748b"} />,
-    },
+    ...(canViewReport
+      ? [
+          {
+            key: "Report",
+            label: <Link to={"/report"}>Báo cáo & Thống kê</Link>,
+            icon: <Chart size={20} variant="Bulk" color={selectedKey === "Report" ? colors.primary500 : "#64748b"} />,
+          },
+        ]
+      : []),
     {
       key: "Support",
       label: <Link to={"/support"}>Hỗ trợ khách hàng</Link>,
       icon: <Messages1 size={20} variant="Bulk" color={selectedKey === "Support" ? colors.primary500 : "#64748b"} />,
     },
+    ...(isAdmin
+      ? [
+          {
+            key: "Accounts",
+            label: <Link to={"/accounts"}>Quản lý tài khoản</Link>,
+            icon: (
+              <ShieldSecurity
+                size={20}
+                variant="Bulk"
+                color={selectedKey === "Accounts" ? colors.primary500 : "#64748b"}
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -176,7 +263,8 @@ const SiderComponent = ({ collapsed = false, onCollapse }: Props) => {
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
-          defaultOpenKeys={["inventory"]}
+          openKeys={collapsed ? undefined : openKeys}
+          onOpenChange={(keys) => setOpenKeys(keys)}
           items={items}
           theme="light"
           style={{ borderRight: "none" }}
