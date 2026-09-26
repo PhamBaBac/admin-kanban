@@ -177,17 +177,21 @@ const Categories = () => {
       key: "btnContainer",
       title: "Thao tác",
       dataIndex: "",
+      width: 100,
+      align: "center" as const,
       render: (item: any) => (
-        <Space>
+        <Space size={2}>
           <Tooltip title="Chỉnh sửa danh mục" key={"btnEdit"}>
             <Button
+              size="small"
               onClick={() => setCategorySelected(item)}
-              icon={<Edit2 size={18} color={colors.gray600} />}
+              icon={<Edit2 size={16} color={colors.gray600} />}
               type="text"
             />
           </Tooltip>
           <Tooltip title="Xoá danh mục" key={"btnDelete"}>
             <Button
+              size="small"
               onClick={() =>
                 confirm({
                   title: "Xác nhận xóa",
@@ -198,13 +202,12 @@ const Categories = () => {
                   onOk: async () => handleRemove(item.id),
                 })
               }
-              icon={<Trash size={18} className="text-danger" />}
+              icon={<Trash size={16} className="text-danger" />}
               type="text"
             />
           </Tooltip>
         </Space>
       ),
-      align: "right",
     },
   ];
 
@@ -301,6 +304,7 @@ const Categories = () => {
             }
           >
             <Table
+              bordered
               size="middle"
               dataSource={treeCategories}
               columns={columns}

@@ -267,18 +267,17 @@ const ShipmentsScreen: React.FC = () => {
       title: "Thao tác",
       key: "actions",
       fixed: "right" as const,
-      width: 90,
-      align: "left" as const,
+      width: 80,
+      align: "center" as const,
       render: (_: any, record: ShipmentModel) => (
-        <div style={{ display: "flex", justifyContent: "flex-start" }}>
-          <Tooltip title="Xem chi tiết hành trình GHN">
-            <Button
-              icon={<Eye size={18} color="#1570ef" />}
-              type="text"
-              onClick={() => handleOpenTracking(record)}
-            />
-          </Tooltip>
-        </div>
+        <Tooltip title="Xem chi tiết hành trình GHN">
+          <Button
+            size="small"
+            icon={<Eye size={16} color="#1570ef" />}
+            type="text"
+            onClick={() => handleOpenTracking(record)}
+          />
+        </Tooltip>
       ),
     },
   ];
@@ -395,6 +394,7 @@ const ShipmentsScreen: React.FC = () => {
       {/* Shipments Table */}
       <Card className="app-card" bordered={false}>
         <Table
+          bordered
           rowKey="id"
           dataSource={shipments}
           columns={columns}

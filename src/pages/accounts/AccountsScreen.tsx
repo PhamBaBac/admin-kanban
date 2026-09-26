@@ -315,14 +315,15 @@ const AccountsScreen: React.FC = () => {
     {
       title: "Thao tác",
       key: "actions",
+      width: 120,
       align: "center",
       render: (_, record) => {
         const isCurrent = record.email.toLowerCase() === currentAdminEmail.toLowerCase();
         return (
-          <Space>
+          <Space size={2}>
             <Tooltip title="Cập nhật phân quyền / vai trò">
               <Button
-                type="link"
+                type="text"
                 size="small"
                 icon={<TagUser size={16} />}
                 onClick={() => handleOpenRoleModal(record)}
@@ -546,6 +547,7 @@ const AccountsScreen: React.FC = () => {
 
                   {/* Bảng danh sách tài khoản */}
                   <Table
+                    bordered
                     rowKey="id"
                     columns={userColumns}
                     dataSource={users}
@@ -736,6 +738,7 @@ const AccountsScreen: React.FC = () => {
                   </Row>
 
                   <Table
+                    bordered
                     rowKey="id"
                     columns={logColumns}
                     dataSource={logs}

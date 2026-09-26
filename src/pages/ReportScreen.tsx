@@ -460,6 +460,7 @@ const ReportScreen: React.FC = () => {
               style={{ borderRadius: 12 }}
             >
               <Table
+                bordered
                 dataSource={topProducts}
                 columns={topColumns}
                 rowKey="id"

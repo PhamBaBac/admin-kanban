@@ -357,23 +357,22 @@ const AddSubProductModal = (props: Props) => {
         const pct = Math.min(100, Math.max(0, Number(values.discountValue || 0)));
         calculatedDiscountAmount = Math.round((basePrice * pct) / 100);
         calculatedSalePrice = Math.max(0, basePrice - calculatedDiscountAmount);
-        attributesObj["discountType"] = "PERCENT";
-        attributesObj["discountValue"] = String(pct);
-        attributesObj["discountAmount"] = String(calculatedDiscountAmount);
       } else if (values.discountType === "DISCOUNT") {
         calculatedDiscountAmount = Math.min(
           basePrice,
           Math.max(0, Number(values.discountValue || 0))
         );
         calculatedSalePrice = Math.max(0, basePrice - calculatedDiscountAmount);
-        attributesObj["discountType"] = "DISCOUNT";
-        attributesObj["discountValue"] = String(calculatedDiscountAmount);
-        attributesObj["discountAmount"] = String(calculatedDiscountAmount);
-      } else {
-        attributesObj["discountType"] = "NONE";
-        attributesObj["discountValue"] = "0";
-        attributesObj["discountAmount"] = "0";
       }
+
+      // Đảm bảo không lưu các trường giá / giảm giá vào bảng thuộc tính phân loại (attributes)
+      delete attributesObj["discountType"];
+      delete attributesObj["discountValue"];
+      delete attributesObj["discountAmount"];
+      delete attributesObj["price"];
+      delete attributesObj["cost"];
+      delete attributesObj["stock"];
+      delete attributesObj["qty"];
 
       data.attributes = attributesObj;
       data.price = basePrice;

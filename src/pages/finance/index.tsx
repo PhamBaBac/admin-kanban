@@ -378,6 +378,7 @@ const FinanceScreen: React.FC = () => {
       {/* BẢNG SỔ CÁI BÚT TOÁN */}
       <Card bordered={false} className="app-card">
         <Table
+          bordered
           rowKey="id"
           loading={loading}
           columns={columns}

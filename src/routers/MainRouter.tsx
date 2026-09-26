@@ -29,6 +29,7 @@ import {
   ReportScreen,
   FinanceScreen,
   AccountsScreen,
+  SupportScreen,
 } from "../pages";
 import AdminRoute from "./AdminRoute";
 
@@ -79,6 +80,7 @@ const MainRouter = () => {
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/promotions" element={<PromotionScreen />} />
             <Route path="/report" element={<AdminRoute roles={["ADMIN", "MANAGER"]}><ReportScreen /></AdminRoute>} />
+            <Route path="/support" element={<AdminRoute roles={["ADMIN", "MANAGER"]}><SupportScreen /></AdminRoute>} />
             <Route path="/orders" element={<OrdersScreen />} />
             <Route path="/shipments" element={<ShipmentsScreen />} />
             <Route path="/finance" element={<AdminRoute><FinanceScreen /></AdminRoute>} />

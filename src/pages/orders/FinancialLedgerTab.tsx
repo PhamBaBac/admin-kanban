@@ -321,6 +321,7 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
       {/* Bảng sổ cái */}
       <Card bordered={false} className="app-card">
         <Table
+          bordered
           rowKey="id"
           loading={loading}
           columns={columns}

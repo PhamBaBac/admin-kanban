@@ -385,13 +385,14 @@ const Inventories = () => {
       title: "Thao tác",
       dataIndex: "",
       fixed: "right",
-      width: 140,
-      align: "right",
+      width: 130,
+      align: "center" as const,
       render: (item: ProductModel) => (
-        <Space>
+        <Space size={2}>
           <Tooltip title="Thêm biến thể sản phẩm">
             <Button
-              icon={<MdLibraryAdd color={colors.primary500} size={18} />}
+              size="small"
+              icon={<MdLibraryAdd color={colors.primary500} size={16} />}
               type="text"
               onClick={() => {
                 setProductSelected(item);
@@ -401,7 +402,8 @@ const Inventories = () => {
           </Tooltip>
           <Tooltip title="Chỉnh sửa sản phẩm">
             <Button
-              icon={<Edit2 color={colors.primary500} size={18} />}
+              size="small"
+              icon={<Edit2 color={colors.primary500} size={16} />}
               type="text"
               onClick={() =>
                 navigate(`/inventory/add-product?id=${item.id}`, {
@@ -412,7 +414,8 @@ const Inventories = () => {
           </Tooltip>
           <Tooltip title="Xóa sản phẩm">
             <Button
-              icon={<Trash color={colors.error500} size={18} />}
+              size="small"
+              icon={<Trash color={colors.error500} size={16} />}
               type="text"
               onClick={() =>
                 confirm({
@@ -527,6 +530,7 @@ const Inventories = () => {
 
       <div className="app-card p-3">
         <Table
+          bordered
           rowKey={(record) => record.id}
           rowSelection={rowSelection}
           pagination={{

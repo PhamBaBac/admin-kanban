@@ -476,6 +476,7 @@ const HomeScreen = () => {
             style={{ borderRadius: 12 }}
           >
             <Table
+              bordered
               dataSource={recentOrders}
               columns={orderColumns}
               rowKey="id"

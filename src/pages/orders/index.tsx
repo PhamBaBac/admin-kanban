@@ -610,24 +610,14 @@ const OrdersScreen = () => {
       title: "Thao tác",
       dataIndex: "",
       fixed: "right",
-      width: 210,
-      align: "left",
+      width: 160,
+      align: "center",
       render: (item: BillModel) => (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            gap: "8px",
-            flexWrap: "nowrap",
-            whiteSpace: "nowrap",
-            padding: "2px 4px",
-          }}
-        >
+        <Space size={2}>
           {/* Nút Xem chi tiết đơn hàng, Snapshot & Sổ cái */}
           <Tooltip title="Xem chi tiết đơn hàng, Snapshot & Nhật ký đối soát">
             <Button
-              icon={<Eye color="#10b981" size={18} />}
+              icon={<Eye color="#10b981" size={16} />}
               type="text"
               size="small"
               onClick={() => handleOpenDetailModal(item)}
@@ -638,7 +628,7 @@ const OrdersScreen = () => {
           {!item.trackingCode && item.orderStatus === "PENDING" && (
             <Tooltip title="Đóng gói & Tạo vận đơn GHN">
               <Button
-                icon={<Box color="#1570ef" size={18} />}
+                icon={<Box color="#1570ef" size={16} />}
                 type="text"
                 size="small"
                 onClick={() => handleOpenCreateShipment(item)}
@@ -646,11 +636,10 @@ const OrdersScreen = () => {
             </Tooltip>
           )}
 
-
           {item.trackingCode && (
             <Tooltip title="Xem hành trình vận chuyển GHN">
               <Button
-                icon={<TruckFast color="#13c2c2" size={18} />}
+                icon={<TruckFast color="#13c2c2" size={16} />}
                 type="text"
                 size="small"
                 onClick={() => handleOpenTracking(item)}
@@ -672,7 +661,7 @@ const OrdersScreen = () => {
                       ? "#bbb"
                       : colors.primary500
                   }
-                  size={18}
+                  size={16}
                 />
               }
               type="text"
@@ -683,7 +672,7 @@ const OrdersScreen = () => {
           </Tooltip>
           <Tooltip title="Xóa đơn hàng">
             <Button
-              icon={<Trash className="text-danger" size={18} />}
+              icon={<Trash className="text-danger" size={16} />}
               type="text"
               size="small"
               onClick={() =>
@@ -698,7 +687,7 @@ const OrdersScreen = () => {
               }
             />
           </Tooltip>
-        </div>
+        </Space>
       ),
     },
   ];
@@ -902,6 +891,7 @@ const OrdersScreen = () => {
 
       <Card className="app-card" bordered={false}>
         <Table
+          bordered
           rowKey={(record) => record.id}
           rowSelection={rowSelection}
           loading={loading}

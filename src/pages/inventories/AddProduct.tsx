@@ -463,14 +463,32 @@ const AddProduct = () => {
       title: "Phân loại",
       key: "attributes",
       render: (_: any, item: SubProductModel) => {
+        const isSystemAttr = (k: string) => {
+          const lower = k.trim().toLowerCase();
+          return (
+            lower === "discounttype" ||
+            lower === "discountvalue" ||
+            lower === "discountamount" ||
+            lower === "discount" ||
+            lower === "price" ||
+            lower === "cost" ||
+            lower === "stock" ||
+            lower === "qty"
+          );
+        };
+
         const attrs = item.attributes;
-        if (attrs && Object.keys(attrs).length > 0) {
+        const validEntries = attrs
+          ? Object.entries(attrs).filter(([key]) => !isSystemAttr(key))
+          : [];
+
+        if (validEntries.length > 0) {
           return (
             <Space wrap size={[4, 4]}>
-              {Object.entries(attrs).map(([key, val]) => {
+              {validEntries.map(([key, val]) => {
                 const isColor =
                   key.toLowerCase() === "color" || key.toLowerCase() === "màu sắc";
-                const isHexColor = isColor && val.startsWith("#");
+                const isHexColor = isColor && typeof val === "string" && val.startsWith("#");
                 return (
                   <Tag
                     key={key}
@@ -586,7 +604,7 @@ const AddProduct = () => {
       title: "Thao tác",
       align: "center" as const,
       render: (item: SubProductModel) => (
-        <Space size={4}>
+        <Space size={2}>
           <Tooltip title="Nhân bản">
             <Button
               type="text"
@@ -816,6 +834,7 @@ const AddProduct = () => {
                   style={{ marginTop: 20 }}
                 >
                   <Table
+                    bordered
                     columns={subProductColumns}
                     dataSource={subProducts}
                     rowKey="id"

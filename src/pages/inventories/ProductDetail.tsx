@@ -16,6 +16,7 @@ import {
   Modal,
   message,
   Tooltip,
+  Card,
 } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { ColumnProps } from "antd/es/table";
@@ -112,14 +113,32 @@ const ProductDetail = () => {
       title: "Phân loại / Thuộc tính",
       key: "attributes",
       render: (_: any, item: SubProductModel) => {
+        const isSystemAttr = (k: string) => {
+          const lower = k.trim().toLowerCase();
+          return (
+            lower === "discounttype" ||
+            lower === "discountvalue" ||
+            lower === "discountamount" ||
+            lower === "discount" ||
+            lower === "price" ||
+            lower === "cost" ||
+            lower === "stock" ||
+            lower === "qty"
+          );
+        };
+
         const attrs = item.attributes;
-        if (attrs && Object.keys(attrs).length > 0) {
+        const validEntries = attrs
+          ? Object.entries(attrs).filter(([key]) => !isSystemAttr(key))
+          : [];
+
+        if (validEntries.length > 0) {
           return (
             <Space wrap size={[4, 4]}>
-              {Object.entries(attrs).map(([key, val]) => {
+              {validEntries.map(([key, val]) => {
                 const isColor =
                   key.toLowerCase() === "color" || key.toLowerCase() === "màu sắc";
-                const isHexColor = isColor && val.startsWith("#");
+                const isHexColor = isColor && typeof val === "string" && val.startsWith("#");
                 return (
                   <Tag
                     key={key}
@@ -232,11 +251,16 @@ const ProductDetail = () => {
     },
     {
       key: "actions",
+      title: "Thao tác",
       dataIndex: "",
+      width: 130,
+      align: "center" as const,
+      fixed: "right" as const,
       render: (item: SubProductModel) => (
-        <Space>
+        <Space size={2}>
           <Tooltip title="Chép biến thể">
             <Button
+              size="small"
               type="text"
               onClick={() => {
                 setProductSelected(productDetail);
@@ -251,30 +275,34 @@ const ProductDetail = () => {
               }}
               icon={
                 <CopyOutlined
-                  style={{ fontSize: 18, color: colors.primary500 }}
+                  style={{ fontSize: 16, color: colors.primary500 }}
                 />
               }
             />
           </Tooltip>
           <Tooltip title="Chỉnh sửa biến thể">
             <Button
+              size="small"
               type="text"
               onClick={() => {
                 setCloneVariant(undefined);
                 setSubProductSelected(item);
                 setIsVisibleAddSubProduct(true);
               }}
-              icon={<Edit2 variant="Bold" color={colors.primary500} size={18} />}
+              icon={<Edit2 variant="Bold" color={colors.primary500} size={16} />}
             />
           </Tooltip>
           <Tooltip title="Xóa biến thể">
             <Button
+              size="small"
               loading={removingSubProductId === item.id}
               onClick={() =>
                 Modal.confirm({
-                  title: "Confirm",
-                  content:
-                    "Are you sure you want to remove this sub product item?",
+                  title: "Xác nhận xóa",
+                  content: "Bạn có chắc muốn xóa biến thể này?",
+                  okText: "Xóa",
+                  cancelText: "Hủy",
+                  okType: "danger",
                   onOk: async () => {
                     await handleRemoveSubProduct(item.id);
                   },
@@ -282,38 +310,38 @@ const ProductDetail = () => {
               }
               type="text"
               danger
-              icon={<Trash variant="Bold" size={18} />}
+              icon={<Trash variant="Bold" size={16} />}
             />
           </Tooltip>
         </Space>
       ),
-      align: "right",
-      fixed: "right",
     },
   ];
 
   return productDetail ? (
-    <div className="container">
-      <div className="row">
+    <div>
+      <div className="row mb-3 align-items-center">
         <div className="col">
-          <Typography.Title level={3}>{productDetail?.title}</Typography.Title>
+          <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
+            {productDetail?.title}
+          </Typography.Title>
         </div>
-        <div className="col text-right">
+        <div className="col-auto">
           <Button
+            type="primary"
             onClick={() => {
-              setProductSelected(productDetail); // Đảm bảo luôn có productSelected
-              setSubProductSelected(undefined); // Reset biến thể được chọn để là THÊM MỚI
+              setProductSelected(productDetail);
+              setSubProductSelected(undefined);
               setCloneVariant(undefined);
               setIsVisibleAddSubProduct(true);
             }}
-            type="primary"
           >
             Thêm biến thể mới
           </Button>
         </div>
       </div>
-      <div className="mt-4">
-        <Table columns={columns} dataSource={subProducts} rowKey="id" />
+      <div className="app-card p-3">
+        <Table bordered columns={columns} dataSource={subProducts} rowKey="id" />
       </div>
       {productDetail && (
         <AddSubProductModal

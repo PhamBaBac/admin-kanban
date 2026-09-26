@@ -125,6 +125,7 @@ const PromotionScreen = () => {
         </Button>
         <div className="mt-3"></div>
         <Table
+          bordered
           rowKey={(record) => record.id}
           loading={loading}
           columns={columns}
