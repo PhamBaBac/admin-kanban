@@ -41,6 +41,7 @@ import {
   NotificationType,
   notificationService,
 } from "../services/notificationService";
+import { productService } from "../services/productService";
 import {
   formatRelativeTime,
   getNotificationIcon,
@@ -115,9 +116,48 @@ const NotificationScreen: React.FC = () => {
       fetchNotifications(true);
       fetchUnreadCount();
     };
+
+    const handleDeletedEvent = (e: any) => {
+      const id = e.detail?.id;
+      if (id) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+        setTotalElements((t) => Math.max(0, t - 1));
+      }
+      fetchUnreadCount();
+    };
+
+    const handleClearReadEvent = () => {
+      setNotifications((prev) => prev.filter((n) => !n.isRead));
+      fetchUnreadCount();
+    };
+
+    const handleReadAllEvent = () => {
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    };
+
+    const handleReadOneEvent = (e: any) => {
+      const id = e.detail?.id;
+      if (id) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        );
+      }
+      fetchUnreadCount();
+    };
+
     window.addEventListener("new_admin_notification", handleNewNoti);
+    window.addEventListener("admin_notification_deleted", handleDeletedEvent);
+    window.addEventListener("admin_notification_clear_read", handleClearReadEvent);
+    window.addEventListener("admin_notification_read_all", handleReadAllEvent);
+    window.addEventListener("admin_notification_read", handleReadOneEvent);
+
     return () => {
       window.removeEventListener("new_admin_notification", handleNewNoti);
+      window.removeEventListener("admin_notification_deleted", handleDeletedEvent);
+      window.removeEventListener("admin_notification_clear_read", handleClearReadEvent);
+      window.removeEventListener("admin_notification_read_all", handleReadAllEvent);
+      window.removeEventListener("admin_notification_read", handleReadOneEvent);
     };
   }, []);
 
@@ -133,6 +173,9 @@ const NotificationScreen: React.FC = () => {
         prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
       );
       setUnreadCount((c) => Math.max(0, c - 1));
+      window.dispatchEvent(
+        new CustomEvent("admin_notification_read", { detail: { id: item.id } })
+      );
       message.success("Đã đánh dấu là đã đọc");
     } catch (err) {
       message.error("Lỗi khi đánh dấu đã đọc");
@@ -144,6 +187,7 @@ const NotificationScreen: React.FC = () => {
       await notificationService.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      window.dispatchEvent(new CustomEvent("admin_notification_read_all"));
       message.success("Đã đánh dấu tất cả thông báo là đã đọc");
     } catch (err) {
       message.error("Không thể đánh dấu đọc tất cả");
@@ -158,6 +202,9 @@ const NotificationScreen: React.FC = () => {
       if (!isRead) {
         setUnreadCount((c) => Math.max(0, c - 1));
       }
+      window.dispatchEvent(
+        new CustomEvent("admin_notification_deleted", { detail: { id } })
+      );
       message.success("Đã xóa thông báo");
     } catch (err) {
       message.error("Lỗi khi xóa thông báo");
@@ -186,6 +233,7 @@ const NotificationScreen: React.FC = () => {
       setNotifications((prev) => prev.filter((n) => !n.isRead));
       setTotalElements((prev) => Math.max(0, prev - deleted));
       fetchUnreadCount();
+      window.dispatchEvent(new CustomEvent("admin_notification_clear_read"));
     } catch (err) {
       message.error("Lỗi khi dọn dẹp thông báo");
     }
@@ -195,6 +243,40 @@ const NotificationScreen: React.FC = () => {
     if (!item.isRead) {
       handleMarkAsRead(item);
     }
+
+    if (item.type === "LOW_STOCK" || item.type === "OUT_OF_STOCK") {
+      if (item.targetUrl && item.targetUrl.startsWith("/inventory/detail/")) {
+        navigate(item.targetUrl);
+        return;
+      }
+
+      if (item.referenceId) {
+        try {
+          const detail = await productService.getSubProductDetail(item.referenceId);
+          if (detail && detail.productId) {
+            navigate(
+              `/inventory/detail/${detail.productSlug || "product"}?id=${detail.productId}&subId=${item.referenceId}`
+            );
+            return;
+          }
+        } catch (e) {
+          console.error("Lỗi khi tìm sản phẩm theo biến thể:", e);
+        }
+      }
+
+      const match = item.content?.match(
+        /Biến thể\s+([^(\n\r]+?)(?:\s*\(|\s+chỉ còn lại|\s+đã hết hàng)/i
+      );
+      const productName = match ? match[1].trim() : "";
+      if (productName) {
+        navigate(`/inventory?search=${encodeURIComponent(productName)}`);
+        return;
+      }
+
+      navigate(item.targetUrl || "/inventory");
+      return;
+    }
+
     if (item.targetUrl) {
       navigate(item.targetUrl);
     }

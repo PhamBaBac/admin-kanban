@@ -616,7 +616,7 @@ const HomeScreen = () => {
                           {item.name}
                         </Text>
                         <Text type="secondary" style={{ fontSize: 11, color: "#1570ef" }}>
-                          Xem chi tiết các phân loại (SubProduct) →
+                          Xem chi tiết 
                         </Text>
                       </div>
                     </div>

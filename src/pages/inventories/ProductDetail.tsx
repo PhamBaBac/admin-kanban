@@ -65,12 +65,25 @@ const ProductDetail = () => {
   const [searchParams] = useSearchParams();
 
   const id = searchParams.get("id");
+  const subId = searchParams.get("subId");
 
   useEffect(() => {
     if (id) {
       getProductDetail();
     }
   }, [id, slug]);
+
+  useEffect(() => {
+    if (subId && subProducts.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`subproduct-${subId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [subId, subProducts]);
 
   const getProductDetail = async () => {
     if (!id) return;
@@ -480,18 +493,24 @@ const ProductDetail = () => {
                 ? Object.entries(attrs).filter(([key]) => !isSystemAttr(key))
                 : [];
 
+              const isHighlighted = item.id === subId;
+
               return (
                 <div
                   key={item.id}
+                  id={`subproduct-${item.id}`}
                   style={{
-                    background: "#ffffff",
+                    background: isHighlighted ? "#fff7ed" : "#ffffff",
                     borderRadius: 12,
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                    border: isHighlighted ? "2px solid #f97316" : "1px solid #e2e8f0",
+                    boxShadow: isHighlighted
+                      ? "0 4px 14px rgba(249, 115, 22, 0.18)"
+                      : "0 1px 3px rgba(0,0,0,0.05)",
                     padding: "14px",
                     display: "flex",
                     flexDirection: "column",
                     gap: 10,
+                    transition: "all 0.3s ease",
                   }}
                 >
                   {/* Header: Ảnh đại diện + SKU + Tag tồn kho */}
@@ -513,7 +532,12 @@ const ProductDetail = () => {
                         {item.sku || item.id?.substring(0, 8).toUpperCase() || "—"}
                       </Typography.Text>
                     </div>
-                    <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {isHighlighted && (
+                        <Tag color="orange" style={{ fontWeight: 600, margin: 0, borderRadius: 6, fontSize: 11 }}>
+                          Cảnh báo kho
+                        </Tag>
+                      )}
                       <Tag
                         color={item.stock === 0 ? "error" : item.stock <= 5 ? "warning" : "blue"}
                         style={{ fontWeight: 600, margin: 0, padding: "3px 8px", borderRadius: 6, fontSize: 12 }}
@@ -727,6 +751,13 @@ const ProductDetail = () => {
       ) : (
         /* Giao diện Desktop: Bảng dữ liệu có scroll an toàn */
         <div className="app-card p-3">
+          <style>{`
+            .subproduct-row-highlight > td {
+              background-color: #fff7ed !important;
+              border-top: 2px solid #f97316 !important;
+              border-bottom: 2px solid #f97316 !important;
+            }
+          `}</style>
           <Table
             bordered
             columns={columns}
@@ -734,6 +765,12 @@ const ProductDetail = () => {
             rowKey="id"
             scroll={{ x: 1360 }}
             pagination={subProducts.length > 10 ? { pageSize: 10, showSizeChanger: true } : false}
+            onRow={(record) => ({
+              id: `subproduct-${record.id}`,
+            })}
+            rowClassName={(record) =>
+              record.id === subId ? "subproduct-row-highlight" : ""
+            }
           />
         </div>
       )}

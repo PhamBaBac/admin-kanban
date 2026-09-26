@@ -76,6 +76,22 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
     if (auth?.accessToken) {
       fetchUnreadCount();
     }
+
+    const handleSync = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener("admin_notification_deleted", handleSync);
+    window.addEventListener("admin_notification_clear_read", handleSync);
+    window.addEventListener("admin_notification_read_all", handleSync);
+    window.addEventListener("admin_notification_read", handleSync);
+
+    return () => {
+      window.removeEventListener("admin_notification_deleted", handleSync);
+      window.removeEventListener("admin_notification_clear_read", handleSync);
+      window.removeEventListener("admin_notification_read_all", handleSync);
+      window.removeEventListener("admin_notification_read", handleSync);
+    };
   }, [auth?.accessToken]);
 
   useEffect(() => {

@@ -70,6 +70,15 @@ export const productService = {
     return response.data;
   },
 
+  getSubProductDetail: async (subProductId: string): Promise<any> => {
+    try {
+      const response = await handleAPI(`/subProducts/detail/${subProductId}`);
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
   createSubProduct: async (data: any): Promise<any> => {
     const response = await handleAPI(`/subProducts/create`, data, "post");
     return response.data;
