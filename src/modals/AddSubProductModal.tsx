@@ -93,7 +93,6 @@ const AddSubProductModal = (props: Props) => {
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [options, setOptions] = useState<SelectModel[]>([]);
 
-  // Ảnh đại diện đầu tiên của biến thể (thay thế cho ô màu cũ)
   const primaryImage =
     fileList && fileList.length > 0
       ? fileList[0].url ||
@@ -135,13 +134,11 @@ const AddSubProductModal = (props: Props) => {
 
   const [form] = Form.useForm();
 
-  // Watchers for calculations
   const watchedPrice = Form.useWatch("price", form) || 0;
   const watchedCost = Form.useWatch("cost", form) || 0;
   const watchedDiscountType = Form.useWatch("discountType", form) || "NONE";
   const watchedDiscountValue = Form.useWatch("discountValue", form) || 0;
 
-  // Tính số tiền giảm và giá bán thực tế theo 2 loại PromotionType (PERCENT hoặc DISCOUNT)
   let discountAmount = 0;
   let discountPercent = 0;
 
@@ -172,7 +169,6 @@ const AddSubProductModal = (props: Props) => {
       form.resetFields();
 
       if (subProduct) {
-        // 1. Phân tích an toàn attributes (chuỗi JSON, object hoặc mảng)
         let rawAttrs: any = subProduct.attributes;
         if (typeof rawAttrs === "string") {
           try {
@@ -185,7 +181,6 @@ const AddSubProductModal = (props: Props) => {
           rawAttrs = {};
         }
 
-        // 2. Trích xuất thuộc tính mở rộng (bỏ qua màu sắc và các trường hệ thống)
         let customAttributes: { name: string; value: string }[] = [];
         if (Array.isArray(rawAttrs)) {
           customAttributes = rawAttrs
@@ -219,7 +214,6 @@ const AddSubProductModal = (props: Props) => {
             }));
         }
 
-        // 3. Đảm bảo nếu có subProduct.size mà chưa có trong customAttributes thì bổ sung
         if (
           subProduct.size &&
           !customAttributes.some((a) => a.name.toLowerCase() === "size")
@@ -230,7 +224,6 @@ const AddSubProductModal = (props: Props) => {
           });
         }
 
-        // 4. Nhận diện loại giảm giá (PERCENT hoặc DISCOUNT)
         let initialDiscountType = "NONE";
         let initialDiscountValue = 0;
 
@@ -253,7 +246,6 @@ const AddSubProductModal = (props: Props) => {
           }
         }
 
-        // 5. Lấy tên màu hiện có (từ color hoặc attributes)
         const existingColor =
           subProduct.color ||
           rawAttrs?.["Màu sắc"] ||
@@ -266,7 +258,6 @@ const AddSubProductModal = (props: Props) => {
           rawAttrs?.["màu"] ||
           "";
 
-        // 6. Số lượng tồn kho (ưu tiên qty -> stock -> quantity -> 0)
         const existingQty =
           subProduct.qty !== undefined && subProduct.qty !== null
             ? subProduct.qty
@@ -274,7 +265,6 @@ const AddSubProductModal = (props: Props) => {
             ? subProduct.stock
             : (subProduct as any).quantity ?? 0;
 
-        // 7. Điền toàn bộ dữ liệu vào Form
         form.setFieldsValue({
           ...subProduct,
           productId: subProduct.productId || product?.id || id || undefined,
@@ -291,7 +281,6 @@ const AddSubProductModal = (props: Props) => {
               : [{ name: "", value: "" }],
         });
 
-        // 8. Xử lý an toàn bộ sưu tập ảnh
         let rawImages: any = subProduct.images;
         if (typeof rawImages === "string") {
           try {
@@ -480,7 +469,6 @@ const AddSubProductModal = (props: Props) => {
     }
   }, [visible, subProduct, initialValues, form]);
 
-  // Auto-generate SKU helper
   const handleAutoGenerateSku = () => {
     const title = product?.title || "SP";
     const cleanTitle = title
@@ -493,7 +481,6 @@ const AddSubProductModal = (props: Props) => {
     const values = form.getFieldsValue();
     let variantPart = "";
 
-    // Thêm mã viết tắt của màu sắc vào SKU nếu có
     if (values.color && typeof values.color === "string" && values.color.trim()) {
       const cleanColor = values.color
         .normalize("NFD")
@@ -554,7 +541,6 @@ const AddSubProductModal = (props: Props) => {
         data.color = "";
       }
 
-      // Xử lý Dynamic Attributes
       const attributesObj: Record<string, string> = {};
       if (values.customAttributes && Array.isArray(values.customAttributes)) {
         values.customAttributes.forEach((attr: any) => {
@@ -576,7 +562,6 @@ const AddSubProductModal = (props: Props) => {
         data.color = attributesObj["Màu sắc"];
       }
 
-      // XỬ LÝ 2 LOẠI GIẢM GIÁ (PERCENT hoặc DISCOUNT)
       const basePrice = Number(values.price ?? 0);
       let calculatedSalePrice = basePrice;
       let calculatedDiscountAmount = 0;
@@ -600,7 +585,6 @@ const AddSubProductModal = (props: Props) => {
         delete attributesObj["discountValue"];
       }
 
-      // Xóa các trường nhạy cảm không phải thuộc tính biến thể
       delete attributesObj["discountAmount"];
       delete attributesObj["price"];
       delete attributesObj["cost"];
@@ -609,10 +593,8 @@ const AddSubProductModal = (props: Props) => {
 
       data.attributes = attributesObj;
       data.price = basePrice;
-      // Shopping app đọc subProduct.discount làm giá bán khuyến mãi (sale price)
       data.discount = calculatedDiscountAmount > 0 ? calculatedSalePrice : 0;
 
-      // Đồng bộ stock & qty
       const finalQty = Number(values.qty ?? 0);
       data.qty = finalQty;
       data.stock = finalQty;

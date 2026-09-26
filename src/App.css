@@ -129,3 +129,79 @@ a {
 .orders-status-tabs .ant-tabs-nav-list {
   transform: none !important;
 }
+
+/* Chống giật toàn trang khi thanh cuộn xuất hiện / biến mất giữa tab dài và tab ngắn */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+.main-app-layout {
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+}
+
+/* Layout stability for Ant Design Tables - Chống giật giật khi click / loading / phân trang */
+.ant-table-wrapper {
+  position: relative;
+}
+
+/* Đảm bảo bảng có phân trang luôn giữ chiều cao ổn định và Pagination neo cố định ở đáy */
+.ant-table-wrapper:has(.ant-pagination) {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+}
+
+.ant-table-wrapper:has(.ant-pagination) .ant-spin-nested-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+}
+
+.ant-table-wrapper:has(.ant-pagination) .ant-spin-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ant-table-wrapper:has(.ant-pagination) .ant-table {
+  flex: 1;
+}
+
+.ant-table-wrapper:has(.ant-pagination) .ant-table-placeholder {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ant-table-wrapper .ant-spin-nested-loading > div > .ant-spin {
+  max-height: 100%;
+}
+
+/* Custom Segmented for Support Chat Screen - Đảm bảo các nút hiển thị đầy đủ 100% nội dung */
+.support-filter-segmented {
+  background-color: #f1f5f9 !important;
+  padding: 3px !important;
+  border-radius: 8px !important;
+}
+
+.support-filter-segmented .ant-segmented-item {
+  border-radius: 6px !important;
+}
+
+.support-filter-segmented .ant-segmented-item-label {
+  padding: 0 4px !important;
+  font-size: 12px !important;
+  font-weight: 500;
+  min-height: 32px !important;
+  line-height: 32px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}

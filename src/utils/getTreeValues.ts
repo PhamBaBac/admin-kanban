@@ -4,7 +4,6 @@ export const getTreeValues = (data: any[], isSelect?: boolean) => {
 	const values: any = [];
 	const idSet = new Set(data.map((el) => String(el.id)));
 
-	// Root categories: không có parentId, hoặc rỗng, hoặc parentId trùng chính nó, hoặc parentId không có trong idSet
 	const items = data.filter((element) => {
 		const pId = element.parentId ? String(element.parentId).trim() : "";
 		return !pId || pId === "" || pId === String(element.id) || !idSet.has(pId);

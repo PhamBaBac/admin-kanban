@@ -94,7 +94,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
 
   useEffect(() => {
     if (open && order?.id) {
-      // Tải dữ liệu bổ trợ cho Tab đang active hoặc cả 2
       fetchHistory(order.id);
       fetchTransactions(order.id);
     }
@@ -131,7 +130,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
     message.success(`Đã sao chép ${label}!`);
   };
 
-  // Tính toán tóm tắt tài chính
   const subtotal =
     order.subtotal ??
     (order.orderResponses || []).reduce((sum, item) => sum + (item.totalPrice || 0), 0);
@@ -139,7 +137,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
   const discountAmount = order.discountAmount ?? 0;
   const finalTotal = Math.max(0, subtotal + shippingFee - discountAmount);
 
-  // Tính sổ cái dòng tiền
   const totalPaid = transactions
     .filter((tx) => tx.transactionType === "PAYMENT" && tx.status === "SUCCESS")
     .reduce((sum, tx) => sum + (tx.amount || 0), 0);
@@ -150,7 +147,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
 
   const netBalance = totalPaid - totalRefunded;
 
-  // Cột cho bảng sản phẩm Snapshot
   const snapshotColumns = [
     {
       title: "Sản phẩm",
@@ -249,7 +245,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
     },
   ];
 
-  // Cột cho bảng Sổ cái dòng tiền
   const ledgerColumns = [
     {
       title: "Mã giao dịch nội bộ",
@@ -549,6 +544,8 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
                     dataSource={order.orderResponses || []}
                     pagination={false}
                     size="middle"
+                    scroll={{ x: 600 }}
+                    style={{ minHeight: 120 }}
                   />
                 </Card>
               </Space>
@@ -675,6 +672,8 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
                     dataSource={transactions}
                     pagination={false}
                     size="small"
+                    scroll={{ x: 650 }}
+                    style={{ minHeight: 120 }}
                   />
                 )}
               </div>

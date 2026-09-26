@@ -49,12 +49,15 @@ export const formatRelativeTime = (dateStr?: string) => {
   if (diffSec < 3600) return `${Math.max(1, Math.floor(diffSec / 60))} phút trước`;
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
   if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} ngày trước`;
-  return date.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  if (year === now.getFullYear()) {
+    return `${day}/${month}`;
+  }
+  return `${day}/${month}/${year}`;
 };
 
 export const getNotificationIcon = (type: NotificationType) => {
@@ -116,7 +119,6 @@ const NotificationPopover: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<"ALL" | "UNREAD">("ALL");
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
 
-  // Tải danh sách thông báo khi mở popover
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -125,7 +127,12 @@ const NotificationPopover: React.FC<Props> = ({
         size: 15,
         unreadOnly: activeTab === "UNREAD",
       });
-      setNotifications(res.data || []);
+      setNotifications((prev) => {
+        const fetched = res.data || [];
+        const fetchedIds = new Set(fetched.map((n) => n.id));
+        const unpersisted = prev.filter((n) => !fetchedIds.has(n.id));
+        return [...unpersisted, ...fetched];
+      });
     } catch (error) {
       console.error("Lỗi khi tải thông báo:", error);
     } finally {
@@ -139,21 +146,17 @@ const NotificationPopover: React.FC<Props> = ({
     }
   }, [open, activeTab]);
 
-  // Khi có thông báo Realtime từ Socket bắn xuống, prepend vào đầu danh sách
   useEffect(() => {
     if (!latestNotification) return;
 
     setNotifications((prev) => {
-      // Tránh trùng lặp id
       const exists = prev.some((n) => n.id === latestNotification.id);
       if (exists) return prev;
       return [latestNotification, ...prev];
     });
   }, [latestNotification]);
 
-  // Xử lý click vào 1 thông báo
   const handleItemClick = async (item: AdminNotification) => {
-    // 1. Đánh dấu đã đọc nếu chưa đọc
     if (!item.isRead) {
       try {
         await notificationService.markAsRead(item.id);
@@ -168,13 +171,11 @@ const NotificationPopover: React.FC<Props> = ({
 
     setOpen(false);
 
-    // 2. Điều hướng tới trang đích nếu có targetUrl
     if (item.targetUrl) {
       navigate(item.targetUrl);
     }
   };
 
-  // Đánh dấu tất cả là đã đọc
   const handleMarkAllAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -186,8 +187,7 @@ const NotificationPopover: React.FC<Props> = ({
       message.error("Không thể đánh dấu đọc tất cả");
     }
   };
-
-  // Xóa 1 thông báo
+  
   const handleDeleteItem = async (e: React.MouseEvent, id: string, isRead: boolean) => {
     e.stopPropagation();
     try {

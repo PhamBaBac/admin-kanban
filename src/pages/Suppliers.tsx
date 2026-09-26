@@ -40,6 +40,12 @@ const FILTER_OPTIONS = [
   { key: "inactive", label: "Khóa" },
 ];
 
+const isSupplierActive = (active?: number | string | boolean | null) =>
+  active === 1 || active === "1" || active === true;
+
+const isSupplierTaking = (isTaking?: number | string | boolean | null) =>
+  isTaking === 1 || isTaking === "1" || isTaking === true;
+
 const Suppliers = () => {
   const {
     getSuppliers: fetchSuppliers,
@@ -57,7 +63,6 @@ const Suppliers = () => {
   const [total, setTotal] = useState<number>(10);
   const [forms, setForms] = useState<FormModel>();
 
-  // Responsive state
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -125,7 +130,6 @@ const Suppliers = () => {
     }
   };
 
-  // Filter suppliers in Cards mode
   const filteredSuppliers = suppliers.filter((item) => {
     if (searchKey.trim()) {
       const q = searchKey.trim().toLowerCase();
@@ -159,24 +163,23 @@ const Suppliers = () => {
     }
 
     if (statusFilter === "active") {
-      return item.active === 1 || item.active === "1" || (item.active as any) === true;
+      return isSupplierActive(item.active);
     }
     if (statusFilter === "inactive") {
-      return item.active !== 1 && item.active !== "1" && (item.active as any) !== true;
+      return !isSupplierActive(item.active);
     }
     if (statusFilter === "taking") {
-      return item.isTaking === 1 || (item.isTaking as any) === true;
+      return isSupplierTaking(item.isTaking);
     }
     if (statusFilter === "stopped") {
-      return item.isTaking !== 1 && (item.isTaking as any) !== true;
+      return !isSupplierTaking(item.isTaking);
     }
     return true;
   });
 
   const renderSupplierCard = (item: SupplierModel, index: number) => {
-    const isActive =
-      item.active === 1 || item.active === "1" || (item.active as any) === true;
-    const isTaking = item.isTaking === 1 || (item.isTaking as any) === true;
+    const isActive = isSupplierActive(item.active);
+    const isTaking = isSupplierTaking(item.isTaking);
 
     return (
       <div
@@ -193,7 +196,6 @@ const Suppliers = () => {
           transition: "box-shadow 0.2s ease, border-color 0.2s ease",
         }}
       >
-        {/* Top: Avatar, Name, Index, Badges */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           {item.photoUrl ? (
             <Avatar
@@ -326,7 +328,6 @@ const Suppliers = () => {
           </div>
         </div>
 
-        {/* Content details */}
         <div
           style={{
             backgroundColor: "#f8fafc",
@@ -338,7 +339,6 @@ const Suppliers = () => {
             fontSize: 13,
           }}
         >
-          {/* Phone */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <PhoneOutlined
               style={{ color: "#2563eb", fontSize: 13, flexShrink: 0 }}
@@ -358,7 +358,6 @@ const Suppliers = () => {
             )}
           </div>
 
-          {/* Email */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <MailOutlined
               style={{ color: "#0284c7", fontSize: 13, flexShrink: 0 }}
@@ -382,10 +381,8 @@ const Suppliers = () => {
             )}
           </div>
 
-          {/* Price */}
           {item.price !== undefined &&
-            item.price !== null &&
-            item.price !== "" && (
+            item.price !== null && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <DollarCircleOutlined
                   style={{ color: "#16a34a", fontSize: 13, flexShrink: 0 }}
@@ -403,7 +400,6 @@ const Suppliers = () => {
               </div>
             )}
 
-          {/* Categories */}
           {item.categories && item.categories.length > 0 && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <span
@@ -450,7 +446,6 @@ const Suppliers = () => {
             </div>
           )}
 
-          {/* Products */}
           {(item.product || (item as any).products) && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <span
@@ -498,7 +493,6 @@ const Suppliers = () => {
           )}
         </div>
 
-        {/* Actions */}
         <div
           style={{
             display: "flex",
@@ -576,9 +570,7 @@ const Suppliers = () => {
   return (
     <div style={{ padding: isMobile ? "4px 0" : "0" }}>
       {viewMode === "cards" ? (
-        /* GIAO DIỆN DẠNG THẺ (CARDS VIEW) - TỐI ƯU CHO MOBILE & TABLET */
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Header Mobile / Cards */}
           <div
             style={{
               background: "#ffffff",
@@ -588,7 +580,7 @@ const Suppliers = () => {
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
             }}
           >
-            {/* Top row: Title, Counter, View Toggle, Add button */}
+            
             <div
               style={{
                 display: "flex",
@@ -670,7 +662,6 @@ const Suppliers = () => {
               </Space>
             </div>
 
-            {/* Row 2: Search input + Export Excel */}
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <Input
                 placeholder="Tìm theo tên, SĐT, email, danh mục..."
@@ -693,7 +684,6 @@ const Suppliers = () => {
               </Button>
             </div>
 
-            {/* Row 3: Filter Pills */}
             <div
               style={{
                 display: "flex",

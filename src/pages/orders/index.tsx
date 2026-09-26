@@ -78,7 +78,6 @@ const isTerminalStatus = (status?: string) => {
 const getNextAvailableStatuses = (currentStatus?: string): string[] => {
   switch (currentStatus) {
     case "PENDING":
-      // Đơn PENDING muốn chuyển sang PROCESSING phải qua bước Đóng gói & Kê khai kiện hàng (GHN)
       return ["CANCELLED"];
     case "PROCESSING":
       return ["COMPLETED", "CANCELLED"];
@@ -96,8 +95,10 @@ const OrdersScreen = () => {
     useOrders();
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFromUrl = searchParams.get("status");
-  const [filterStatus, setFilterStatus] = useState<string>(statusFromUrl || "ALL");
+  const orderIdFromUrl = searchParams.get("id") || searchParams.get("orderId");
+  const searchFromUrl = searchParams.get("search");
 
+  const [filterStatus, setFilterStatus] = useState<string>(statusFromUrl || "ALL");
   const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({
     ALL: 0,
     PENDING: 0,
@@ -111,7 +112,7 @@ const OrdersScreen = () => {
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
-  const [searchKey, setSearchKey] = useState("");
+  const [searchKey, setSearchKey] = useState(orderIdFromUrl || searchFromUrl || "");
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [isModalStatusOpen, setIsModalStatusOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<BillModel | null>(null);
@@ -145,25 +146,29 @@ const OrdersScreen = () => {
   }, []);
 
   const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const handledOrderIdRef = useRef<string | null>(null);
+  const isSwitchingTabRef = useRef<boolean>(false);
 
-  // Cuộn nhẹ tab đang active vào tầm nhìn nếu nó bị che khuất ở mép container
   useEffect(() => {
-    const container = tabsContainerRef.current;
-    if (!container) return;
-    const activeTab = container.querySelector(".ant-tabs-tab-active") as HTMLElement | null;
-    if (!activeTab) return;
+    const timer = setTimeout(() => {
+      const container = tabsContainerRef.current;
+      if (!container) return;
+      const activeTab = container.querySelector(".ant-tabs-tab-active") as HTMLElement | null;
+      if (!activeTab) return;
 
-    const containerLeft = container.scrollLeft;
-    const containerRight = containerLeft + container.clientWidth;
-    const tabLeft = activeTab.offsetLeft;
-    const tabRight = tabLeft + activeTab.offsetWidth;
+      const containerLeft = container.scrollLeft;
+      const containerRight = containerLeft + container.clientWidth;
+      const tabLeft = activeTab.offsetLeft;
+      const tabRight = tabLeft + activeTab.offsetWidth;
 
-    // Chỉ cuộn khi tab vượt ra ngoài khung nhìn của container, tránh nhảy lại đầu khi bấm
-    if (tabLeft < containerLeft) {
-      container.scrollTo({ left: Math.max(0, tabLeft - 16), behavior: "smooth" });
-    } else if (tabRight > containerRight) {
-      container.scrollTo({ left: tabRight - container.clientWidth + 16, behavior: "smooth" });
-    }
+      if (tabLeft < containerLeft) {
+        container.scrollTo({ left: Math.max(0, tabLeft - 16), behavior: "smooth" });
+      } else if (tabRight > containerRight) {
+        container.scrollTo({ left: tabRight - container.clientWidth + 16, behavior: "smooth" });
+      }
+    }, 60);
+
+    return () => clearTimeout(timer);
   }, [filterStatus]);
 
   const handleOpenDetailModal = (order: BillModel) => {
@@ -176,17 +181,39 @@ const OrdersScreen = () => {
     if (found) {
       setSelectedDetailOrder(found);
       setIsDetailModalOpen(true);
+      if (found.orderStatus) {
+        setFilterStatus(found.orderStatus);
+      }
       return;
     }
     try {
-      const fetched: any = await orderService.getOrderById(orderId);
+      const fetched = await orderService.getOrderById(orderId);
       if (fetched) {
         setSelectedDetailOrder(fetched);
         setIsDetailModalOpen(true);
+        if (fetched.orderStatus) {
+          setFilterStatus(fetched.orderStatus);
+        }
+        return;
       }
-    } catch (err: any) {
-      message.error("Không thể tải thông tin đơn hàng này");
+    } catch {
+      try {
+        const res = await getOrders({ search: orderId, page: 1, pageSize: 10 });
+        const matched: BillModel | undefined =
+          (res?.data || []).find((b: any) => b.id === orderId) || (res?.data || [])[0];
+        if (matched) {
+          setSelectedDetailOrder(matched);
+          setIsDetailModalOpen(true);
+          if (matched.orderStatus) {
+            setFilterStatus(matched.orderStatus);
+          }
+          return;
+        }
+      } catch (e) {
+        console.error("Lỗi khi tải chi tiết đơn hàng fallback:", e);
+      }
     }
+    message.error("Không thể tải thông tin đơn hàng này");
   };
 
   const finalCancelReason = cancelReason === "Khác" ? customReason : cancelReason;
@@ -233,7 +260,6 @@ const OrdersScreen = () => {
         return;
       }
     } catch {
-      // Fallback nếu backend endpoint chưa khởi động lại: truy vấn pageSize=1 để lấy totalElements
       try {
         const statuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "REFUNDED"];
         const [allRes, ...statusResList] = await Promise.all([
@@ -257,11 +283,7 @@ const OrdersScreen = () => {
     fetchStatusCounts();
   }, [fetchStatusCounts]);
 
-  useEffect(() => {
-    if (statusFromUrl) {
-      setFilterStatus(statusFromUrl);
-    }
-  }, [statusFromUrl]);
+
 
   const fetchBills = useCallback(
     async (
@@ -295,7 +317,6 @@ const OrdersScreen = () => {
         setBills(billsData);
         setTotal(res?.totalElements || 0);
 
-        // Đồng bộ số lượng cho tab hiện tại nếu không có search/date filter
         if (targetStatus && res?.totalElements !== undefined && !targetSearch && !targetDates) {
           setStatusCounts((prev) => ({
             ...prev,
@@ -310,8 +331,90 @@ const OrdersScreen = () => {
   );
 
   useEffect(() => {
-    fetchBills(page, limit, filterStatus, searchKey, dateRange);
-  }, [page, limit, filterStatus, dateRange]);
+    if (!orderIdFromUrl) {
+      handledOrderIdRef.current = null;
+      return;
+    }
+
+    if (isSwitchingTabRef.current || handledOrderIdRef.current === orderIdFromUrl) {
+      return;
+    }
+    handledOrderIdRef.current = orderIdFromUrl;
+
+    let isCancelled = false;
+
+    const loadOrderFromUrl = async () => {
+      try {
+        if (statusFromUrl) {
+          setFilterStatus(statusFromUrl);
+        }
+
+        const res = await getOrders({ search: orderIdFromUrl, page: 1, pageSize: 10 });
+        if (isCancelled || isSwitchingTabRef.current) return;
+
+        const foundOrder =
+          (res?.data || []).find((b: any) => b.id === orderIdFromUrl) ||
+          (res?.data || [])[0];
+
+        if (foundOrder) {
+          const matchedStatus = foundOrder.orderStatus || statusFromUrl || "ALL";
+          setFilterStatus(matchedStatus);
+          setSelectedDetailOrder(foundOrder);
+          setIsDetailModalOpen(true);
+
+          const billsData = (res?.data || []).map((item: any) => ({
+            ...item,
+            key: item.id,
+          }));
+          setBills(billsData);
+          setTotal(res?.totalElements || billsData.length);
+          return;
+        }
+
+        const fetched = await orderService.getOrderById(orderIdFromUrl);
+        if (isCancelled || isSwitchingTabRef.current) return;
+        if (fetched) {
+          const matchedStatus = fetched.orderStatus || statusFromUrl || "ALL";
+          setFilterStatus(matchedStatus);
+          setSelectedDetailOrder(fetched);
+          setIsDetailModalOpen(true);
+          setBills([{ ...fetched, key: fetched.id }]);
+          setTotal(1);
+          return;
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải chi tiết đơn hàng từ thông báo:", err);
+      }
+
+      if (!isCancelled && !isSwitchingTabRef.current) {
+        fetchBills(1, limit, statusFromUrl || "ALL", orderIdFromUrl, null);
+      }
+    };
+
+    loadOrderFromUrl();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [orderIdFromUrl, statusFromUrl]);
+
+  useEffect(() => {
+    if (isSwitchingTabRef.current) {
+      return;
+    }
+
+    if (orderIdFromUrl) {
+      return;
+    }
+
+    if (searchFromUrl) {
+      setSearchKey(searchFromUrl);
+      setPage(1);
+      fetchBills(1, limit, filterStatus, searchFromUrl, dateRange);
+    } else {
+      fetchBills(page, limit, filterStatus, searchKey, dateRange);
+    }
+  }, [page, limit, filterStatus, dateRange, searchFromUrl]);
 
   const handleSearchBills = async () => {
     setPage(1);
@@ -365,7 +468,6 @@ const OrdersScreen = () => {
       setTrackingCode("");
       setCancelReason("");
       setCustomReason("");
-      // reload bills and counts
       fetchBills(page, limit, filterStatus, searchKey, dateRange);
       fetchStatusCounts();
     } catch (error: any) {
@@ -782,12 +884,51 @@ const OrdersScreen = () => {
                 </Button>
               </Tooltip>
             )}
+            {orderIdFromUrl && (
+              <Tag
+                closable
+                color="blue"
+                onClose={() => {
+                  isSwitchingTabRef.current = true;
+                  searchParams.delete("id");
+                  searchParams.delete("orderId");
+                  setSearchParams(searchParams, { replace: true });
+                  setSearchKey("");
+                  setPage(1);
+                  fetchBills(1, limit, filterStatus, "", dateRange);
+                  setTimeout(() => {
+                    isSwitchingTabRef.current = false;
+                  }, 200);
+                }}
+                style={{
+                  borderRadius: 6,
+                  padding: "4px 8px",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                Đang xem đơn #{orderIdFromUrl.length > 8 ? orderIdFromUrl.substring(0, 8).toUpperCase() : orderIdFromUrl}
+              </Tag>
+            )}
             <Input.Search
               value={searchKey}
               onChange={(e) => {
                 setSearchKey(e.target.value);
                 if (!e.target.value) {
                   setPage(1);
+                  if (orderIdFromUrl || searchFromUrl) {
+                    isSwitchingTabRef.current = true;
+                    searchParams.delete("id");
+                    searchParams.delete("orderId");
+                    searchParams.delete("search");
+                    setSearchParams(searchParams, { replace: true });
+                    setTimeout(() => {
+                      isSwitchingTabRef.current = false;
+                    }, 200);
+                  }
                   fetchBills(1, limit, filterStatus, "", dateRange);
                 }
               }}
@@ -816,14 +957,21 @@ const OrdersScreen = () => {
             activeKey={filterStatus}
             className="orders-status-tabs"
             onChange={(val) => {
+              isSwitchingTabRef.current = true;
               setFilterStatus(val);
               setPage(1);
-              if (val === "ALL") {
-                searchParams.delete("status");
-                setSearchParams(searchParams);
-              } else {
-                setSearchParams({ status: val });
+              setSearchKey("");
+
+              const newParams = new URLSearchParams();
+              if (val !== "ALL") {
+                newParams.set("status", val);
               }
+              setSearchParams(newParams, { replace: true });
+              fetchBills(1, limit, val, "", dateRange);
+
+              setTimeout(() => {
+                isSwitchingTabRef.current = false;
+              }, 400);
             }}
             items={[
               {
@@ -906,18 +1054,34 @@ const OrdersScreen = () => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <FilterSearch size={16} color="#1570ef" variant="Bold" />
-                Đang lọc danh sách theo: <strong>{filterStatus === "PENDING" ? "Đơn hàng chờ xác nhận" : filterStatus}</strong> ({total} đơn)
+                Đang lọc danh sách theo: <strong>
+                  {filterStatus === "PENDING"
+                    ? "Đơn hàng chờ xác nhận"
+                    : filterStatus === "PROCESSING"
+                    ? "Đơn hàng đang chuẩn bị"
+                    : filterStatus === "COMPLETED"
+                    ? "Đơn hàng hoàn thành"
+                    : filterStatus === "CANCELLED"
+                    ? "Đơn hàng đã hủy"
+                    : filterStatus === "REFUNDED"
+                    ? "Đơn hàng hoàn tiền"
+                    : filterStatus}
+                </strong> ({total} đơn)
               </span>
               <Button
                 size="small"
                 type="link"
                 onClick={() => {
+                  isSwitchingTabRef.current = true;
                   setFilterStatus("ALL");
                   setSearchKey("");
                   setDateRange(null);
                   setPage(1);
-                  searchParams.delete("status");
-                  setSearchParams(searchParams);
+                  setSearchParams({}, { replace: true });
+                  fetchBills(1, limit, "ALL", "", null);
+                  setTimeout(() => {
+                    isSwitchingTabRef.current = false;
+                  }, 200);
                 }}
               >
                 Xóa bộ lọc (Xem tất cả)
@@ -975,6 +1139,10 @@ const OrdersScreen = () => {
               style={{
                 textAlign: "center",
                 padding: "48px 0",
+                minHeight: 320,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 background: "#fff",
                 borderRadius: 12,
                 border: "1px solid #e2e8f0",
@@ -1260,6 +1428,7 @@ const OrdersScreen = () => {
             columns={columns}
             size="middle"
             scroll={{ x: 1400 }}
+            style={{ minHeight: 450 }}
             pagination={{
               total,
               showSizeChanger: true,

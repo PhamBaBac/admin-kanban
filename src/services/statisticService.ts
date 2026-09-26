@@ -9,7 +9,7 @@ export interface DashboardStatistics {
   subProduct: number;
   totalSubProduct: number;
   totalQty: number;
-  [key: string]: any; // Allow additional properties
+  [key: string]: any; 
 }
 
 export interface TopSellingProduct {

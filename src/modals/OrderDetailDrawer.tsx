@@ -479,6 +479,8 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
             dataSource={order.orderResponses || []}
             pagination={false}
             size="middle"
+            scroll={{ x: 600 }}
+            style={{ minHeight: 120 }}
           />
         </Card>
 
@@ -585,6 +587,8 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                 rowKey="id"
                 pagination={false}
                 size="small"
+                scroll={{ x: 650 }}
+                style={{ minHeight: 120 }}
                 dataSource={transactions}
                 columns={[
                   {

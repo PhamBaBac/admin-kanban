@@ -64,12 +64,12 @@ const SalesAndPurchaseStatistic = () => {
       labels: list.map((item) => {
         if (!item || !item.date) return "";
         if (timeTypeSelected === "yearly") {
-          return item.date; // "2025"
+          return item.date; 
         } else if (timeTypeSelected === "weekly") {
           const parts = String(item.date).split("-W");
           return parts[1] ? `Week ${parts[1]}` : item.date;
         } else {
-          return item.date; // monthly: "YYYY-MM"
+          return item.date;
         }
       }),
       datasets: [

@@ -48,7 +48,6 @@ const QUICK_REPLIES = [
   "Cảm ơn bạn đã phản hồi, chúc bạn một ngày tốt lành!",
 ];
 
-// Ngưỡng thời gian (phút) để gom cụm chuỗi tin nhắn liên tục của cùng một người gửi
 const MESSAGE_GROUP_TIME_WINDOW_MINUTES = 5;
 
 const SupportScreen: React.FC = () => {
@@ -57,12 +56,10 @@ const SupportScreen: React.FC = () => {
   const currentUsername = `${auth?.firstName || ""} ${auth?.lastName || ""}`.trim() || "Quản trị viên";
   const currentUserRole = (auth?.role || "ADMIN").toUpperCase() as "ADMIN" | "MANAGER";
 
-  // Data state
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
 
-  // UI state
   const [loadingList, setLoadingList] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [inputText, setInputText] = useState("");
@@ -71,7 +68,6 @@ const SupportScreen: React.FC = () => {
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
 
-  // Refs
   const socketRef = useRef<Socket | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,12 +90,10 @@ const SupportScreen: React.FC = () => {
     currentUserIdRef.current = currentUserId;
   }, [currentUserId]);
 
-  // Luôn đồng bộ selectedConvId vào ref để các socket callback không bị dính stale closure
   useEffect(() => {
     selectedConvIdRef.current = selectedConvId;
   }, [selectedConvId]);
 
-  // Cuộn xuống tin nhắn mới nhất (cuộn nội bộ container, không gây giật màn hình hoặc lệch ngang)
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -110,13 +104,11 @@ const SupportScreen: React.FC = () => {
     scrollToBottom();
   }, [messages, isCustomerTyping]);
 
-  // 1. Tải danh sách các cuộc hội thoại
   const loadConversations = async () => {
     setLoadingList(true);
     try {
       const summaries = await supportService.getConversationSummaries();
       setConversations(summaries);
-      // Nếu chưa chọn cuộc hội thoại nào và có danh sách, tự động chọn cuộc đầu tiên (chỉ trên desktop)
       if (!selectedConvId && summaries.length > 0 && typeof window !== "undefined" && window.innerWidth >= 768) {
         setSelectedConvId(summaries[0].conversationId);
       }
@@ -127,7 +119,6 @@ const SupportScreen: React.FC = () => {
     }
   };
 
-  // 2. Khởi tạo Socket.IO kết nối
   useEffect(() => {
     loadConversations();
 
@@ -136,14 +127,12 @@ const SupportScreen: React.FC = () => {
 
     socket.on("connect", () => {
       setSocketConnected(true);
-      // Join vào phòng ban quản trị chung để nhận thông báo từ mọi khách hàng và quản trị viên khác
       socket.emit("join_admin_channel", {
         userId: currentUserId,
         username: currentUsername,
         role: currentUserRole,
       });
 
-      // Nếu đã có cuộc hội thoại đang chọn, tự động join room tương ứng
       if (selectedConvIdRef.current) {
         socket.emit("join_conversation", {
           conversationId: selectedConvIdRef.current,
@@ -156,9 +145,7 @@ const SupportScreen: React.FC = () => {
       setSocketConnected(false);
     });
 
-    // Hàm dùng chung xử lý mọi tin nhắn mới (từ khách hàng, hoặc từ quản trị viên khác đang trực)
     const handleIncomingMessage = (newMsg: SupportMessage) => {
-      // 0. Bỏ qua nếu tin nhắn này đã được nhận và xử lý qua kênh socket khác (deduplication)
       if (newMsg.id) {
         if (processedMsgIdsRef.current.has(newMsg.id)) return;
         processedMsgIdsRef.current.add(newMsg.id);
@@ -166,12 +153,9 @@ const SupportScreen: React.FC = () => {
 
       const isActiveConv = newMsg.conversationId === selectedConvIdRef.current;
 
-      // 1. Nếu tin nhắn thuộc cuộc trò chuyện đang mở -> đẩy ngay vào khung chat
       if (isActiveConv) {
         setMessages((prev) => {
-          // Tránh trùng lặp nếu ID tin nhắn đã tồn tại
           if (newMsg.id && prev.some((m) => m.id === newMsg.id)) return prev;
-          // Tránh trùng lặp với tin nhắn optimistic do chính admin này gửi
           const optIndex = prev.findIndex(
             (m) =>
               !m.id &&
@@ -187,13 +171,10 @@ const SupportScreen: React.FC = () => {
         });
         setIsCustomerTyping(false);
 
-        // Đang mở cuộc hội thoại này nên coi như đã đọc ngay
         if (newMsg.role === "USER") {
           supportService.markAsRead(newMsg.conversationId).catch(() => {});
         }
       }
-
-      // 2. Cập nhật danh sách hội thoại bên cột trái và đưa lên đầu
       setConversations((prev) => {
         const existingIndex = prev.findIndex((c) => c.conversationId === newMsg.conversationId);
         if (existingIndex > -1) {
@@ -209,13 +190,11 @@ const SupportScreen: React.FC = () => {
               item.unreadCount = 0;
             }
           } else {
-            // Khi quản trị viên đã phản hồi, reset unreadCount
             item.unreadCount = 0;
           }
           updated.splice(existingIndex, 1);
           return [item, ...updated];
         } else {
-          // Hội thoại mới tinh
           const newItem: ConversationSummary = {
             conversationId: newMsg.conversationId,
             customerId: newMsg.senderId,
@@ -231,13 +210,10 @@ const SupportScreen: React.FC = () => {
       });
     };
 
-    // Lắng nghe tin nhắn từ phòng trò chuyện đang mở
     socket.on("receive_message", handleIncomingMessage);
 
-    // Lắng nghe tin nhắn từ kênh quản trị chung (tất cả tin nhắn giữa khách và admin)
     socket.on("admin_channel_message", handleIncomingMessage);
 
-    // Lắng nghe trạng thái đang gõ phím
     socket.on(
       "user_typing",
       (data: {
@@ -246,7 +222,6 @@ const SupportScreen: React.FC = () => {
         senderId?: string;
         role?: string;
       }) => {
-        // Bỏ qua nếu sự kiện do chính admin này gửi đi hoặc người gửi là ADMIN / MANAGER
         if (data.senderId && data.senderId === currentUserIdRef.current) return;
         if (data.role && (data.role === "ADMIN" || data.role === "MANAGER")) return;
 
@@ -263,11 +238,9 @@ const SupportScreen: React.FC = () => {
     };
   }, []);
 
-  // 3. Khi chuyển đổi cuộc hội thoại
   useEffect(() => {
     if (!selectedConvId) return;
 
-    // Join room socket của cuộc hội thoại này
     if (socketRef.current) {
       socketRef.current.emit("join_conversation", {
         conversationId: selectedConvId,
@@ -275,7 +248,6 @@ const SupportScreen: React.FC = () => {
       });
     }
 
-    // Đánh dấu đã đọc trên server và local state
     supportService.markAsRead(selectedConvId).catch(() => {});
     setConversations((prev) =>
       prev.map((c) =>
@@ -283,7 +255,6 @@ const SupportScreen: React.FC = () => {
       )
     );
 
-    // Tải lịch sử tin nhắn của cuộc hội thoại này
     const fetchHistory = async () => {
       setLoadingMessages(true);
       try {
@@ -298,7 +269,6 @@ const SupportScreen: React.FC = () => {
 
     fetchHistory();
 
-    // Rời room khi unmount hoặc đổi cuộc hội thoại khác
     return () => {
       if (socketRef.current) {
         socketRef.current.emit("leave_conversation", {
@@ -308,7 +278,6 @@ const SupportScreen: React.FC = () => {
     };
   }, [selectedConvId]);
 
-  // 4. Gửi tin nhắn
   const handleSendMessage = async (textToSend?: string) => {
     const content = (textToSend || inputText).trim();
     if (!content || !selectedConvId) return;
@@ -326,7 +295,6 @@ const SupportScreen: React.FC = () => {
       content: content,
     };
 
-    // Tạo tin nhắn tạm để hiển thị ngay trên UI (Optimistic UI)
     const optimisticMsg: SupportMessage = {
       ...newMsgPayload,
       status: "SENT",
@@ -335,11 +303,9 @@ const SupportScreen: React.FC = () => {
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputText("");
 
-    // Bắn qua Socket
     if (socketRef.current && socketConnected) {
       socketRef.current.emit("send_message", newMsgPayload);
     } else {
-      // Fallback qua REST API nếu socket chưa sẵn sàng
       try {
         await supportService.sendMessage(newMsgPayload);
       } catch (err) {
@@ -347,7 +313,6 @@ const SupportScreen: React.FC = () => {
       }
     }
 
-    // Cập nhật hiển thị tóm tắt tin nhắn cuối trong danh sách bên trái
     setConversations((prev) =>
       prev.map((c) =>
         c.conversationId === selectedConvId
@@ -362,7 +327,6 @@ const SupportScreen: React.FC = () => {
     );
   };
 
-  // 5. Báo trạng thái đang gõ phím
   const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
     if (!socketRef.current || !selectedConvId) return;
@@ -387,7 +351,6 @@ const SupportScreen: React.FC = () => {
     }, 1500);
   };
 
-  // Đếm số lượng cuộc hội thoại theo từng trạng thái
   const unreadOrPendingCount = useMemo(() => {
     return conversations.filter(
       (c) => (c.unreadCount || 0) > 0 || c.lastSenderRole === "USER"
@@ -400,10 +363,8 @@ const SupportScreen: React.FC = () => {
     ).length;
   }, [conversations]);
 
-  // Cuộc hội thoại đang chọn
   const activeConversation = conversations.find((c) => c.conversationId === selectedConvId);
 
-  // Lọc danh sách hội thoại theo tìm kiếm và tab
   const filteredConversations = conversations.filter((c) => {
     const matchSearch =
       c.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -411,18 +372,15 @@ const SupportScreen: React.FC = () => {
       c.lastMessage?.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (!matchSearch) return false;
-    // Tab "unread": Cuộc hội thoại có tin nhắn chưa đọc HOẶC khách hàng gửi tin cuối (chờ trả lời)
     if (filterType === "unread") {
       return (c.unreadCount || 0) > 0 || c.lastSenderRole === "USER";
     }
-    // Tab "answered": Quản trị viên đã phản hồi và không còn tin chưa đọc
     if (filterType === "answered") {
       return c.lastSenderRole !== "USER" && (c.unreadCount || 0) === 0;
     }
     return true;
   });
 
-  // Format thời gian hiển thị
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return "";
     try {
@@ -483,9 +441,9 @@ const SupportScreen: React.FC = () => {
         {(!isMobileView || !selectedConvId) && (
           <div
             style={{
-              width: isMobileView ? "100%" : 330,
-              minWidth: isMobileView ? "100%" : 330,
-              maxWidth: isMobileView ? "100%" : 350,
+              width: isMobileView ? "100%" : 360,
+              minWidth: isMobileView ? "100%" : 360,
+              maxWidth: isMobileView ? "100%" : 380,
               flexShrink: 0,
               borderRight: isMobileView ? "none" : "1px solid #f1f5f9",
               display: "flex",
@@ -496,7 +454,7 @@ const SupportScreen: React.FC = () => {
             }}
           >
           {/* Header cột trái */}
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", background: "#fff", flexShrink: 0 }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid #f1f5f9", background: "#fff", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Title level={5} style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
@@ -532,39 +490,52 @@ const SupportScreen: React.FC = () => {
             {/* Phân loại tab */}
             <Segmented
               block
+              className="support-filter-segmented"
               value={filterType}
               onChange={(val) => setFilterType(val as string)}
               options={[
                 {
-                  label: `Tất cả (${conversations.length})`,
+                  label: (
+                    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <span>Tất cả</span>
+                      <span style={{ color: "#64748b", fontSize: 11 }}>({conversations.length})</span>
+                    </span>
+                  ),
                   value: "all",
                 },
                 {
                   label: (
-                    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      Chờ phản hồi
-                      {unreadOrPendingCount > 0 && (
+                    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <span>Chờ phản hồi</span>
+                      {unreadOrPendingCount > 0 ? (
                         <span
                           style={{
                             backgroundColor: "#ef4444",
                             color: "#fff",
-                            fontSize: 11,
-                            fontWeight: 600,
+                            fontSize: 10,
+                            fontWeight: 700,
                             borderRadius: 10,
-                            padding: "0 6px",
-                            lineHeight: "18px",
-                            height: 18,
+                            padding: "0 5px",
+                            lineHeight: "16px",
+                            height: 16,
                           }}
                         >
                           {unreadOrPendingCount}
                         </span>
+                      ) : (
+                        <span style={{ color: "#94a3b8", fontSize: 11 }}>(0)</span>
                       )}
                     </span>
                   ),
                   value: "unread",
                 },
                 {
-                  label: `Đã phản hồi (${answeredCount})`,
+                  label: (
+                    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <span>Đã phản hồi</span>
+                      <span style={{ color: "#64748b", fontSize: 11 }}>({answeredCount})</span>
+                    </span>
+                  ),
                   value: "answered",
                 },
               ]}
@@ -846,7 +817,6 @@ const SupportScreen: React.FC = () => {
                     const isStaff = msg.role === "ADMIN" || msg.role === "MANAGER";
                     const isMe = msg.senderId === currentUserId;
 
-                    // Xác định tin nhắn trước đó để kiểm tra chuỗi liên tục (tin đầu chuỗi)
                     const prevMsg = index > 0 ? messages[index - 1] : null;
                     const isSameSender = Boolean(
                       prevMsg &&
@@ -855,7 +825,6 @@ const SupportScreen: React.FC = () => {
                         : prevMsg.role === msg.role)
                     );
 
-                    // Kiểm tra 2 tin nhắn gửi liền kề có trong vòng [X phút] hay không
                     let isWithinTimeThreshold = false;
                     if (isSameSender && prevMsg?.createdAt && msg.createdAt) {
                       const prevTime = new Date(prevMsg.createdAt).getTime();
@@ -866,10 +835,8 @@ const SupportScreen: React.FC = () => {
                       }
                     }
 
-                    // Chỉ hiển thị Tên/Thời gian ở tin nhắn đầu tiên của chuỗi tin nhắn liên tục
                     const isFirstInChain = !isSameSender || !isWithinTimeThreshold;
 
-                    // Xác định tin nhắn kế tiếp để kiểm tra tin cuối chuỗi (hiển thị Avatar ở tin nhắn cuối)
                     const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
                     const isSameNextSender = Boolean(
                       nextMsg &&
@@ -888,7 +855,6 @@ const SupportScreen: React.FC = () => {
                       }
                     }
 
-                    // Chỉ hiển thị Avatar ở tin nhắn cuối cùng của chuỗi tin nhắn liên tục
                     const isLastInChain = !isSameNextSender || !isNextWithinTimeThreshold;
 
                     return (
@@ -1087,6 +1053,8 @@ const SupportScreen: React.FC = () => {
                       fontSize: 12,
                       background: "#f8fafc",
                       border: "1px solid #e2e8f0",
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
                     }}
                     onClick={() => handleSendMessage(reply)}
                   >
@@ -1134,7 +1102,6 @@ const SupportScreen: React.FC = () => {
               </div>
             </>
           ) : (
-            // Empty state khi chưa chọn cuộc hội thoại nào
             <div
               style={{
                 flex: 1,

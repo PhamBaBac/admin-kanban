@@ -1,6 +1,7 @@
 /** @format */
 
 export interface BillModel {
+  key?: string;
   id: string;
   userName: string;
   nameRecipient: string | null;
@@ -48,7 +49,7 @@ export interface OrderStatusHistoryModel {
   fromStatus: string | null;
   toStatus: string;
   changedById: string;
-  changedByRole: string; // CUSTOMER, ADMIN, SHIPPER, SYSTEM
+  changedByRole: string;
   reason?: string | null;
   metadata?: string | null;
   createdAt: string;
@@ -100,7 +101,6 @@ export interface ShipmentModel {
   items: ShipmentItemModel[];
 }
 
-// Legacy interface for backward compatibility
 export interface BillItem {
   image: string;
   title: string;
@@ -112,11 +112,6 @@ export interface BillItem {
 }
 
 export enum BillStatus {
-  //   PENDING, // Bill is created but not yet paid
-  //   PAID, // Bill has been paid
-  //   COMPLETED, // Bill has been completed
-  //   CANCELLED, // Bill has been cancelled
-  //   REFUNDED, // Bill has been refunded
   PENDING = 0,
   PAID = 1,
   COMPLETED = 2,

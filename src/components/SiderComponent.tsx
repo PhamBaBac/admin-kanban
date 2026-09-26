@@ -13,6 +13,7 @@ import {
   TruckFast,
   WalletMoney,
   ShieldSecurity,
+  Notification,
 } from "iconsax-react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -46,7 +47,6 @@ const SiderComponent = ({
   const isAdmin = userRole === "ADMIN";
   const canViewReport = userRole === "ADMIN" || userRole === "MANAGER";
 
-  // Xác định selectedKey dựa trên pathname
   const pathname = location.pathname;
   let selectedKey = "dashboard";
   if (pathname.startsWith("/inventory/add-product")) selectedKey = "inventory-add-product";
@@ -60,6 +60,7 @@ const SiderComponent = ({
   else if (pathname.startsWith("/promotions")) selectedKey = "Promotions";
   else if (pathname.startsWith("/report")) selectedKey = "Report";
   else if (pathname.startsWith("/support")) selectedKey = "Support";
+  else if (pathname.startsWith("/notifications")) selectedKey = "Notifications";
   else if (pathname.startsWith("/accounts")) selectedKey = "Accounts";
 
   const isInventoryActive =
@@ -184,6 +185,11 @@ const SiderComponent = ({
       key: "Support",
       label: <Link to={"/support"}>Hỗ trợ khách hàng</Link>,
       icon: <Messages1 size={20} variant="Bulk" color={selectedKey === "Support" ? colors.primary500 : "#64748b"} />,
+    },
+    {
+      key: "Notifications",
+      label: <Link to={"/notifications"}>Thông báo</Link>,
+      icon: <Notification size={20} variant="Bulk" color={selectedKey === "Notifications" ? colors.primary500 : "#64748b"} />,
     },
     ...(isAdmin
       ? [

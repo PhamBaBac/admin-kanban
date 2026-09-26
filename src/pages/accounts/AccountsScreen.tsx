@@ -56,10 +56,8 @@ const AccountsScreen: React.FC = () => {
   const auth = useSelector(authSeletor);
   const currentAdminEmail = auth?.email || "";
 
-  // Tabs state
   const [activeTab, setActiveTab] = useState<string>("list");
 
-  // Tab 1: Danh sách tài khoản
   const [users, setUsers] = useState<UserModel[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -68,7 +66,6 @@ const AccountsScreen: React.FC = () => {
   const [searchUser, setSearchUser] = useState("");
   const [filterRole, setFilterRole] = useState<string>("ALL");
 
-  // Modal đổi vai trò (Role)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<UserModel | null>(null);
   const [newSelectedRole, setNewSelectedRole] = useState<string>("");
@@ -83,11 +80,9 @@ const AccountsScreen: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Tab 2: Tạo tài khoản mới (Form)
   const [createForm] = Form.useForm();
   const [creatingUser, setCreatingUser] = useState(false);
 
-  // Tab 3: Nhật ký hoạt động (Audit Logs)
   const [logs, setLogs] = useState<UserAuditLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [totalLogs, setTotalLogs] = useState(0);
@@ -95,12 +90,10 @@ const AccountsScreen: React.FC = () => {
   const [logPageSize, setLogPageSize] = useState(10);
   const [searchLog, setSearchLog] = useState("");
 
-  // Statistics
   const adminCount = users.filter((u) => u.role === "ADMIN").length;
   const managerCount = users.filter((u) => u.role === "MANAGER").length;
   const userCount = users.filter((u) => u.role === "USER").length;
 
-  // 1. Tải danh sách tài khoản
   const fetchUsers = useCallback(
     async (
       page = userPage,
@@ -127,7 +120,6 @@ const AccountsScreen: React.FC = () => {
     [userPage, userPageSize, searchUser, filterRole]
   );
 
-  // 2. Tải nhật ký hoạt động (Audit Logs)
   const fetchLogs = useCallback(
     async (
       page = logPage,
@@ -162,7 +154,6 @@ const AccountsScreen: React.FC = () => {
     }
   }, [activeTab, logPage, logPageSize]);
 
-  // Xử lý tạo tài khoản mới
   const handleCreateUser = async (values: any) => {
     setCreatingUser(true);
     try {
@@ -177,7 +168,6 @@ const AccountsScreen: React.FC = () => {
 
       message.success(`Đã tạo thành công tài khoản [${values.email}] với vai trò [${values.role}]!`);
       createForm.resetFields();
-      // Làm mới danh sách và chuyển về Tab 1
       fetchUsers(1, userPageSize, "", "ALL");
       setUserPage(1);
       setFilterRole("ALL");
@@ -195,14 +185,12 @@ const AccountsScreen: React.FC = () => {
     }
   };
 
-  // Mở modal đổi Role
   const handleOpenRoleModal = (record: UserModel) => {
     setSelectedUserForRole(record);
     setNewSelectedRole(record.role);
     setIsRoleModalOpen(true);
   };
 
-  // Thực hiện đổi Role
   const handleConfirmRoleChange = async () => {
     if (!selectedUserForRole || !newSelectedRole) return;
 
@@ -222,7 +210,6 @@ const AccountsScreen: React.FC = () => {
       );
       setIsRoleModalOpen(false);
       setSelectedUserForRole(null);
-      // Reload danh sách
       fetchUsers(userPage, userPageSize, searchUser, filterRole);
     } catch (err: any) {
       console.error("Lỗi cập nhật vai trò:", err);
@@ -244,7 +231,6 @@ const AccountsScreen: React.FC = () => {
     }
   };
 
-  // Cột bảng Tài khoản
   const userColumns: ColumnsType<UserModel> = [
     {
       title: "Người dùng",
@@ -349,7 +335,6 @@ const AccountsScreen: React.FC = () => {
     },
   ];
 
-  // Cột bảng Nhật ký hoạt động
   const logColumns: ColumnsType<UserAuditLog> = [
     {
       title: "Thời gian",
@@ -676,6 +661,7 @@ const AccountsScreen: React.FC = () => {
                       dataSource={users}
                       loading={loadingUsers}
                       scroll={{ x: 950 }}
+                      style={{ minHeight: 450 }}
                       pagination={{
                         current: userPage,
                         pageSize: userPageSize,
@@ -870,6 +856,7 @@ const AccountsScreen: React.FC = () => {
                     dataSource={logs}
                     loading={loadingLogs}
                     scroll={{ x: 950 }}
+                    style={{ minHeight: 450 }}
                     pagination={{
                       current: logPage,
                       pageSize: logPageSize,

@@ -99,8 +99,7 @@ const ProductDetail = () => {
   const handleRemoveSubProduct = async (subProductId: string) => {
     setRemovingSubProductId(subProductId);
     try {
-      await deleteSubProduct(subProductId); // chỉ truyền subProductId
-      // update state
+      await deleteSubProduct(subProductId); 
       setSubProducts((prev) =>
         prev.filter((element) => element.id !== subProductId)
       );
@@ -326,7 +325,7 @@ const ProductDetail = () => {
               type="text"
               onClick={() => {
                 setProductSelected(productDetail);
-                setSubProductSelected(undefined); // Chế độ thêm mới
+                setSubProductSelected(undefined);
                 const { id: _, ...rest } = item;
                 setCloneVariant({
                   ...rest,
@@ -753,10 +752,8 @@ const ProductDetail = () => {
             setSubProducts((prev) => {
               const exists = prev.find((item) => item.id === val.id);
               if (exists) {
-                // Nếu là update, thay thế phần tử cũ
                 return prev.map((item) => (item.id === val.id ? val : item));
               }
-              // Nếu là thêm mới, thêm vào cuối mảng
               return [...prev, val];
             });
             setSubProductSelected(undefined);

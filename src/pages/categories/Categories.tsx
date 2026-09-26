@@ -38,23 +38,18 @@ import { AddCategory } from "../../components";
 import { useCategories } from "../../hooks/useCategories";
 const { confirm } = Modal;
 
-// Function để build tree structure từ flat data, đảm bảo không làm mất danh mục nào
 const buildCategoryTree = (categories: CategoyModel[]): CategoyModel[] => {
   const categoryMap = new Map<string, CategoyModel>();
   const rootCategories: CategoyModel[] = [];
 
-  // Tạo map để truy cập nhanh
   categories.forEach((category) => {
     categoryMap.set(category.id, { ...category, children: [] });
   });
 
-  // Build tree structure
   categories.forEach((category) => {
     const categoryWithChildren = categoryMap.get(category.id)!;
     const pId = category.parentId ? String(category.parentId).trim() : "";
 
-    // Nếu không có parentId (hoặc rỗng), HOẶC parentId trùng với chính nó, HOẶC parentId không tồn tại trong db:
-    // Chắc chắn đây là Root Category!
     if (!pId || pId === "" || pId === category.id || !categoryMap.has(pId)) {
       rootCategories.push(categoryWithChildren);
     } else {
@@ -70,7 +65,6 @@ const buildCategoryTree = (categories: CategoyModel[]): CategoyModel[] => {
     }
   });
 
-  // Dọn dẹp các mảng children rỗng để Ant Design Table không hiện icon expand thừa
   const cleanEmptyChildren = (items: CategoyModel[]) => {
     items.forEach((item) => {
       if (item.children && item.children.length === 0) {
@@ -95,10 +89,8 @@ const Categories = () => {
   const [tableLoading, setTableLoading] = useState(false);
   const [allCategoriesList, setAllCategoriesList] = useState<CategoyModel[]>([]);
 
-  // Desktop / Laptop state
   const [showAddPanel, setShowAddPanel] = useState(true);
 
-  // Mobile / Responsive state
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -113,7 +105,6 @@ const Categories = () => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Tự động nhảy qua dạng bảng hoặc thẻ tương ứng theo kích thước màn hình
       setViewMode(mobile ? "cards" : "table");
     };
     window.addEventListener("resize", handleResize);
@@ -124,7 +115,6 @@ const Categories = () => {
     fetchCategories();
   }, []);
 
-  // Tự động mở các nhánh có danh mục con khi nạp cây danh mục
   useEffect(() => {
     const keysWithChildren = new Set<string>();
     const collectKeys = (cats: CategoyModel[]) => {
@@ -217,7 +207,6 @@ const Categories = () => {
       }));
   };
 
-  // Lọc cây danh mục theo từ khóa tìm kiếm
   const filterCategoryTree = (
     cats: CategoyModel[],
     keyword: string
@@ -246,7 +235,6 @@ const Categories = () => {
 
   const displayedCategories = filterCategoryTree(treeCategories, searchKey);
 
-  // Desktop Table Columns
   const columns: ColumnProps<CategoyModel>[] = [
     {
       key: "title",
@@ -365,7 +353,6 @@ const Categories = () => {
     },
   ];
 
-  // Mobile Render Item: Cây phân cấp dạng thẻ có đường nối nhánh
   const renderCategoryItem = (item: CategoyModel, depth = 0) => {
     const hasChildren = Array.isArray(item.children) && item.children.length > 0;
     const isExpanded = expandedKeys.has(item.id) || searchKey.trim() !== "";
@@ -879,7 +866,8 @@ const Categories = () => {
                 columns={columns}
                 rowKey={(record) => record.id}
                 loading={tableLoading}
-                scroll={{ x: 600 }}
+                scroll={{ x: 700 }}
+                style={{ minHeight: 400 }}
                 expandable={{
                   indentSize: 20,
                   defaultExpandAllRows: true,

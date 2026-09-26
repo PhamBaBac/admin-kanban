@@ -30,6 +30,7 @@ import {
   FinanceScreen,
   AccountsScreen,
   SupportScreen,
+  NotificationScreen,
 } from "../pages";
 import AdminRoute from "./AdminRoute";
 
@@ -84,7 +85,15 @@ const MainRouter = () => {
         mobileOpen={mobileDrawerOpen}
         onMobileClose={() => setMobileDrawerOpen(false)}
       />
-      <Layout style={{ backgroundColor: "var(--bg-app, #f8fafc)", height: "100vh", overflow: "auto" }}>
+      <Layout
+        className="main-app-layout"
+        style={{
+          backgroundColor: "var(--bg-app, #f8fafc)",
+          height: "100vh",
+          overflowY: "scroll",
+          overflowX: "hidden",
+        }}
+      >
         <HeaderComponent
           collapsed={collapsed}
           onToggleCollapse={handleToggle}
@@ -131,6 +140,7 @@ const MainRouter = () => {
                 </AdminRoute>
               }
             />
+            <Route path="/notifications" element={<NotificationScreen />} />
 
 
             {/* Redirect auth routes if already authenticated */}

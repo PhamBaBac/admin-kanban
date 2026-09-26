@@ -50,7 +50,6 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
   const [inputFileName, setInputFileName] = useState("");
   const [addingUrl, setAddingUrl] = useState(false);
 
-  // Responsive state
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -93,7 +92,6 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
     fetchMedias(1, search);
   };
 
-  // Upload file lên Cloudinary rồi lưu thông tin vào Backend
   const handleCustomUpload = async (options: any) => {
     const { file, onSuccess, onError } = options;
     try {
@@ -119,7 +117,6 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
 
       const cloudData = await response.json();
 
-      // Lưu metadata vào DB thông qua backend API
       const savedMedia = await mediaAPI.saveMedia({
         url: cloudData.secure_url,
         publicId: cloudData.public_id,
@@ -142,7 +139,6 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
     }
   };
 
-  // Thêm ảnh trực tiếp từ đường link URL bên ngoài
   const handleAddUrlMedia = async () => {
     if (!inputUrl.trim()) {
       message.warning("Vui lòng nhập đường dẫn (URL) ảnh");
@@ -182,7 +178,6 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
     }
   };
 
-  // Xóa ảnh
   const handleDelete = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     try {
@@ -194,14 +189,12 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
     }
   };
 
-  // Copy link ảnh
   const handleCopy = (url: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     navigator.clipboard.writeText(url);
     message.success("Đã sao chép đường dẫn ảnh");
   };
 
-  // Format kích thước file
   const formatBytes = (bytes?: number) => {
     if (!bytes) return "";
     const k = 1024;

@@ -57,7 +57,6 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
           pageSize: targetLimit,
         });
 
-        // Hỗ trợ response bọc PageResponse hoặc data trực tiếp
         const list = res?.data || (Array.isArray(res) ? res : []);
         setTransactions(list);
         setTotal(res?.totalElements || list.length);
@@ -74,14 +73,12 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
     fetchTransactions(page, pageSize);
   }, [page, pageSize, fetchTransactions]);
 
-  // Lọc local nếu cần cho UI nhanh
   const filteredData = transactions.filter((tx) => {
     if (filterType !== "ALL" && tx.transactionType !== filterType) return false;
     if (filterStatus !== "ALL" && tx.status !== filterStatus) return false;
     return true;
   });
 
-  // Tính toán số liệu thống kê
   const totalInflow = transactions
     .filter((tx) => tx.transactionType === "PAYMENT" && tx.status === "SUCCESS")
     .reduce((sum, tx) => sum + (tx.amount || 0), 0);

@@ -46,14 +46,13 @@ const CreateShipmentModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (visible && order) {
-      // Khởi tạo số lượng đóng gói = số lượng trong đơn hàng
       const initialQtys: Record<string, number> = {};
       let calculatedWeight = 0;
 
       order.orderResponses.forEach((item, idx) => {
         const key = item.orderItemId || `item-${idx}`;
         initialQtys[key] = item.qty;
-        calculatedWeight += 250 * item.qty; // Ước tính 250g / sản phẩm
+        calculatedWeight += 250 * item.qty; 
       });
 
       setPackQuantities(initialQtys);
@@ -72,7 +71,6 @@ const CreateShipmentModal: React.FC<Props> = ({
         requiredNote: "CHOXEMHANGKHONGTHU",
       });
 
-      // Tự động tính cước ban đầu
       handleCalculateFee(calculatedWeight > 0 ? calculatedWeight : 500, 20, 15, 10);
     } else {
       form.resetFields();
@@ -103,7 +101,6 @@ const CreateShipmentModal: React.FC<Props> = ({
     const updated = { ...packQuantities, [key]: qty };
     setPackQuantities(updated);
 
-    // Cập nhật lại cân nặng ước tính
     let totalW = 0;
     order?.orderResponses.forEach((item, idx) => {
       const k = item.orderItemId || `item-${idx}`;
@@ -159,7 +156,6 @@ const CreateShipmentModal: React.FC<Props> = ({
     }
   };
 
-  // Áp dụng bộ kích thước gói hàng nhanh
   const applyPresetSize = (w: number, l: number, wi: number, h: number) => {
     form.setFieldsValue({
       weight: w,
@@ -170,7 +166,6 @@ const CreateShipmentModal: React.FC<Props> = ({
     handleCalculateFee(w, l, wi, h);
   };
 
-  // Đóng gói toàn bộ sản phẩm
   const handlePackAll = () => {
     if (!order) return;
     const allPacked: Record<string, number> = {};

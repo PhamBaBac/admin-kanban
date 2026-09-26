@@ -58,23 +58,19 @@ const HomeScreen = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // 1. Thống kê dashboard
       const dashStats = await getDashboardStatistics();
       setStats(dashStats);
 
-      // 2. Hàng sắp hết trong kho
       const topAndLow = await getTopSellingAndLowQuantity();
       if (topAndLow && topAndLow.lowQuantity) {
         setLowStockItems(topAndLow.lowQuantity.slice(0, 5));
       }
 
-      // 3. 5 Đơn hàng mới nhất cần theo dõi
       const ordersRes = await orderService.getOrders({ page: 1, pageSize: 5 });
       if (ordersRes && ordersRes.data) {
         setRecentOrders(ordersRes.data);
       }
 
-      // 4. Số lượng kiện hàng chờ bưu tá GHN lấy
       const shipRes = await shipmentService.getShipmentsPage({
         page: 1,
         pageSize: 1,
@@ -103,7 +99,6 @@ const HomeScreen = () => {
   const sales = stats?.sales || [];
   const pendingOrdersCount = sales.filter((item: any) => item.orderStatus === "PENDING").length;
 
-  // Cột cho bảng Đơn hàng mới nhất - Map đúng trường từ backend OrderDetailResponse
   const orderColumns = [
     {
       title: "Mã đơn hàng",
@@ -132,7 +127,6 @@ const HomeScreen = () => {
       key: "total",
       align: "right" as const,
       render: (_: any, record: any) => {
-        // Tính tổng tiền từ danh sách sản phẩm trong đơn
         const calculatedTotal = Array.isArray(record.orderResponses)
           ? record.orderResponses.reduce((sum: number, it: any) => sum + (it.totalPrice || 0), 0)
           : record.totalAmount || record.total || 0;
@@ -316,7 +310,6 @@ const HomeScreen = () => {
                 const item = lowStockItems[0];
                 navigate(`/inventory/detail/${item.slug || "product"}?id=${item.id}`);
               } else if (lowStockItems.length > 0 && lowStockItems[0].id) {
-                // Nếu có nhiều mặt hàng, cuộn xuống bảng chi tiết hàng sắp hết hoặc đến trang chi tiết mặt hàng đầu tiên
                 const item = lowStockItems[0];
                 navigate(`/inventory/detail/${item.slug || "product"}?id=${item.id}`);
               } else {
@@ -564,6 +557,7 @@ const HomeScreen = () => {
               pagination={false}
               size="middle"
               scroll={{ x: 600 }}
+              style={{ minHeight: 260 }}
             />
           )}
         </Card>

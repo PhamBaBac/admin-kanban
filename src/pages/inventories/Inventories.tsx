@@ -72,7 +72,6 @@ const Inventories = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Đọc query param ?search= từ URL khi bấm từ Tổng quan
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const searchFromUrl = urlParams.get("search");
@@ -102,7 +101,7 @@ const Inventories = () => {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
-    if (urlParams.get("search")) return; // Ưu tiên search từ URL
+    if (urlParams.get("search")) return; 
 
     if (isFilting) {
       executeFilter(filterValues, page, pageSize);
@@ -111,11 +110,9 @@ const Inventories = () => {
     }
   }, [searchKey, page, pageSize, isFilting]);
 
-  // Refresh data khi quay lại từ AddProduct
   useEffect(() => {
     if (location.state?.refresh) {
       fetchProducts(`/products/page?page=${page}&pageSize=${pageSize}`);
-      // Clear refresh state
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state?.refresh]);
@@ -1112,6 +1109,7 @@ const Inventories = () => {
             loading={loading}
             scroll={{ x: 1350 }}
             size="middle"
+            style={{ minHeight: 450 }}
           />
         </div>
       )}

@@ -236,6 +236,7 @@ const TableComponent = (props: Props) => {
         }))}
         columns={columns}
         bordered
+        style={{ minHeight: 450 }}
         title={() => (
           <div
             style={{

@@ -8,11 +8,11 @@ export interface SupplierModel {
   categories: string[];
   price: number;
   contact: string;
-  isTaking: number;
+  isTaking: number | boolean;
   photoUrl: string;
   createdAt: string;
   updatedAt: string;
   email: string;
-  active: string;
+  active: number | string | boolean;
   id: string;
 }

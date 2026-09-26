@@ -2,7 +2,15 @@
  * Phát âm thanh thông báo chime 2 âm nhẹ nhàng bằng Web Audio API.
  * Hoạt động 100% không cần tải file mp3 bên ngoài, không phụ thuộc network/CORS.
  */
+let lastAudioPlayTime = 0;
+
 export const playNotificationSound = () => {
+  const nowMs = Date.now();
+  if (nowMs - lastAudioPlayTime < 1500) {
+    return;
+  }
+  lastAudioPlayTime = nowMs;
+
   try {
     const AudioContextClass =
       window.AudioContext || (window as any).webkitAudioContext;
@@ -16,7 +24,6 @@ export const playNotificationSound = () => {
 
     const now = ctx.currentTime;
 
-    // Tone 1: Nốt đầu (587.33 Hz - D5)
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = "sine";
@@ -28,7 +35,6 @@ export const playNotificationSound = () => {
     osc1.start(now);
     osc1.stop(now + 0.25);
 
-    // Tone 2: Nốt sau cao hơn (880 Hz - A5), tạo hiệu ứng ping chuông sang trọng
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = "sine";

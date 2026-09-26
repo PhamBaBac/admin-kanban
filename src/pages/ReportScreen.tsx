@@ -74,28 +74,23 @@ const ReportScreen: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Lấy số liệu dashboard tổng thể
       const dashStats = await getDashboardStatistics();
       setStats(dashStats);
 
-      // 2. Lấy số liệu biểu đồ theo chu kỳ
       const salesData = await getSalesAndPurchaseData({ timeType: filterPeriod === "year" ? "yearly" : "monthly" });
       const salesArr = Array.isArray(salesData) ? salesData : (salesData as any)?.data || [];
       setChartData(salesArr);
 
-      // 3. Lấy top bán chạy & tồn kho thấp
       const topRes = await getTopSellingAndLowQuantity();
       if (topRes) {
         setTopProducts(topRes.topSelling || []);
       }
 
-      // 4. Lấy đơn hàng mới nhất để phân tích tỷ lệ trạng thái
       const ordersRes = await orderService.getOrders({ page: 1, pageSize: 100 });
       if (ordersRes && ordersRes.data) {
         setOrdersSummary(ordersRes.data);
       }
 
-      // 5. Lấy vận đơn để phân tích tỷ lệ giao hàng
       const shipRes = await shipmentService.getShipments({ page: 1, size: 100 });
       const shipmentList = Array.isArray(shipRes)
         ? shipRes
@@ -112,7 +107,6 @@ const ReportScreen: React.FC = () => {
     fetchData();
   }, [filterPeriod]);
 
-  // Phân tích doanh thu & đơn hàng
   const sales = stats?.sales || [];
   const completedOrders = sales.filter((item: any) => item.orderStatus === "COMPLETED");
   const pendingOrders = sales.filter((item: any) => item.orderStatus === "PENDING");
@@ -123,7 +117,6 @@ const ReportScreen: React.FC = () => {
   const totalProfit = totalRevenue - totalCost;
   const profitMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : "0";
 
-  // Phân tích trạng thái vận đơn GHN
   const totalShipments = shipmentsSummary.length;
   const deliveredShipments = shipmentsSummary.filter(
     (s) => (s.shippingStatus || "").toLowerCase() === "delivered"
@@ -131,7 +124,6 @@ const ReportScreen: React.FC = () => {
   const deliverySuccessRate =
     totalShipments > 0 ? Math.round((deliveredShipments / totalShipments) * 100) : 100;
 
-  // Biểu đồ Doanh thu & Chi phí (Line Chart)
   const lineChartConfig = {
     labels: chartData.map((d) => d.date || "Kỳ"),
     datasets: [
@@ -154,7 +146,6 @@ const ReportScreen: React.FC = () => {
     ],
   };
 
-  // Biểu đồ Tròn: Tỷ lệ phân bố trạng thái đơn hàng (Doughnut)
   const doughnutData = {
     labels: ["Hoàn thành", "Chờ xử lý", "Đã hủy"],
     datasets: [
@@ -170,7 +161,6 @@ const ReportScreen: React.FC = () => {
     ],
   };
 
-  // Cột cho bảng Top Sản phẩm sinh lời (map đúng SubProductSellingInfo từ API)
   const topColumns = [
     {
       title: "#",
@@ -466,6 +456,8 @@ const ReportScreen: React.FC = () => {
                 rowKey="id"
                 pagination={false}
                 size="middle"
+                scroll={{ x: 750 }}
+                style={{ minHeight: 280 }}
               />
             </Card>
           </Col>

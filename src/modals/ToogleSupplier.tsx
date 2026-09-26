@@ -66,7 +66,6 @@ const ToogleSupplier = (props: Props) => {
     if (supplier && flatCategories.length > 0) {
       const categoryIds = (supplier.categories || [])
         .map((catItem: string) => {
-          // catItem có thể là ID hoặc là Title/Name
           const found = flatCategories.find(
             (c) => c.id === catItem || c.title === catItem || c.name === catItem
           );

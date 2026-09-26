@@ -96,7 +96,6 @@ export const useSuppliers = () => {
     []
   );
 
-  // Lấy form cấu hình supplier
   const getSupplierForm = useCallback(async () => {
     try {
       const res: any = await handleAPI("/suppliers/get-form");

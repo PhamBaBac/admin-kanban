@@ -93,7 +93,6 @@ const ShipmentsScreen: React.FC = () => {
     }
   }, [statusFromUrl]);
 
-  // Tracking Modal State
   const [selectedShipment, setSelectedShipment] = useState<ShipmentModel | null>(null);
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
   const [trackingLoading, setTrackingLoading] = useState(false);
@@ -113,7 +112,6 @@ const ShipmentsScreen: React.FC = () => {
         search: search.trim() || undefined,
       });
       if (res) {
-        // Hỗ trợ cả 2 trường hợp: res.data là mảng hoặc res.data.data là mảng
         const list = Array.isArray(res.data)
           ? res.data
           : Array.isArray(res?.data?.data)
@@ -152,7 +150,6 @@ const ShipmentsScreen: React.FC = () => {
     }
   };
 
-  // Tính thống kê nhanh
   const totalCod = shipments.reduce((sum, s) => sum + (s.codAmount || 0), 0);
   const totalShippingFee = shipments.reduce((sum, s) => sum + (s.shippingFee || 0), 0);
   const deliveringCount = shipments.filter((s) =>
@@ -590,6 +587,7 @@ const ShipmentsScreen: React.FC = () => {
             loading={loading}
             size="middle"
             scroll={{ x: 1400 }}
+            style={{ minHeight: 450 }}
             pagination={{
               current: page,
               pageSize,

@@ -59,7 +59,6 @@ const ModalExportData = (props: Props) => {
         setCheckedValues(allKeys);
       }
     } catch {
-      // Gracefully ignore if endpoint doesn't support get-form
     } finally {
       setIsGetting(false);
     }

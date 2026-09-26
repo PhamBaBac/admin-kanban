@@ -41,7 +41,6 @@ export const uploadFile = async (file: any) => {
   const data = await response.json();
 
   if (data.secure_url) {
-    // Tự động lưu metadata vào Thư viện Media ở Backend
     try {
       const { mediaAPI } = await import("../apis/mediaAPI");
       mediaAPI.saveMedia({

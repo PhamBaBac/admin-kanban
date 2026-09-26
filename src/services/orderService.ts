@@ -1,19 +1,10 @@
 import handleAPI from "../apis/handleAPI";
+import { BillModel } from "../models/BillModel";
 
-export interface Order {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  totalAmount: number;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type Order = BillModel;
 
 export interface OrderListResponse {
-  data: Order[];
+  data: BillModel[];
   totalElements: number;
   totalPages: number;
   currentPage: number;
@@ -35,7 +26,7 @@ export const orderService = {
     return response.data;
   },
 
-  getOrderById: async (id: string): Promise<Order> => {
+  getOrderById: async (id: string): Promise<BillModel> => {
     const response = await handleAPI(`/orders/${id}`);
     return response.data;
   },
@@ -45,7 +36,7 @@ export const orderService = {
     status: string,
     cancelReason?: string,
     trackingCode?: string
-  ): Promise<Order> => {
+  ): Promise<BillModel> => {
     const response = await handleAPI(
       `/orders/${id}/status`,
       { orderStatus: status, cancelReason, trackingCode },

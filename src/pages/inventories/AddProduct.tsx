@@ -81,7 +81,6 @@ const AddProduct = () => {
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
-  // SubProducts variant management state
   const [subProducts, setSubProducts] = useState<SubProductModel[]>([]);
   const [loadingSubProducts, setLoadingSubProducts] = useState(false);
   const [isVisibleAddSubProduct, setIsVisibleAddSubProduct] = useState(false);
@@ -155,7 +154,6 @@ const AddProduct = () => {
       try {
         editorRef.current.setContent(product.content || "");
       } catch {
-        // TinyMCE might not be initialized yet
       }
     }
     setFileList(
@@ -202,7 +200,6 @@ const AddProduct = () => {
           try {
             editorRef.current.setContent(item.content || "");
           } catch {
-            // TinyMCE might not be initialized yet
           }
         }
         if (item.images && item.images.length > 0) {
@@ -461,7 +458,6 @@ const AddProduct = () => {
     }
   };
 
-  // Subproduct columns for inline table
   const subProductColumns = [
     {
       key: "images",

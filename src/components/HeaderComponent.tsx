@@ -39,10 +39,8 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
   const [latestNotification, setLatestNotification] =
     useState<AdminNotification | null>(null);
 
-  // Ant Design Notification Hook for Toast alerts
   const [notiApi, contextHolder] = antNotification.useNotification();
 
-  // Tạo Breadcrumb text tiếng Việt từ path
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === "/") return "Tổng quan hệ thống";
@@ -65,7 +63,6 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
     `${auth.firstName?.[0] ?? ""}${auth.lastName?.[0] ?? ""}`.toUpperCase() ||
     "A";
 
-  // 1. Tải số lượng thông báo chưa đọc khi đăng nhập / mở trang
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
@@ -81,7 +78,6 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
     }
   }, [auth?.accessToken]);
 
-  // 2. Kết nối Socket.IO toàn cục để lắng nghe thông báo Realtime
   useEffect(() => {
     if (!auth?.accessToken) return;
 
@@ -89,7 +85,6 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      // Tham gia kênh quản trị để nhận broadcast từ backend
       socket.emit("join_admin_channel", {
         userId: auth.id,
         username:
@@ -100,17 +95,22 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
     });
 
     socket.on("admin_notification", (data: AdminNotification) => {
-      // 1. Tăng số lượng unread badge
       setNotifyCount((prev) => prev + 1);
-
-      // 2. Chuyển thông báo mới vào Popover
       setLatestNotification(data);
+      window.dispatchEvent(new CustomEvent("new_admin_notification", { detail: data }));
 
-      // 3. Phát âm thanh thông báo
+      if (location.pathname.startsWith("/support") && data.type === "SUPPORT_MESSAGE") {
+        return;
+      }
+
       playNotificationSound();
 
-      // 4. Hiển thị popup Toast góc trên bên phải
       const config = getNotificationIcon(data.type);
+      const notiKey =
+        data.type === "SUPPORT_MESSAGE" && data.referenceId
+          ? `support_${data.referenceId}`
+          : data.id || Date.now().toString();
+
       notiApi.open({
         message: (
           <span style={{ fontWeight: 600, color: "#0f172a", fontSize: 14 }}>
@@ -131,14 +131,14 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
             size="small"
             style={{ borderRadius: 6, backgroundColor: "#2563eb" }}
             onClick={() => {
-              notiApi.destroy(data.id);
+              notiApi.destroy(notiKey);
               navigate(data.targetUrl!);
             }}
           >
             Xem ngay
           </Button>
         ) : undefined,
-        key: data.id || Date.now().toString(),
+        key: notiKey,
       });
     });
 

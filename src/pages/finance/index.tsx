@@ -385,6 +385,7 @@ const FinanceScreen: React.FC = () => {
           dataSource={filteredData}
           size="middle"
           scroll={{ x: 1200 }}
+          style={{ minHeight: 450 }}
           pagination={{
             total,
             pageSize,

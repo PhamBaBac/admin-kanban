@@ -39,7 +39,7 @@ const TopSellingAndLowQuantityStatictis = () => {
     setIsLoading(true);
     try {
       const res = await getTopSellingAndLowQuantity();
-      setDatas(res as any); // ép kiểu tạm thời để tránh lỗi linter
+      setDatas(res as any); 
     } catch (error) {
       console.log(error);
     } finally {

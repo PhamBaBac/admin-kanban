@@ -2,8 +2,8 @@ import handleAPI from "../apis/handleAPI";
 
 export interface Category {
   id: string;
-  title: string; // Backend trả về 'title' thay vì 'name'
-  name?: string; // Giữ lại để backward compatibility
+  title: string;
+  name?: string; 
   description?: string;
   parentId?: string;
   children?: Category[];
@@ -32,10 +32,9 @@ export interface CategoryListResponse {
 export const categoryService = {
   getCategories: async (params?: any): Promise<CategoryListResponse> => {
     console.log("CategoryService - getCategories params:", params);
-    // Format params theo chuẩn backend
     const formattedParams = {
       page: params?.page || 1,
-      pageSize: params?.pageSize || 10, // Backend expect 'pageSize'
+      pageSize: params?.pageSize || 10,
     };
     console.log("CategoryService - formatted params:", formattedParams);
     const response = await handleAPI(

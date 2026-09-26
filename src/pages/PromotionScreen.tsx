@@ -285,6 +285,7 @@ const PromotionScreen = () => {
             loading={loading}
             columns={columns}
             scroll={{ x: 950 }}
+            style={{ minHeight: 400 }}
             dataSource={Array.isArray(promotions) ? promotions : []}
           />
         </Card>
@@ -294,14 +295,12 @@ const PromotionScreen = () => {
         promotion={promotionSelected}
         onAddNew={(newPromotion) => {
           if (promotionSelected) {
-            // Update: thay thế promotion cũ
             setPromotions((prev) =>
               (prev || []).map((p) =>
                 p.id === promotionSelected.id ? newPromotion : p
               )
             );
           } else {
-            // Add: thêm promotion mới
             setPromotions((prev) => [...(prev || []), newPromotion]);
           }
           setPromotionSelected(undefined);

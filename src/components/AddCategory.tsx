@@ -30,7 +30,6 @@ const AddCategory = (props: Props) => {
     }
   }, [seleted, form]);
 
-  // Chỉ reset parentId khi values thay đổi NẾU đang ở chế độ thêm mới (không có seleted)
   useEffect(() => {
     if (!seleted) {
       form.setFieldsValue({ parentId: undefined });
@@ -44,7 +43,6 @@ const AddCategory = (props: Props) => {
       data[i] = values[i] ?? "";
     }
 
-    // Nếu không chọn parentId hoặc xóa parentId thì đặt là rỗng để xác định là Root
     data.parentId = values.parentId ? String(values.parentId).trim() : "";
     data.slug = replaceName(values.title);
 

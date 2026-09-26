@@ -4,7 +4,7 @@ import { CategoyModel } from "../models/Products";
 export const mapCategoryToCategoyModel = (category: Category): CategoyModel => {
   return {
     id: category.id,
-    title: category.title || category.name || "", // Ưu tiên title, fallback về name
+    title: category.title || category.name || "", 
     parentId: category.parentId || "",
     slug:
       category.slug ||
