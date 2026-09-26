@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layout, Menu, MenuProps, Typography, Tooltip } from "antd";
+import { Layout, Menu, MenuProps, Typography, Tooltip, Drawer, Button } from "antd";
 import {
   Box,
   Chart,
@@ -27,9 +27,18 @@ type MenuItem = Required<MenuProps>["items"][number];
 interface Props {
   collapsed?: boolean;
   onCollapse?: (collapsed: boolean) => void;
+  isMobile?: boolean;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-const SiderComponent = ({ collapsed = false, onCollapse }: Props) => {
+const SiderComponent = ({
+  collapsed = false,
+  onCollapse,
+  isMobile = false,
+  mobileOpen = false,
+  onMobileClose,
+}: Props) => {
   const location = useLocation();
 
   const auth = useSelector(authSeletor);
@@ -192,6 +201,93 @@ const SiderComponent = ({ collapsed = false, onCollapse }: Props) => {
         ]
       : []),
   ];
+
+  if (isMobile) {
+    return (
+      <Drawer
+        placement="left"
+        open={mobileOpen}
+        onClose={onMobileClose}
+        closable={false}
+        styles={{
+          body: {
+            padding: 0,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            background: "#fff",
+          },
+        }}
+        width={270}
+      >
+        <div
+          className="d-flex align-items-center justify-content-between"
+          style={{
+            height: 64,
+            padding: "0 20px",
+            borderBottom: "1px solid #f1f5f9",
+            flexShrink: 0,
+          }}
+        >
+          <div className="d-flex align-items-center">
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: "linear-gradient(135deg, #1570EF 0%, #3b82f6 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 18,
+                boxShadow: "0 4px 10px rgba(21, 112, 239, 0.3)",
+                flexShrink: 0,
+              }}
+            >
+              K
+            </div>
+            <div style={{ marginLeft: 12 }}>
+              <Text
+                style={{
+                  fontWeight: 700,
+                  fontSize: "1.1rem",
+                  color: "#0f172a",
+                  lineHeight: 1.2,
+                  display: "block",
+                }}
+              >
+                {appInfo.title}
+              </Text>
+              <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>Admin Portal</span>
+            </div>
+          </div>
+          <Button
+            type="text"
+            shape="circle"
+            onClick={onMobileClose}
+            style={{ color: "#64748b", fontSize: 16 }}
+          >
+            ✕
+          </Button>
+        </div>
+
+        <div style={{ padding: "12px 4px", flex: 1, overflowY: "auto" }}>
+          <Menu
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            openKeys={openKeys}
+            onOpenChange={(keys) => setOpenKeys(keys)}
+            onClick={() => onMobileClose?.()}
+            items={items}
+            theme="light"
+            style={{ borderRight: "none" }}
+          />
+        </div>
+      </Drawer>
+    );
+  }
 
   return (
     <Sider

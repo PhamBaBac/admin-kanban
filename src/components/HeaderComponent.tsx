@@ -13,9 +13,10 @@ const { Text } = Typography;
 interface Props {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  isMobile?: boolean;
 }
 
-const HeaderComponent = ({ collapsed, onToggleCollapse }: Props) => {
+const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
   const auth = useSelector(authSeletor);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ const HeaderComponent = ({ collapsed, onToggleCollapse }: Props) => {
 
   return (
     <div
-      className="d-flex align-items-center justify-content-between px-4 bg-white"
+      className="d-flex align-items-center justify-content-between px-2 px-sm-3 px-md-4 bg-white"
       style={{
         height: 64,
         borderBottom: "1px solid #f1f5f9",
@@ -91,17 +92,25 @@ const HeaderComponent = ({ collapsed, onToggleCollapse }: Props) => {
       }}
     >
       {/* Left: Collapse toggle + Page Title */}
-      <div className="d-flex align-items-center gap-3">
+      <div className="d-flex align-items-center gap-2 gap-sm-3" style={{ minWidth: 0, flex: 1, marginRight: 8 }}>
         {onToggleCollapse && (
           <Button
             type="text"
             icon={<HambergerMenu size={20} color="#64748b" />}
             onClick={onToggleCollapse}
-            style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 36, height: 36, minWidth: 36, display: "flex", alignItems: "center", justifyContent: "center" }}
           />
         )}
-        <div>
-          <Text style={{ fontWeight: 600, fontSize: 16, color: "#0f172a" }}>
+        <div style={{ minWidth: 0, overflow: "hidden" }}>
+          <Text
+            ellipsis
+            style={{
+              fontWeight: 600,
+              fontSize: isMobile ? 14 : 16,
+              color: "#0f172a",
+              display: "block",
+            }}
+          >
             {getPageTitle()}
           </Text>
         </div>

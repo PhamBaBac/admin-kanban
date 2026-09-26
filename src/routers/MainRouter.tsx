@@ -1,6 +1,6 @@
 /** @format */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Affix, Layout } from "antd";
 import {
   BarElement,
@@ -50,14 +50,53 @@ const { Content, Footer } = Layout;
 
 const MainRouter = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 992 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 992;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setMobileDrawerOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleToggle = () => {
+    if (isMobile) {
+      setMobileDrawerOpen((prev) => !prev);
+    } else {
+      setCollapsed((prev) => !prev);
+    }
+  };
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <SiderComponent collapsed={collapsed} onCollapse={setCollapsed} />
+      <SiderComponent
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        isMobile={isMobile}
+        mobileOpen={mobileDrawerOpen}
+        onMobileClose={() => setMobileDrawerOpen(false)}
+      />
       <Layout style={{ backgroundColor: "var(--bg-app, #f8fafc)", height: "100vh", overflow: "auto" }}>
-        <HeaderComponent collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
+        <HeaderComponent
+          collapsed={collapsed}
+          onToggleCollapse={handleToggle}
+          isMobile={isMobile}
+        />
 
-        <Content className="p-4" style={{ minHeight: "calc(100vh - 120px)" }}>
+        <Content
+          style={{
+            minHeight: "calc(100vh - 120px)",
+            padding: isMobile ? "12px 8px" : "16px 20px",
+          }}
+        >
           <Routes>
             {/* Dashboard */}
             <Route path="/" element={<HomeScreen />} />
