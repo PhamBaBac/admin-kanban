@@ -7,6 +7,7 @@ import SiderComponent from "./SiderComponent";
 import StatisticComponent from "./StatisticComponent";
 import TableComponent from "./TableComponent";
 import TopSellingAndLowQuantityStatictis from "./TopSellingAndLowQuantityStatictis";
+import NotificationPopover from "./NotificationPopover";
 
 export {
   HeaderComponent,
@@ -18,4 +19,5 @@ export {
   FormItem,
   FilterProduct,
   TopSellingAndLowQuantityStatictis,
+  NotificationPopover,
 };
