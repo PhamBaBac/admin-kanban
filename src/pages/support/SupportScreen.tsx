@@ -24,6 +24,7 @@ import {
   User,
   Bag2,
   Flash,
+  ArrowLeft,
 } from "iconsax-react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -77,6 +78,17 @@ const SupportScreen: React.FC = () => {
   const selectedConvIdRef = useRef<string | null>(null);
   const processedMsgIdsRef = useRef<Set<string>>(new Set());
   const currentUserIdRef = useRef<string>(currentUserId);
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
@@ -104,8 +116,8 @@ const SupportScreen: React.FC = () => {
     try {
       const summaries = await supportService.getConversationSummaries();
       setConversations(summaries);
-      // Nếu chưa chọn cuộc hội thoại nào và có danh sách, tự động chọn cuộc đầu tiên
-      if (!selectedConvId && summaries.length > 0) {
+      // Nếu chưa chọn cuộc hội thoại nào và có danh sách, tự động chọn cuộc đầu tiên (chỉ trên desktop)
+      if (!selectedConvId && summaries.length > 0 && typeof window !== "undefined" && window.innerWidth >= 768) {
         setSelectedConvId(summaries[0].conversationId);
       }
     } catch (err: any) {
@@ -433,8 +445,8 @@ const SupportScreen: React.FC = () => {
   return (
     <div
       style={{
-        height: "calc(100vh - 135px)",
-        maxHeight: "calc(100vh - 135px)",
+        height: isMobileView ? "calc(100vh - 90px)" : "calc(100vh - 135px)",
+        maxHeight: isMobileView ? "calc(100vh - 90px)" : "calc(100vh - 135px)",
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -461,27 +473,28 @@ const SupportScreen: React.FC = () => {
           minHeight: 0,
           width: "100%",
           background: "#fff",
-          borderRadius: 16,
+          borderRadius: isMobileView ? 10 : 16,
           border: "1px solid #e2e8f0",
           overflow: "hidden",
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
         }}
       >
-        {/* CỘT TRÁI: Danh sách cuộc hội thoại (330px) */}
-        <div
-          style={{
-            width: 330,
-            minWidth: 330,
-            maxWidth: 350,
-            flexShrink: 0,
-            borderRight: "1px solid #f1f5f9",
-            display: "flex",
-            flexDirection: "column",
-            background: "#fafafa",
-            height: "100%",
-            overflow: "hidden",
-          }}
-        >
+        {/* CỘT TRÁI: Danh sách cuộc hội thoại */}
+        {(!isMobileView || !selectedConvId) && (
+          <div
+            style={{
+              width: isMobileView ? "100%" : 330,
+              minWidth: isMobileView ? "100%" : 330,
+              maxWidth: isMobileView ? "100%" : 350,
+              flexShrink: 0,
+              borderRight: isMobileView ? "none" : "1px solid #f1f5f9",
+              display: "flex",
+              flexDirection: "column",
+              background: "#fafafa",
+              height: "100%",
+              overflow: "hidden",
+            }}
+          >
           {/* Header cột trái */}
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", background: "#fff", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -724,8 +737,10 @@ const SupportScreen: React.FC = () => {
             </Tag>
           </div>
         </div>
+        )}
 
         {/* CỘT PHẢI: Khung trò chuyện chi tiết (Chat Area) */}
+        {(!isMobileView || Boolean(selectedConvId)) && (
         <div
           style={{
             flex: 1,
@@ -742,7 +757,7 @@ const SupportScreen: React.FC = () => {
               {/* Header khung chat */}
               <div
                 style={{
-                  padding: "14px 24px",
+                  padding: isMobileView ? "10px 14px" : "14px 24px",
                   borderBottom: "1px solid #f1f5f9",
                   display: "flex",
                   justifyContent: "space-between",
@@ -751,24 +766,42 @@ const SupportScreen: React.FC = () => {
                   flexShrink: 0,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  {isMobileView && (
+                    <Button
+                      type="text"
+                      icon={<ArrowLeft size={18} color="#475569" />}
+                      onClick={() => setSelectedConvId(null)}
+                      style={{
+                        padding: 0,
+                        width: 32,
+                        height: 32,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginRight: 2,
+                      }}
+                    />
+                  )}
                   <Avatar
-                    size={40}
+                    size={isMobileView ? 34 : 40}
                     src={activeConversation.customerAvatar}
-                    style={{ backgroundColor: "#1570ef", color: "#fff", fontWeight: 700 }}
+                    style={{ backgroundColor: "#1570ef", color: "#fff", fontWeight: 700, flexShrink: 0 }}
                   >
                     {activeConversation.customerName ? activeConversation.customerName[0].toUpperCase() : "U"}
                   </Avatar>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <Text strong style={{ fontSize: 15, color: "#0f172a" }}>
+                  <div style={{ minWidth: 0, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <Text strong style={{ fontSize: isMobileView ? 14 : 15, color: "#0f172a" }}>
                         {activeConversation.customerName || "Khách hàng"}
                       </Text>
-                      <Tag color="cyan" style={{ fontSize: 11, margin: 0 }}>
-                        {activeConversation.conversationId}
-                      </Tag>
+                      {!isMobileView && (
+                        <Tag color="cyan" style={{ fontSize: 11, margin: 0 }}>
+                          {activeConversation.conversationId}
+                        </Tag>
+                      )}
                     </div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
                       Khách mua hàng
                     </Text>
                   </div>
@@ -777,8 +810,11 @@ const SupportScreen: React.FC = () => {
                 {/* Các nút thao tác nhanh */}
                 <Space>
                   <Link to={`/orders?search=${encodeURIComponent(activeConversation.customerName || "")}`}>
-                    <Button icon={<Bag2 size={16} color="#1570ef" />} style={{ borderRadius: 8 }}>
-                      Xem đơn hàng của khách
+                    <Button
+                      icon={<Bag2 size={16} color="#1570ef" />}
+                      style={{ borderRadius: 8, fontSize: 12, padding: isMobileView ? "4px 8px" : undefined }}
+                    >
+                      {isMobileView ? "Đơn hàng" : "Xem đơn hàng của khách"}
                     </Button>
                   </Link>
                 </Space>
@@ -790,7 +826,7 @@ const SupportScreen: React.FC = () => {
                 style={{
                   flex: 1,
                   minHeight: 0,
-                  padding: "20px 24px",
+                  padding: isMobileView ? "12px 10px" : "20px 24px",
                   overflowY: "auto",
                   overflowX: "hidden",
                   background: "#f8fafc",
@@ -889,7 +925,7 @@ const SupportScreen: React.FC = () => {
                         {/* Bong bóng chat */}
                         <div
                           style={{
-                            maxWidth: "65%",
+                            maxWidth: isMobileView ? "82%" : "65%",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: isStaff ? "flex-end" : "flex-start",
@@ -1020,7 +1056,7 @@ const SupportScreen: React.FC = () => {
               {/* Thanh gợi ý phản hồi nhanh (Quick Replies) */}
               <div
                 style={{
-                  padding: "8px 24px",
+                  padding: isMobileView ? "6px 12px" : "8px 24px",
                   background: "#fff",
                   borderTop: "1px solid #f1f5f9",
                   display: "flex",
@@ -1060,7 +1096,14 @@ const SupportScreen: React.FC = () => {
               </div>
 
               {/* Vùng nhập tin nhắn (Input Area) */}
-              <div style={{ padding: "14px 24px", borderTop: "1px solid #f1f5f9", background: "#fff", flexShrink: 0 }}>
+              <div
+                style={{
+                  padding: isMobileView ? "10px 12px" : "14px 24px",
+                  borderTop: "1px solid #f1f5f9",
+                  background: "#fff",
+                  flexShrink: 0,
+                }}
+              >
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
                   <TextArea
                     value={inputText}
@@ -1125,6 +1168,7 @@ const SupportScreen: React.FC = () => {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
