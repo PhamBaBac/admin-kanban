@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   BillModel,
   PaymentStatusColor,
@@ -34,6 +34,9 @@ import {
   Steps,
   Badge,
   Tabs,
+  Checkbox,
+  Pagination,
+  Empty,
 } from "antd";
 import {
   Edit2,
@@ -91,6 +94,18 @@ const getNextAvailableStatuses = (currentStatus?: string): string[] => {
 const OrdersScreen = () => {
   const { getOrders, deleteOrder, updateOrderStatus, loading, error } =
     useOrders();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get("status");
+  const [filterStatus, setFilterStatus] = useState<string>(statusFromUrl || "ALL");
+
+  const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({
+    ALL: 0,
+    PENDING: 0,
+    PROCESSING: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+    REFUNDED: 0,
+  });
   const [bills, setBills] = useState<BillModel[]>([]);
   const [total, setTotal] = useState(0);
   const [limit, setLimit] = useState(10);
@@ -117,6 +132,39 @@ const OrdersScreen = () => {
   const [mainTabKey, setMainTabKey] = useState<string>("orders");
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailOrder, setSelectedDetailOrder] = useState<BillModel | null>(null);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Cuộn nhẹ tab đang active vào tầm nhìn nếu nó bị che khuất ở mép container
+  useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+    const activeTab = container.querySelector(".ant-tabs-tab-active") as HTMLElement | null;
+    if (!activeTab) return;
+
+    const containerLeft = container.scrollLeft;
+    const containerRight = containerLeft + container.clientWidth;
+    const tabLeft = activeTab.offsetLeft;
+    const tabRight = tabLeft + activeTab.offsetWidth;
+
+    // Chỉ cuộn khi tab vượt ra ngoài khung nhìn của container, tránh nhảy lại đầu khi bấm
+    if (tabLeft < containerLeft) {
+      container.scrollTo({ left: Math.max(0, tabLeft - 16), behavior: "smooth" });
+    } else if (tabRight > containerRight) {
+      container.scrollTo({ left: tabRight - container.clientWidth + 16, behavior: "smooth" });
+    }
+  }, [filterStatus]);
 
   const handleOpenDetailModal = (order: BillModel) => {
     setSelectedDetailOrder(order);
@@ -176,19 +224,6 @@ const OrdersScreen = () => {
       setTrackingLoading(false);
     }
   };
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const statusFromUrl = searchParams.get("status");
-  const [filterStatus, setFilterStatus] = useState<string>(statusFromUrl || "ALL");
-
-  const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({
-    ALL: 0,
-    PENDING: 0,
-    PROCESSING: 0,
-    COMPLETED: 0,
-    CANCELLED: 0,
-    REFUNDED: 0,
-  });
 
   const fetchStatusCounts = useCallback(async () => {
     try {
@@ -361,15 +396,21 @@ const OrdersScreen = () => {
   const getOrderStatusColor = (orderStatus: string) => {
     switch (orderStatus) {
       case "PENDING":
-        return "processing";
-      case "CONFIRMED":
-        return "warning";
-      case "SHIPPING":
-        return "processing";
-      case "DELIVERED":
+        return "orange";
+      case "PROCESSING":
+        return "blue";
+      case "COMPLETED":
         return "success";
       case "CANCELLED":
         return "error";
+      case "REFUNDED":
+        return "purple";
+      case "CONFIRMED":
+        return "warning";
+      case "SHIPPING":
+        return "cyan";
+      case "DELIVERED":
+        return "green";
       default:
         return "default";
     }
@@ -705,164 +746,164 @@ const OrdersScreen = () => {
   return (
     <div style={{ padding: "8px 0" }}>
       <Card className="app-card" style={{ marginBottom: "16px" }} bordered={false}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
-          <Col>
+        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3" style={{ marginBottom: 14 }}>
+          <div>
             <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
               Quản lý đơn hàng
             </Typography.Title>
-          </Col>
-          <Col>
-            <Space wrap>
-              {selectedRowKeys.length > 0 && (
-                <Tooltip title="Xóa các đơn hàng đã chọn">
-                  <Button
-                    danger
-                    type="primary"
-                    icon={<Trash size={16} />}
-                    onClick={() =>
-                      confirm({
-                        title: "Xác nhận xóa hàng loạt",
-                        content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} đơn hàng đã chọn?`,
-                        okText: "Xóa",
-                        okType: "danger",
-                        cancelText: "Hủy",
-                        onOk: async () => {
-                          await Promise.all(
-                            selectedRowKeys.map((id) => handleRemoveBill(id))
-                          );
-                          setSelectedRowKeys([]);
-                          await fetchBills(page, limit, filterStatus, searchKey, dateRange);
-                          fetchStatusCounts();
-                        },
-                        onCancel: () => setSelectedRowKeys([]),
-                      })
-                    }
-                  >
-                    Xóa ({selectedRowKeys.length})
-                  </Button>
-                </Tooltip>
-              )}
-              <Input.Search
-                value={searchKey}
-                onChange={(e) => {
-                  setSearchKey(e.target.value);
-                  if (!e.target.value) {
-                    setPage(1);
-                    fetchBills(1, limit, filterStatus, "", dateRange);
+          </div>
+          <div className="d-flex align-items-center flex-wrap gap-2 w-100 w-lg-auto justify-content-start justify-content-lg-end">
+            {selectedRowKeys.length > 0 && (
+              <Tooltip title="Xóa các đơn hàng đã chọn">
+                <Button
+                  danger
+                  type="primary"
+                  icon={<Trash size={16} />}
+                  onClick={() =>
+                    confirm({
+                      title: "Xác nhận xóa hàng loạt",
+                      content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} đơn hàng đã chọn?`,
+                      okText: "Xóa",
+                      okType: "danger",
+                      cancelText: "Hủy",
+                      onOk: async () => {
+                        await Promise.all(
+                          selectedRowKeys.map((id) => handleRemoveBill(id))
+                        );
+                        setSelectedRowKeys([]);
+                        await fetchBills(page, limit, filterStatus, searchKey, dateRange);
+                        fetchStatusCounts();
+                      },
+                      onCancel: () => setSelectedRowKeys([]),
+                    })
                   }
-                }}
-                onSearch={handleSearchBills}
-                placeholder="Tìm kiếm theo mã đơn, khách hàng, sản phẩm..."
-                allowClear
-                style={{ width: 320 }}
-              />
-              <DatePicker.RangePicker
-                placeholder={["Từ ngày", "Đến ngày"]}
-                style={{ width: 240 }}
-                onChange={(dates, dateStrings) => {
+                >
+                  Xóa ({selectedRowKeys.length})
+                </Button>
+              </Tooltip>
+            )}
+            <Input.Search
+              value={searchKey}
+              onChange={(e) => {
+                setSearchKey(e.target.value);
+                if (!e.target.value) {
                   setPage(1);
-                  if (dates && dateStrings[0] && dateStrings[1]) {
-                    setDateRange([dateStrings[0], dateStrings[1]]);
-                  } else {
-                    setDateRange(null);
-                  }
-                }}
-              />
-            </Space>
-          </Col>
-        </Row>
+                  fetchBills(1, limit, filterStatus, "", dateRange);
+                }
+              }}
+              onSearch={handleSearchBills}
+              placeholder="Tìm kiếm theo mã đơn, khách hàng, sản phẩm..."
+              allowClear
+              style={{ minWidth: 240, flex: 1, maxWidth: 360 }}
+            />
+            <DatePicker.RangePicker
+              placeholder={["Từ ngày", "Đến ngày"]}
+              style={{ minWidth: 220, flex: 1, maxWidth: 280 }}
+              onChange={(dates, dateStrings) => {
+                setPage(1);
+                if (dates && dateStrings[0] && dateStrings[1]) {
+                  setDateRange([dateStrings[0], dateStrings[1]]);
+                } else {
+                  setDateRange(null);
+                }
+              }}
+            />
+          </div>
+        </div>
 
-        {/* Thanh Tabs Trạng thái Ngang Chuẩn Shopee */}
-        <Tabs
-          activeKey={filterStatus}
-          onChange={(val) => {
-            setFilterStatus(val);
-            setPage(1);
-            if (val === "ALL") {
-              searchParams.delete("status");
-              setSearchParams(searchParams);
-            } else {
-              setSearchParams({ status: val });
-            }
-          }}
-          items={[
-            {
-              key: "ALL",
-              label: (
-                <Space size={6}>
-                  <span>Tất cả</span>
-                  <Badge
-                    count={statusCounts["ALL"] || 0}
-                    overflowCount={999}
-                    color="#64748b"
-                  />
-                </Space>
-              ),
-            },
-            {
-              key: "PENDING",
-              label: (
-                <Space size={6}>
-                  <span>Chờ xử lý</span>
-                  {(statusCounts["PENDING"] || 0) > 0 && (
-                    <Badge count={statusCounts["PENDING"]} color="#f04438" />
-                  )}
-                </Space>
-              ),
-            },
-            {
-              key: "PROCESSING",
-              label: (
-                <Space size={6}>
-                  <span>Đang chuẩn bị</span>
-                  {(statusCounts["PROCESSING"] || 0) > 0 && (
-                    <Badge count={statusCounts["PROCESSING"]} color="#1570ef" />
-                  )}
-                </Space>
-              ),
-            },
-            {
-              key: "COMPLETED",
-              label: (
-                <Space size={6}>
-                  <span>Hoàn thành</span>
-                  {(statusCounts["COMPLETED"] || 0) > 0 && (
-                    <Badge count={statusCounts["COMPLETED"]} color="#12b76a" />
-                  )}
-                </Space>
-              ),
-            },
-            {
-              key: "CANCELLED",
-              label: (
-                <Space size={6}>
-                  <span>Đã hủy</span>
-                  {(statusCounts["CANCELLED"] || 0) > 0 && (
-                    <Badge count={statusCounts["CANCELLED"]} color="#98a2b3" />
-                  )}
-                </Space>
-              ),
-            },
-            {
-              key: "REFUNDED",
-              label: (
-                <Space size={6}>
-                  <span>Hoàn tiền</span>
-                  {(statusCounts["REFUNDED"] || 0) > 0 && (
-                    <Badge count={statusCounts["REFUNDED"]} color="#f79009" />
-                  )}
-                </Space>
-              ),
-            },
-          ]}
-        />
+        <div ref={tabsContainerRef} className="orders-status-tabs-container">
+          <Tabs
+            activeKey={filterStatus}
+            className="orders-status-tabs"
+            onChange={(val) => {
+              setFilterStatus(val);
+              setPage(1);
+              if (val === "ALL") {
+                searchParams.delete("status");
+                setSearchParams(searchParams);
+              } else {
+                setSearchParams({ status: val });
+              }
+            }}
+            items={[
+              {
+                key: "ALL",
+                label: (
+                  <Space size={6}>
+                    <span>Tất cả</span>
+                    <Badge
+                      count={statusCounts["ALL"] || 0}
+                      overflowCount={999}
+                      color="#64748b"
+                    />
+                  </Space>
+                ),
+              },
+              {
+                key: "PENDING",
+                label: (
+                  <Space size={6}>
+                    <span>Chờ xử lý</span>
+                    {(statusCounts["PENDING"] || 0) > 0 && (
+                      <Badge count={statusCounts["PENDING"]} color="#f04438" />
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                key: "PROCESSING",
+                label: (
+                  <Space size={6}>
+                    <span>Đang chuẩn bị</span>
+                    {(statusCounts["PROCESSING"] || 0) > 0 && (
+                      <Badge count={statusCounts["PROCESSING"]} color="#1570ef" />
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                key: "COMPLETED",
+                label: (
+                  <Space size={6}>
+                    <span>Hoàn thành</span>
+                    {(statusCounts["COMPLETED"] || 0) > 0 && (
+                      <Badge count={statusCounts["COMPLETED"]} color="#12b76a" />
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                key: "CANCELLED",
+                label: (
+                  <Space size={6}>
+                    <span>Đã hủy</span>
+                    {(statusCounts["CANCELLED"] || 0) > 0 && (
+                      <Badge count={statusCounts["CANCELLED"]} color="#98a2b3" />
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                key: "REFUNDED",
+                label: (
+                  <Space size={6}>
+                    <span>Hoàn tiền</span>
+                    {(statusCounts["REFUNDED"] || 0) > 0 && (
+                      <Badge count={statusCounts["REFUNDED"]} color="#f79009" />
+                    )}
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        </div>
       </Card>
 
 
       {filterStatus !== "ALL" && (
         <Alert
           message={
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <FilterSearch size={16} color="#1570ef" variant="Bold" />
                 Đang lọc danh sách theo: <strong>{filterStatus === "PENDING" ? "Đơn hàng chờ xác nhận" : filterStatus}</strong> ({total} đơn)
@@ -889,35 +930,357 @@ const OrdersScreen = () => {
         />
       )}
 
-      <Card className="app-card" bordered={false}>
-        <Table
-          bordered
-          rowKey={(record) => record.id}
-          rowSelection={rowSelection}
-          loading={loading}
-          dataSource={bills}
-          columns={columns}
-          size="middle"
-          scroll={{ x: 1400 }}
-          pagination={{
-            total,
-            showSizeChanger: true,
-            pageSizeOptions: ["10", "20", "50", "100"],
-            onShowSizeChange(current, size) {
-              setLimit(size);
-              setPage(1);
-            },
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} trong tổng số ${total} đơn hàng`,
-            pageSize: limit,
-            current: page,
-            onChange: (p, l) => {
-              setPage(p);
-              if (l && l !== limit) setLimit(l);
-            },
-          }}
-        />
-      </Card>
+      {isMobile ? (
+        /* GIAO DIỆN MOBILE / TABLET: DẠNG THẺ ĐƠN HÀNG (ORDER CARD VIEW) */
+        <div className="d-flex flex-column" style={{ gap: 10 }}>
+          {/* Thanh Chọn tất cả trên mobile */}
+          {bills.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "#f8fafc",
+                padding: "8px 12px",
+                borderRadius: 10,
+                marginBottom: 4,
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <Checkbox
+                checked={selectedRowKeys.length > 0 && selectedRowKeys.length === bills.length}
+                indeterminate={selectedRowKeys.length > 0 && selectedRowKeys.length < bills.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedRowKeys(bills.map((b) => b.id));
+                  } else {
+                    setSelectedRowKeys([]);
+                  }
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 500 }}>
+                  Chọn tất cả trang này ({bills.length})
+                </span>
+              </Checkbox>
+              {selectedRowKeys.length > 0 && (
+                <span style={{ fontSize: 12, color: colors.primary500, fontWeight: 600 }}>
+                  Đã chọn {selectedRowKeys.length}
+                </span>
+              )}
+            </div>
+          )}
+
+          {loading ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "48px 0",
+                background: "#fff",
+                borderRadius: 12,
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <Spin tip="Đang tải danh sách đơn hàng..." />
+            </div>
+          ) : bills.length === 0 ? (
+            <Card className="app-card" style={{ textAlign: "center", borderRadius: 12 }} bordered={false}>
+              <Empty description="Không có đơn hàng nào phù hợp" />
+            </Card>
+          ) : (
+            bills.map((item) => {
+              const isSelected = selectedRowKeys.includes(item.id);
+              const total = (item.orderResponses || []).reduce(
+                (sum, sub) => sum + (sub.totalPrice || 0),
+                0
+              );
+              const isTerminal = isTerminalStatus(item.orderStatus);
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 12,
+                    border: isSelected ? `1.5px solid ${colors.primary500}` : "1px solid #e2e8f0",
+                    boxShadow: isSelected ? "0 4px 14px rgba(21, 112, 239, 0.1)" : "0 2px 6px rgba(0, 0, 0, 0.04)",
+                    padding: 14,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {/* Hàng 1: Checkbox + Mã đơn + Trạng thái */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRowKeys((prev) => [...prev, item.id]);
+                          } else {
+                            setSelectedRowKeys((prev) => prev.filter((id) => id !== item.id));
+                          }
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: colors.primary500,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => handleOpenDetailModal(item)}
+                      >
+                        #{item.id.substring(0, 8).toUpperCase()}
+                      </span>
+                    </div>
+
+                    <Tag
+                      color={getOrderStatusColor(item.orderStatus)}
+                      style={{
+                        cursor: isTerminal ? "default" : "pointer",
+                        margin: 0,
+                        fontWeight: 600,
+                        fontSize: 12,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                      }}
+                      onClick={() => {
+                        if (!isTerminal) openStatusModal(item);
+                      }}
+                    >
+                      {item.orderStatus}
+                    </Tag>
+                  </div>
+
+                  {/* Hàng 2: Khách hàng + Thời gian */}
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>
+                        {item.nameRecipient || item.userName || "Khách lẻ"}
+                      </span>
+                      {item.phoneNumber && (
+                        <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>
+                          • {item.phoneNumber}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString("vi-VN") : ""}
+                    </span>
+                  </div>
+
+                  {/* Hàng 3: Danh sách sản phẩm thu gọn */}
+                  {(item.orderResponses || []).length > 0 && (
+                    <div style={{ marginTop: 8, background: "#f8fafc", padding: "8px 10px", borderRadius: 8, overflow: "hidden" }}>
+                      {(item.orderResponses || []).slice(0, 2).map((prod, pIdx) => (
+                        <div
+                          key={pIdx}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            fontSize: 12,
+                            marginTop: pIdx > 0 ? 4 : 0,
+                            gap: 8,
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: "#334155",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
+                            • {prod.title || "Sản phẩm"} {prod.size ? `(${prod.size})` : ""}
+                          </span>
+                          <span style={{ color: "#64748b", fontWeight: 500, flexShrink: 0 }}>x{prod.qty || 1}</span>
+                        </div>
+                      ))}
+                      {(item.orderResponses || []).length > 2 && (
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+                          + {(item.orderResponses || []).length - 2} sản phẩm khác...
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Hàng 4: Tổng tiền & Phương thức thanh toán */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Tag color={getPaymentTypeColor(item.paymentType)} style={{ margin: 0, fontSize: 11 }}>
+                        {item.paymentType || "COD"}
+                      </Tag>
+                      {item.trackingCode && (
+                        <Tag
+                          color="cyan"
+                          style={{ margin: 0, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
+                          onClick={() => handleOpenTracking(item)}
+                        >
+                          <TruckFast size={12} /> {item.trackingCode}
+                        </Tag>
+                      )}
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 12, color: "#64748b" }}>Tổng: </span>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: "#166534" }}>
+                        {total.toLocaleString("vi-VN")} ₫
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Đường kẻ mỏng */}
+                  <div style={{ height: 1, background: "#f1f5f9", margin: "10px 0 10px 0" }} />
+
+                  {/* Hàng 5: Nút thao tác to bản */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button
+                      size="middle"
+                      icon={<Eye color="#10b981" size={16} />}
+                      onClick={() => handleOpenDetailModal(item)}
+                      style={{
+                        flex: 1,
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                        borderColor: "#bbf7d0",
+                        color: "#166534",
+                        background: "#f0fdf4",
+                      }}
+                    >
+                      Chi tiết
+                    </Button>
+
+                    {!item.trackingCode && item.orderStatus === "PENDING" ? (
+                      <Button
+                        size="middle"
+                        icon={<Box color="#1570ef" size={16} />}
+                        onClick={() => handleOpenCreateShipment(item)}
+                        style={{
+                          flex: 1,
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                          borderColor: "#bfdbfe",
+                          color: "#1570ef",
+                          background: "#eff6ff",
+                        }}
+                      >
+                        Đóng gói GHN
+                      </Button>
+                    ) : (
+                      <Button
+                        size="middle"
+                        icon={<Edit2 color={isTerminal ? "#94a3b8" : "#1570ef"} size={16} />}
+                        disabled={isTerminal}
+                        onClick={() => openStatusModal(item)}
+                        style={{
+                          flex: 1,
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                          borderColor: isTerminal ? "#f1f5f9" : "#bfdbfe",
+                          color: isTerminal ? "#94a3b8" : "#1570ef",
+                          background: isTerminal ? "#f8fafc" : "#eff6ff",
+                        }}
+                      >
+                        Đổi trạng thái
+                      </Button>
+                    )}
+
+                    <Button
+                      size="middle"
+                      danger
+                      icon={<Trash color="#ef4444" size={16} />}
+                      onClick={() =>
+                        confirm({
+                          title: "Xác nhận xóa",
+                          content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
+                          okText: "Xóa",
+                          okType: "danger",
+                          cancelText: "Hủy",
+                          onOk: () => handleRemoveBill(item.id),
+                        })
+                      }
+                      style={{
+                        width: 44,
+                        padding: 0,
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderColor: "#fecaca",
+                        background: "#fef2f2",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Phân trang Mobile */}
+          <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 20px 0" }}>
+            <Pagination
+              current={page}
+              pageSize={limit}
+              total={total}
+              size="small"
+              showSizeChanger={false}
+              onChange={(p, size) => {
+                setPage(p);
+                if (size && size !== limit) setLimit(size);
+              }}
+              showTotal={(tot, range) => `${range[0]}-${range[1]} / ${tot} đơn`}
+            />
+          </div>
+        </div>
+      ) : (
+        /* GIAO DIỆN DESKTOP (>= 768px): BẢNG DỮ LIỆU ĐẦY ĐỦ */
+        <Card className="app-card" bordered={false}>
+          <Table
+            bordered
+            rowKey={(record) => record.id}
+            rowSelection={rowSelection}
+            loading={loading}
+            dataSource={bills}
+            columns={columns}
+            size="middle"
+            scroll={{ x: 1400 }}
+            pagination={{
+              total,
+              showSizeChanger: true,
+              responsive: true,
+              pageSizeOptions: ["10", "20", "50", "100"],
+              onShowSizeChange(current, size) {
+                setLimit(size);
+                setPage(1);
+              },
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} trong tổng số ${total} đơn hàng`,
+              pageSize: limit,
+              current: page,
+              onChange: (p, l) => {
+                setPage(p);
+                if (l && l !== limit) setLimit(l);
+              },
+            }}
+          />
+        </Card>
+      )}
 
       <Modal
         title={
@@ -1189,58 +1552,58 @@ const OrdersScreen = () => {
               items={
                 trackingData.logs && trackingData.logs.length > 0
                   ? trackingData.logs.map((log: any, index: number) => {
-                      const isLatest = index === 0;
-                      return {
-                        color: isLatest ? "green" : "blue",
-                        children: (
-                          <div>
+                    const isLatest = index === 0;
+                    return {
+                      color: isLatest ? "green" : "blue",
+                      children: (
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: isLatest ? 600 : 500,
+                              color: isLatest ? "#52c41a" : "#333",
+                            }}
+                          >
+                            {log.statusName || log.status}
+                          </div>
+                          {log.location && (
+                            <div style={{ fontSize: "12px", color: "#666" }}>
+                              <Location
+                                size={12}
+                                style={{ marginRight: 4, verticalAlign: "middle" }}
+                              />
+                              {log.location}
+                            </div>
+                          )}
+                          {(log.updatedDate || log.action_at) && (
                             <div
                               style={{
-                                fontWeight: isLatest ? 600 : 500,
-                                color: isLatest ? "#52c41a" : "#333",
+                                fontSize: "11px",
+                                color: "#999",
+                                marginTop: 2,
                               }}
                             >
-                              {log.statusName || log.status}
+                              {new Date(log.updatedDate || log.action_at).toLocaleString("vi-VN")}
                             </div>
-                            {log.location && (
-                              <div style={{ fontSize: "12px", color: "#666" }}>
-                                <Location
-                                  size={12}
-                                  style={{ marginRight: 4, verticalAlign: "middle" }}
-                                />
-                                {log.location}
-                              </div>
-                            )}
-                            {(log.updatedDate || log.action_at) && (
-                              <div
-                                style={{
-                                  fontSize: "11px",
-                                  color: "#999",
-                                  marginTop: 2,
-                                }}
-                              >
-                                {new Date(log.updatedDate || log.action_at).toLocaleString("vi-VN")}
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      };
-                    })
+                          )}
+                        </div>
+                      ),
+                    };
+                  })
                   : [
-                      {
-                        color: "green",
-                        children: (
-                          <div>
-                            <div style={{ fontWeight: 600, color: "#52c41a" }}>
-                              {trackingData.statusName || "Mới tạo đơn - Chờ lấy hàng"}
-                            </div>
-                            <div style={{ fontSize: "12px", color: "#666" }}>
-                              Đơn hàng đã được tạo thành công trên hệ thống GHN. Bưu tá sẽ sớm đến lấy hàng tại shop.
-                            </div>
+                    {
+                      color: "green",
+                      children: (
+                        <div>
+                          <div style={{ fontWeight: 600, color: "#52c41a" }}>
+                            {trackingData.statusName || "Mới tạo đơn - Chờ lấy hàng"}
                           </div>
-                        ),
-                      },
-                    ]
+                          <div style={{ fontSize: "12px", color: "#666" }}>
+                            Đơn hàng đã được tạo thành công trên hệ thống GHN. Bưu tá sẽ sớm đến lấy hàng tại shop.
+                          </div>
+                        </div>
+                      ),
+                    },
+                  ]
               }
             />
           </div>
@@ -1266,7 +1629,7 @@ const OrdersScreen = () => {
           setShipmentOrder(null);
         }}
         onSuccess={() => {
-          getBills(`/orders/all?page=${page}&pageSize=${limit}`);
+          fetchBills();
         }}
       />
 

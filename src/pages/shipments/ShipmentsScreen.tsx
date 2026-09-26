@@ -19,6 +19,8 @@ import {
   Timeline,
   Steps,
   Alert,
+  Pagination,
+  Empty,
 } from "antd";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -75,6 +77,15 @@ const ShipmentsScreen: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(statusFromUrl || "ALL");
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (statusFromUrl) {
@@ -326,14 +337,14 @@ const ShipmentsScreen: React.FC = () => {
             </Title>
           </Col>
           <Col>
-            <Space wrap>
+            <Space wrap style={{ width: "100%" }}>
               <Input.Search
                 placeholder="Tìm mã kiện hàng, mã GHN, mã đơn..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onSearch={() => fetchShipments()}
                 allowClear
-                style={{ width: 280 }}
+                style={{ minWidth: 200, flex: 1, maxWidth: 320 }}
               />
               <Select
                 value={statusFilter}
@@ -346,7 +357,7 @@ const ShipmentsScreen: React.FC = () => {
                     setSearchParams({ status: val });
                   }
                 }}
-                style={{ width: 180 }}
+                style={{ minWidth: 160, flex: 1, maxWidth: 200 }}
               >
                 <Select.Option value="ALL">Tất cả trạng thái</Select.Option>
                 <Select.Option value="ready_to_pick">Chờ lấy hàng</Select.Option>
@@ -366,7 +377,7 @@ const ShipmentsScreen: React.FC = () => {
       {statusFilter !== "ALL" && (
         <Alert
           message={
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <FilterSearch size={16} color="#1570ef" variant="Bold" />
                 Đang lọc kiện hàng theo trạng thái:{" "}
@@ -391,29 +402,209 @@ const ShipmentsScreen: React.FC = () => {
         />
       )}
 
-      {/* Shipments Table */}
-      <Card className="app-card" bordered={false}>
-        <Table
-          bordered
-          rowKey="id"
-          dataSource={shipments}
-          columns={columns}
-          loading={loading}
-          size="middle"
-          scroll={{ x: 1400 }}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showTotal: (tot, range) => `${range[0]}-${range[1]} trong tổng số ${tot} kiện hàng`,
-            onChange: (p, ps) => {
-              setPage(p);
-              setPageSize(ps);
-            },
-          }}
-        />
-      </Card>
+      {/* Shipments Display: Mobile Card View vs Desktop Table View */}
+      {isMobile ? (
+        <div className="d-flex flex-column gap-3">
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px 0", background: "#fff", borderRadius: 12 }}>
+              <Spin size="large" tip="Đang tải danh sách kiện hàng..." />
+            </div>
+          ) : shipments.length === 0 ? (
+            <div style={{ padding: "40px 0", background: "#fff", borderRadius: 12 }}>
+              <Empty description="Không tìm thấy kiện hàng nào" />
+            </div>
+          ) : (
+            shipments.map((record) => (
+              <div
+                key={record.id}
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 12,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                  padding: "14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                {/* Header: Mã kiện + Tag trạng thái */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: colors.primary500 }}>
+                      {record.shipmentCode}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      Đơn hàng: <strong style={{ color: "#334155" }}>#{record.orderId?.substring(0, 8)}</strong>
+                      {record.createdAt && (
+                        <span style={{ marginLeft: 6 }}>
+                          • {new Date(record.createdAt).toLocaleDateString("vi-VN")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Tag
+                    color={getShippingStatusColor(record.shippingStatus)}
+                    style={{ margin: 0, fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}
+                  >
+                    {record.shippingStatusName || record.shippingStatus || "Mới tạo"}
+                  </Tag>
+                </div>
+
+                {/* Tracking GHN code */}
+                {record.trackingCode && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 12, color: "#64748b" }}>Mã GHN:</span>
+                    <Tag
+                      color="cyan"
+                      style={{
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        margin: 0,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                      }}
+                      onClick={() => handleOpenTracking(record)}
+                    >
+                      <TruckFast size={14} />
+                      {record.trackingCode}
+                    </Tag>
+                  </div>
+                )}
+
+                {/* Sản phẩm trong kiện */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    border: "1px solid #f1f5f9",
+                  }}
+                >
+                  {(record.items || []).map((item, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        fontSize: 12,
+                        color: "#334155",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        • {item.productTitle} {item.variantName ? `(${item.variantName})` : ""}
+                      </span>
+                      <strong style={{ color: "#1570ef", flexShrink: 0 }}>x{item.quantity}</strong>
+                    </div>
+                  ))}
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#64748b",
+                      marginTop: 4,
+                      paddingTop: 4,
+                      borderTop: "1px dashed #e2e8f0",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span>Cân nặng: {record.weight}g</span>
+                    <span>KT: {record.length}x{record.width}x{record.height} cm</span>
+                  </div>
+                </div>
+
+                {/* Chi phí & Thu COD */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, paddingTop: 2 }}>
+                  <div>
+                    <span style={{ color: "#64748b", fontSize: 12 }}>Cước GHN: </span>
+                    <strong style={{ color: "#166534" }}>
+                      {record.shippingFee ? `${record.shippingFee.toLocaleString("vi-VN")} ₫` : "—"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#64748b", fontSize: 12 }}>Thu COD: </span>
+                    <strong style={{ color: record.codAmount > 0 ? "#e11d48" : "#64748b" }}>
+                      {record.codAmount ? `${record.codAmount.toLocaleString("vi-VN")} ₫` : "0 ₫"}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Nút Xem hành trình */}
+                <div style={{ paddingTop: 4 }}>
+                  <Button
+                    block
+                    size="middle"
+                    icon={<Eye size={16} color="#1570ef" />}
+                    onClick={() => handleOpenTracking(record)}
+                    style={{
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      fontSize: 13,
+                      borderColor: "#bfdbfe",
+                      color: "#1570ef",
+                      background: "#eff6ff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    Xem chi tiết hành trình GHN
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Phân trang Mobile */}
+          <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 20px 0" }}>
+            <Pagination
+              current={page}
+              pageSize={pageSize}
+              total={total}
+              size="small"
+              showSizeChanger={false}
+              onChange={(p, ps) => {
+                setPage(p);
+                setPageSize(ps);
+              }}
+              showTotal={(tot, range) => `${range[0]}-${range[1]} / ${tot} kiện`}
+            />
+          </div>
+        </div>
+      ) : (
+        /* Giao diện Desktop: Bảng dữ liệu đầy đủ cột */
+        <Card className="app-card" bordered={false}>
+          <Table
+            bordered
+            rowKey="id"
+            dataSource={shipments}
+            columns={columns}
+            loading={loading}
+            size="middle"
+            scroll={{ x: 1400 }}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              responsive: true,
+              showTotal: (tot, range) => `${range[0]}-${range[1]} trong tổng số ${tot} kiện hàng`,
+              onChange: (p, ps) => {
+                setPage(p);
+                setPageSize(ps);
+              },
+            }}
+          />
+        </Card>
+      )}
 
       {/* Modal Tracking GHN */}
       <Modal

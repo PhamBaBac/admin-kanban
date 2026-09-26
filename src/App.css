@@ -97,3 +97,35 @@ a {
 .ant-menu-light .ant-menu-item-selected svg {
   color: #1570ef !important;
 }
+
+/* Scrollable status tabs — fix Ant Design overflow:hidden and scroll reset */
+.orders-status-tabs-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.orders-status-tabs-container::-webkit-scrollbar {
+  height: 4px;
+}
+.orders-status-tabs-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.orders-status-tabs {
+  width: max-content;
+  min-width: 100%;
+}
+.orders-status-tabs .ant-tabs-nav {
+  margin-bottom: 0 !important;
+}
+.orders-status-tabs .ant-tabs-nav-operations {
+  display: none !important;
+}
+.orders-status-tabs .ant-tabs-nav-wrap {
+  overflow: visible !important;
+}
+.orders-status-tabs .ant-tabs-nav-list {
+  transform: none !important;
+}

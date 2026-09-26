@@ -305,7 +305,26 @@ const CreateShipmentModal: React.FC<Props> = ({
       open={visible}
       onCancel={onClose}
       width={820}
-      style={{ top: 20 }}
+      style={{
+        top: 20,
+        maxWidth: "calc(100vw - 32px)",
+        paddingBottom: 20,
+      }}
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 210px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          paddingRight: 8,
+        },
+      }}
+      bodyStyle={{
+        maxHeight: "calc(100vh - 210px)",
+        overflowY: "auto",
+        overflowX: "hidden",
+        paddingRight: 8,
+      }}
+      destroyOnClose
       footer={[
         <Button key="back" onClick={onClose} disabled={loading}>
           Hủy bỏ

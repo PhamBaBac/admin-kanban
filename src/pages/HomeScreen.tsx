@@ -45,6 +45,15 @@ const HomeScreen = () => {
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [pendingShipmentsCount, setPendingShipmentsCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -475,6 +484,78 @@ const HomeScreen = () => {
             bordered={false}
             style={{ borderRadius: 12 }}
           >
+          {isMobile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {recentOrders.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px 0", color: "#64748b" }}>
+                  Chưa có đơn hàng nào
+                </div>
+              ) : (
+                recentOrders.map((record) => {
+                  const calculatedTotal = Array.isArray(record.orderResponses)
+                    ? record.orderResponses.reduce((sum: number, it: any) => sum + (it.totalPrice || 0), 0)
+                    : record.totalAmount || record.total || 0;
+
+                  const currentStatus = record.orderStatus || record.status;
+                  let color = "default";
+                  let label = currentStatus || "Mới";
+                  if (currentStatus === "PENDING") {
+                    color = "warning";
+                    label = "Chờ xử lý";
+                  } else if (currentStatus === "PROCESSING") {
+                    color = "processing";
+                    label = "Đang chuẩn bị";
+                  } else if (currentStatus === "COMPLETED") {
+                    color = "success";
+                    label = "Hoàn thành";
+                  } else if (currentStatus === "CANCELLED") {
+                    color = "error";
+                    label = "Đã hủy";
+                  }
+
+                  return (
+                    <div
+                      key={record.id}
+                      onClick={() => navigate("/orders")}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontWeight: 700, color: "#1570ef", fontSize: 13 }}>
+                            #{record.id ? record.id.substring(0, 8) : "—"}
+                          </span>
+                          <Tag color={color} style={{ margin: 0, fontSize: 10, padding: "0 6px" }}>
+                            {label}
+                          </Tag>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#334155", fontWeight: 500, marginTop: 4 }}>
+                          {record.userName || record.nameRecipient || "Khách mua hàng"}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 700, color: "#166534", fontSize: 13 }}>
+                          {calculatedTotal ? `${calculatedTotal.toLocaleString("vi-VN")} ₫` : "0 ₫"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#1570ef", marginTop: 2 }}>
+                          Chi tiết →
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
             <Table
               bordered
               dataSource={recentOrders}
@@ -482,8 +563,10 @@ const HomeScreen = () => {
               rowKey="id"
               pagination={false}
               size="middle"
+              scroll={{ x: 600 }}
             />
-          </Card>
+          )}
+        </Card>
         </Col>
 
         {/* Hàng sắp hết kho */}

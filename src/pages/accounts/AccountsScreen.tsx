@@ -23,6 +23,9 @@ import {
   Alert,
   Statistic,
   Divider,
+  Spin,
+  Empty,
+  Pagination,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -70,6 +73,15 @@ const AccountsScreen: React.FC = () => {
   const [selectedUserForRole, setSelectedUserForRole] = useState<UserModel | null>(null);
   const [newSelectedRole, setNewSelectedRole] = useState<string>("");
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Tab 2: Tạo tài khoản mới (Form)
   const [createForm] = Form.useForm();
@@ -507,7 +519,7 @@ const AccountsScreen: React.FC = () => {
                             fetchUsers(1, userPageSize, searchUser, filterRole);
                           }}
                           allowClear
-                          style={{ width: 300 }}
+                          style={{ minWidth: 200, flex: 1, maxWidth: 320 }}
                         />
                         <Select
                           value={filterRole}
@@ -516,7 +528,7 @@ const AccountsScreen: React.FC = () => {
                             setUserPage(1);
                             fetchUsers(1, userPageSize, searchUser, val);
                           }}
-                          style={{ width: 180 }}
+                          style={{ minWidth: 160, flex: 1, maxWidth: 200 }}
                           options={[
                             { value: "ALL", label: "Tất cả vai trò" },
                             { value: "ADMIN", label: "Quản trị viên (ADMIN)" },
@@ -533,7 +545,7 @@ const AccountsScreen: React.FC = () => {
                         </Button>
                       </Space>
                     </Col>
-                    <Col xs={24} md={8} style={{ textAlign: "right" }}>
+                    <Col xs={24} md={8} className="text-start text-md-end">
                       <Button
                         type="primary"
                         icon={<ProfileAdd size={18} />}
@@ -545,27 +557,141 @@ const AccountsScreen: React.FC = () => {
                     </Col>
                   </Row>
 
-                  {/* Bảng danh sách tài khoản */}
-                  <Table
-                    bordered
-                    rowKey="id"
-                    columns={userColumns}
-                    dataSource={users}
-                    loading={loadingUsers}
-                    pagination={{
-                      current: userPage,
-                      pageSize: userPageSize,
-                      total: totalUsers,
-                      showSizeChanger: true,
-                      pageSizeOptions: ["10", "20", "50"],
-                      onChange: (p, ps) => {
-                        setUserPage(p);
-                        setUserPageSize(ps);
-                        fetchUsers(p, ps, searchUser, filterRole);
-                      },
-                      showTotal: (total) => `Tổng cộng ${total} tài khoản`,
-                    }}
-                  />
+                  {/* Bảng danh sách tài khoản: Mobile Card View vs Desktop Table */}
+                  {isMobile ? (
+                    <div className="d-flex flex-column gap-3">
+                      {loadingUsers ? (
+                        <div style={{ textAlign: "center", padding: "40px 0", background: "#fff", borderRadius: 12 }}>
+                          <Spin size="large" tip="Đang tải danh sách tài khoản..." />
+                        </div>
+                      ) : users.length === 0 ? (
+                        <div style={{ padding: "40px 0", background: "#fff", borderRadius: 12 }}>
+                          <Empty description="Không tìm thấy tài khoản nào" />
+                        </div>
+                      ) : (
+                        users.map((record) => {
+                          const initials = `${record.firstname?.[0] || ""}${record.lastname?.[0] || ""}`.toUpperCase() || "U";
+                          const isCurrent = record.email.toLowerCase() === currentAdminEmail.toLowerCase();
+                          return (
+                            <div
+                              key={record.id}
+                              style={{
+                                background: "#ffffff",
+                                borderRadius: 12,
+                                border: "1px solid #e2e8f0",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                                padding: "14px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 10,
+                              }}
+                            >
+                              {/* Header: Avatar, Name, Email */}
+                              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                                <Avatar
+                                  src={record.avatarUrl}
+                                  size={44}
+                                  style={{
+                                    backgroundColor: record.role === "ADMIN" ? "#ef4444" : record.role === "MANAGER" ? "#3b82f6" : "#10b981",
+                                    fontWeight: 700,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {initials}
+                                </Avatar>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                    <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>
+                                      {record.firstname} {record.lastname}
+                                    </span>
+                                    {isCurrent && (
+                                      <Tag color="purple" style={{ margin: 0, fontSize: 10 }}>
+                                        Bạn
+                                      </Tag>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {record.email}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Badges: Role, 2FA, Provider */}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, background: "#f8fafc", padding: "8px 10px", borderRadius: 8 }}>
+                                <div>{getRoleBadge(record.role)}</div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  <Badge
+                                    status={record.mfaEnabled ? "success" : "default"}
+                                    text={<span style={{ fontSize: 11 }}>{record.mfaEnabled ? "2FA Bật" : "2FA Tắt"}</span>}
+                                  />
+                                  <Tag color={record.provider === "LOCAL" ? "default" : "cyan"} style={{ fontSize: 10, margin: 0 }}>
+                                    {record.provider || "LOCAL"}
+                                  </Tag>
+                                </div>
+                              </div>
+
+                              {/* Action button */}
+                              <Button
+                                block
+                                size="middle"
+                                onClick={() => handleOpenRoleModal(record)}
+                                style={{
+                                  borderRadius: 8,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: "#1570ef",
+                                  borderColor: "#bfdbfe",
+                                  background: "#eff6ff",
+                                }}
+                              >
+                                Đổi vai trò & Phân quyền
+                              </Button>
+                            </div>
+                          );
+                        })
+                      )}
+
+                      {/* Phân trang Mobile */}
+                      <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 20px 0" }}>
+                        <Pagination
+                          current={userPage}
+                          pageSize={userPageSize}
+                          total={totalUsers}
+                          size="small"
+                          showSizeChanger={false}
+                          onChange={(p, ps) => {
+                            setUserPage(p);
+                            setUserPageSize(ps);
+                            fetchUsers(p, ps, searchUser, filterRole);
+                          }}
+                          showTotal={(tot, range) => `${range[0]}-${range[1]} / ${tot} tài khoản`}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <Table
+                      bordered
+                      rowKey="id"
+                      columns={userColumns}
+                      dataSource={users}
+                      loading={loadingUsers}
+                      scroll={{ x: 950 }}
+                      pagination={{
+                        current: userPage,
+                        pageSize: userPageSize,
+                        total: totalUsers,
+                        showSizeChanger: true,
+                        responsive: true,
+                        pageSizeOptions: ["10", "20", "50"],
+                        onChange: (p, ps) => {
+                          setUserPage(p);
+                          setUserPageSize(ps);
+                          fetchUsers(p, ps, searchUser, filterRole);
+                        },
+                        showTotal: (total) => `Tổng cộng ${total} tài khoản`,
+                      }}
+                    />
+                  )}
                 </div>
               ),
             },
@@ -713,7 +839,7 @@ const AccountsScreen: React.FC = () => {
               children: (
                 <div>
                   <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[12, 12]}>
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={14}>
                       <Input.Search
                         placeholder="Tìm kiếm theo email người thực hiện, tài khoản đích, nội dung..."
                         value={searchLog}
@@ -723,10 +849,10 @@ const AccountsScreen: React.FC = () => {
                           fetchLogs(1, logPageSize, searchLog);
                         }}
                         allowClear
-                        style={{ width: 360 }}
+                        style={{ minWidth: 240, width: "100%", maxWidth: 440 }}
                       />
                     </Col>
-                    <Col xs={24} md={12} style={{ textAlign: "right" }}>
+                    <Col xs={24} md={10} className="text-start text-md-end">
                       <Button
                         icon={<Refresh size={16} />}
                         onClick={() => fetchLogs(logPage, logPageSize, searchLog)}
@@ -743,11 +869,13 @@ const AccountsScreen: React.FC = () => {
                     columns={logColumns}
                     dataSource={logs}
                     loading={loadingLogs}
+                    scroll={{ x: 950 }}
                     pagination={{
                       current: logPage,
                       pageSize: logPageSize,
                       total: totalLogs,
                       showSizeChanger: true,
+                      responsive: true,
                       pageSizeOptions: ["10", "20", "50"],
                       onChange: (p, ps) => {
                         setLogPage(p);

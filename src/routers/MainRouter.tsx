@@ -142,7 +142,7 @@ const MainRouter = () => {
           </Routes>
         </Content>
 
-        <Footer className="bg-white" />
+
       </Layout>
     </Layout>
   );

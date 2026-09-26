@@ -45,6 +45,18 @@ const ToogleSupplier = (props: Props) => {
 
   const { getAllCategories } = useCategories();
 
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     getFormData();
     getCategories();
@@ -147,7 +159,7 @@ const ToogleSupplier = (props: Props) => {
 
   return (
     <Modal
-      width={680}
+      width={isMobile ? "100%" : 680}
       loading={isGetting}
       closable={!isLoading}
       open={visible}
@@ -158,13 +170,24 @@ const ToogleSupplier = (props: Props) => {
         loading: isLoading || supplierLoading,
         style: { background: "#1677ff", fontWeight: 600 },
       }}
-      style={{ top: 30 }}
+      style={{
+        top: isMobile ? 10 : 30,
+        maxWidth: isMobile ? "calc(100vw - 16px)" : 680,
+        margin: "0 auto",
+        paddingBottom: isMobile ? 16 : 0,
+      }}
+      bodyStyle={{
+        maxHeight: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 200px)",
+        overflowY: "auto",
+        overflowX: "hidden",
+        padding: isMobile ? "12px 14px" : "20px 24px",
+      }}
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div
             style={{
-              width: 40,
-              height: 40,
+              width: isMobile ? 36 : 40,
+              height: isMobile ? 36 : 40,
               borderRadius: 10,
               backgroundColor: "#eff6ff",
               display: "flex",
@@ -174,13 +197,27 @@ const ToogleSupplier = (props: Props) => {
               flexShrink: 0,
             }}
           >
-            <ShopOutlined style={{ fontSize: 22 }} />
+            <ShopOutlined style={{ fontSize: isMobile ? 18 : 22 }} />
           </div>
           <div>
-            <Title level={5} style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
+            <Title
+              level={5}
+              style={{
+                margin: 0,
+                fontWeight: 700,
+                color: "#0f172a",
+                fontSize: isMobile ? 15 : 16,
+              }}
+            >
               {supplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp mới"}
             </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text
+              type="secondary"
+              style={{
+                fontSize: 12,
+                display: isMobile ? "none" : "block",
+              }}
+            >
               Quản lý thông tin đối tác cung ứng và danh mục hàng hóa hợp tác
             </Text>
           </div>
@@ -192,14 +229,16 @@ const ToogleSupplier = (props: Props) => {
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "center" : "center",
+          textAlign: isMobile ? "center" : "left",
           gap: 16,
-          padding: "16px",
+          padding: isMobile ? "12px" : "16px",
           backgroundColor: "#f8fafc",
           borderRadius: 8,
           border: "1px solid #e2e8f0",
           marginBottom: 20,
-          marginTop: 14,
+          marginTop: isMobile ? 8 : 14,
         }}
       >
         <div style={{ position: "relative" }}>
@@ -228,7 +267,15 @@ const ToogleSupplier = (props: Props) => {
           <Text type="secondary" style={{ fontSize: 12, marginTop: 2, display: "block" }}>
             Định dạng PNG, JPG hoặc JPEG (Tối ưu hình vuông tỉ lệ 1:1)
           </Text>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: isMobile ? "center" : "flex-start",
+              gap: 12,
+              marginTop: 6,
+            }}
+          >
             <Button
               onClick={() => inpRef.current?.click()}
               type="link"
@@ -256,10 +303,10 @@ const ToogleSupplier = (props: Props) => {
         <Form
           disabled={isLoading || supplierLoading}
           onFinish={addNewSupplier}
-          layout={formData.layout}
-          labelCol={{ span: formData.labelCol }}
-          wrapperCol={{ span: formData.wrapperCol }}
-          size="large"
+          layout={isMobile ? "vertical" : formData.layout}
+          labelCol={{ span: isMobile ? 24 : formData.labelCol }}
+          wrapperCol={{ span: isMobile ? 24 : formData.wrapperCol }}
+          size={isMobile ? "middle" : "large"}
           form={form}
         >
           {formData.formItems.map((item) => {

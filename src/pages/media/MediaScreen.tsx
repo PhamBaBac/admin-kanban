@@ -50,6 +50,19 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
   const [inputFileName, setInputFileName] = useState("");
   const [addingUrl, setAddingUrl] = useState(false);
 
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const fetchMedias = async (currentPage = page, searchQuery = search) => {
     try {
       setLoading(true);
@@ -198,67 +211,100 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
   };
 
   return (
-    <div style={{ padding: isModal ? "0" : "16px" }}>
+    <div style={{ padding: isModal ? "0" : isMobile ? "8px 8px 24px" : "16px" }}>
       {/* Header bar */}
       <Card
         bordered={false}
         className="app-card"
         style={{
           marginBottom: 16,
+          borderRadius: 12,
+        }}
+        bodyStyle={{
+          padding: isMobile ? "12px 14px" : "20px 24px",
         }}
       >
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: isMobile ? "stretch" : "center",
+            flexDirection: isMobile ? "column" : "row",
             flexWrap: "wrap",
             gap: 12,
           }}
         >
           <div>
             {!isModal && (
-              <Title level={4} style={{ margin: 0 }}>
+              <Title
+                level={isMobile ? 5 : 4}
+                style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}
+              >
                 Thư viện hình ảnh
               </Title>
             )}
-            <Text type="secondary">
+            <Text type="secondary" style={{ fontSize: 12 }}>
               Tổng cộng {totalElements} tệp phương tiện
             </Text>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: 10,
+              alignItems: isMobile ? "stretch" : "center",
+              width: isMobile ? "100%" : "auto",
+            }}
+          >
             <Input.Search
               placeholder="Tìm kiếm theo tên ảnh..."
               allowClear
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onSearch={handleSearch}
-              style={{ width: 260 }}
-              prefix={<SearchOutlined />}
+              style={{ width: isMobile ? "100%" : 260 }}
+              prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
             />
 
-            <Button
-              icon={<LinkOutlined />}
-              onClick={() => setUrlModalOpen(true)}
-            >
-              Thêm từ Link
-            </Button>
-
-            <Upload
-              customRequest={handleCustomUpload}
-              showUploadList={false}
-              multiple
-              accept="image/*"
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                width: isMobile ? "100%" : "auto",
+              }}
             >
               <Button
-                type="primary"
-                icon={<UploadOutlined />}
-                loading={uploading}
+                icon={<LinkOutlined />}
+                onClick={() => setUrlModalOpen(true)}
+                style={{ flex: isMobile ? 1 : "initial", borderRadius: 8 }}
               >
-                Tải ảnh lên
+                Thêm từ Link
               </Button>
-            </Upload>
+
+              <Upload
+                customRequest={handleCustomUpload}
+                showUploadList={false}
+                multiple
+                accept="image/*"
+                style={{ flex: isMobile ? 1 : "initial" }}
+              >
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  loading={uploading}
+                  style={{
+                    width: isMobile ? "100%" : "auto",
+                    borderRadius: 8,
+                    background: "#1677ff",
+                    fontWeight: 500,
+                  }}
+                >
+                  Tải ảnh lên
+                </Button>
+              </Upload>
+            </div>
           </div>
         </div>
       </Card>
@@ -276,6 +322,15 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
         confirmLoading={addingUrl}
         okText="Lưu vào Thư viện"
         cancelText="Hủy"
+        width={isMobile ? "100%" : 520}
+        style={{
+          top: isMobile ? 16 : 40,
+          maxWidth: isMobile ? "calc(100vw - 16px)" : 520,
+          margin: "0 auto",
+        }}
+        bodyStyle={{
+          padding: isMobile ? "12px 14px" : "20px 24px",
+        }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 10 }}>
           <div>
@@ -284,7 +339,7 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
               placeholder="https://example.com/image.jpg"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              style={{ marginTop: 6 }}
+              style={{ marginTop: 6, borderRadius: 8 }}
               allowClear
             />
           </div>
@@ -294,7 +349,7 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
               placeholder="Nhập tên ảnh..."
               value={inputFileName}
               onChange={(e) => setInputFileName(e.target.value)}
-              style={{ marginTop: 6 }}
+              style={{ marginTop: 6, borderRadius: 8 }}
               allowClear
             />
           </div>
@@ -307,7 +362,7 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                 src={inputUrl}
                 alt="Preview"
                 style={{
-                  maxHeight: 160,
+                  maxHeight: isMobile ? 130 : 160,
                   maxWidth: "100%",
                   objectFit: "contain",
                   borderRadius: 6,
@@ -333,8 +388,10 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-              gap: 16,
+              gridTemplateColumns: isMobile
+                ? "repeat(2, 1fr)"
+                : "repeat(auto-fill, minmax(180px, 1fr))",
+              gap: isMobile ? 10 : 16,
               marginBottom: 20,
             }}
           >
@@ -344,7 +401,7 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                 onClick={() => onSelect && onSelect(item)}
                 style={{
                   border: "1px solid #e8e8e8",
-                  borderRadius: 8,
+                  borderRadius: 10,
                   overflow: "hidden",
                   backgroundColor: "#fff",
                   cursor: onSelect ? "pointer" : "default",
@@ -352,7 +409,7 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                   display: "flex",
                   flexDirection: "column",
                   position: "relative",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = "#1677ff";
@@ -366,8 +423,8 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                 {/* Thumbnail */}
                 <div
                   style={{
-                    height: 140,
-                    backgroundColor: "#f5f5f5",
+                    height: isMobile ? 115 : 140,
+                    backgroundColor: "#f8fafc",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -389,13 +446,13 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                   <div
                     style={{
                       position: "absolute",
-                      top: 6,
-                      right: 6,
+                      top: 4,
+                      right: 4,
                       display: "flex",
-                      gap: 4,
-                      background: "rgba(0,0,0,0.45)",
-                      padding: "2px 6px",
-                      borderRadius: 4,
+                      gap: 2,
+                      background: "rgba(0,0,0,0.55)",
+                      padding: "2px 4px",
+                      borderRadius: 6,
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -403,16 +460,18 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                       <Button
                         type="text"
                         size="small"
-                        icon={<EyeOutlined style={{ color: "#fff" }} />}
+                        icon={<EyeOutlined style={{ color: "#fff", fontSize: 13 }} />}
                         onClick={() => setPreviewMedia(item)}
+                        style={{ padding: "0 4px", height: 24, minWidth: 24 }}
                       />
                     </Tooltip>
                     <Tooltip title="Sao chép link">
                       <Button
                         type="text"
                         size="small"
-                        icon={<CopyOutlined style={{ color: "#fff" }} />}
+                        icon={<CopyOutlined style={{ color: "#fff", fontSize: 13 }} />}
                         onClick={(e) => handleCopy(item.url, e)}
+                        style={{ padding: "0 4px", height: 24, minWidth: 24 }}
                       />
                     </Tooltip>
                     <Popconfirm
@@ -426,21 +485,23 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                         type="text"
                         size="small"
                         danger
-                        icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
+                        icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 13 }} />}
+                        style={{ padding: "0 4px", height: 24, minWidth: 24 }}
                       />
                     </Popconfirm>
                   </div>
                 </div>
 
                 {/* Info */}
-                <div style={{ padding: "8px 10px", flex: 1 }}>
+                <div style={{ padding: isMobile ? "6px 8px" : "8px 10px", flex: 1 }}>
                   <Text
                     ellipsis={{ tooltip: item.fileName }}
                     style={{
-                      fontWeight: 500,
-                      fontSize: 13,
+                      fontWeight: 600,
+                      fontSize: isMobile ? 12 : 13,
                       display: "block",
-                      marginBottom: 4,
+                      marginBottom: 2,
+                      color: "#1e293b",
                     }}
                   >
                     {item.fileName || "Không có tên"}
@@ -449,8 +510,8 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      fontSize: 11,
-                      color: "#8c8c8c",
+                      fontSize: isMobile ? 10 : 11,
+                      color: "#94a3b8",
                     }}
                   >
                     <span>{formatBytes(item.fileSize)}</span>
@@ -471,19 +532,38 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-end",
+              flexDirection: isMobile ? "column" : "row",
+              justifyContent: isMobile ? "center" : "space-between",
+              alignItems: "center",
+              gap: 10,
               marginTop: 16,
+              background: isMobile ? "#fff" : "transparent",
+              padding: isMobile ? "12px 14px" : "0",
+              borderRadius: isMobile ? 10 : 0,
+              border: isMobile ? "1px solid #e2e8f0" : "none",
             }}
           >
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              Hiển thị{" "}
+              <strong style={{ color: "#0f172a" }}>
+                {(page - 1) * pageSize + 1} -{" "}
+                {Math.min(page * pageSize, totalElements)}
+              </strong>{" "}
+              trong tổng số{" "}
+              <strong style={{ color: "#1677ff" }}>{totalElements}</strong> tệp
+            </div>
+
             <Pagination
+              size={isMobile ? "small" : "default"}
               current={page}
               pageSize={pageSize}
               total={totalElements}
               onChange={(p, s) => {
                 setPage(p);
                 setPageSize(s);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              showSizeChanger
+              showSizeChanger={!isMobile}
               pageSizeOptions={["12", "18", "24", "48"]}
             />
           </div>
@@ -495,33 +575,55 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
         open={Boolean(previewMedia)}
         footer={null}
         onCancel={() => setPreviewMedia(null)}
-        width={700}
+        width={isMobile ? "100%" : 700}
+        style={{
+          top: isMobile ? 12 : 40,
+          maxWidth: isMobile ? "calc(100vw - 16px)" : 700,
+          margin: "0 auto",
+        }}
+        bodyStyle={{
+          maxHeight: isMobile ? "calc(100vh - 120px)" : "calc(100vh - 160px)",
+          overflowY: "auto",
+          padding: isMobile ? "12px 14px" : "20px 24px",
+        }}
         title={previewMedia?.fileName}
       >
         {previewMedia && (
-          <div style={{ textAlign: "center", padding: "10px 0" }}>
+          <div style={{ textAlign: "center", padding: "6px 0" }}>
             <img
               src={previewMedia.url}
               alt={previewMedia.fileName}
               style={{
                 maxWidth: "100%",
-                maxHeight: 500,
+                maxHeight: isMobile ? 260 : 500,
                 objectFit: "contain",
                 borderRadius: 6,
+                border: "1px solid #f0f0f0",
               }}
             />
-            <div style={{ marginTop: 12, textAlign: "left" }}>
-              <p>
+            <div
+              style={{
+                marginTop: 12,
+                textAlign: "left",
+                backgroundColor: "#f8fafc",
+                padding: "10px 12px",
+                borderRadius: 8,
+                fontSize: 13,
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <p style={{ margin: "0 0 6px 0", wordBreak: "break-all" }}>
                 <strong>Đường dẫn:</strong>{" "}
                 <a
                   href={previewMedia.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  style={{ color: "#2563eb" }}
                 >
                   {previewMedia.url}
                 </a>
               </p>
-              <p>
+              <p style={{ margin: 0, color: "#64748b" }}>
                 <strong>Kích thước:</strong> {previewMedia.width} x{" "}
                 {previewMedia.height} ({formatBytes(previewMedia.fileSize)})
               </p>

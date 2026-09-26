@@ -57,6 +57,25 @@ export const ColorBadge: React.FC<{ color?: string; showText?: boolean; size?: n
   const colorName = COLOR_HEX_MAP[colorLower] || color;
   const isHex = color.startsWith("#") || color.startsWith("rgb");
 
+  if (!isHex) {
+    return (
+      <Tag
+        style={{
+          margin: 0,
+          fontSize: 12,
+          fontWeight: 500,
+          backgroundColor: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          color: "#1e293b",
+          borderRadius: 4,
+          padding: "1px 8px",
+        }}
+      >
+        {color}
+      </Tag>
+    );
+  }
+
   return (
     <span
       style={{
@@ -71,7 +90,7 @@ export const ColorBadge: React.FC<{ color?: string; showText?: boolean; size?: n
           width: size,
           height: size,
           borderRadius: "50%",
-          backgroundColor: isHex ? color : colorLower,
+          backgroundColor: color,
           display: "inline-block",
           border: colorLower === "#ffffff" || colorLower === "white" ? "1px solid #d1d5db" : "1px solid rgba(0,0,0,0.1)",
           boxShadow: "0 1px 2px rgba(0,0,0,0.1)",

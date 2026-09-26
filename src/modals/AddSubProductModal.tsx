@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   Col,
-  ColorPicker,
   Divider,
   Form,
   Image,
@@ -16,6 +15,7 @@ import {
   Modal,
   Radio,
   Row,
+  Segmented,
   Select,
   Space,
   Tag,
@@ -40,6 +40,12 @@ import {
   AppstoreOutlined,
   LinkOutlined,
   DeleteOutlined,
+  CameraOutlined,
+  EyeOutlined,
+  CloseOutlined,
+  InboxOutlined,
+  WalletOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import mediaAPI from "../apis/mediaAPI";
@@ -53,29 +59,6 @@ import { VND } from "../utils/handleCurrency";
 import MediaPickerModal from "./MediaPickerModal";
 
 const { Text, Title, Paragraph } = Typography;
-
-const COLOR_PRESETS = [
-  { label: "Đen", value: "#000000" },
-  { label: "Trắng", value: "#ffffff" },
-  { label: "Xám", value: "#808080" },
-  { label: "Xanh Navy", value: "#001f3f" },
-  { label: "Xanh Dương", value: "#1677ff" },
-  { label: "Đỏ", value: "#ff4d4f" },
-  { label: "Vàng Gold", value: "#faad14" },
-  { label: "Xanh Lá", value: "#52c41a" },
-  { label: "Hồng", value: "#eb2f96" },
-  { label: "Tím", value: "#722ed1" },
-];
-
-const ATTRIBUTE_PRESETS: Record<string, string[]> = {
-  "Dung lượng": ["64GB", "128GB", "256GB", "512GB", "1TB"],
-  "Bộ nhớ": ["64GB", "128GB", "256GB", "512GB", "1TB"],
-  "Size": ["S", "M", "L", "XL", "2XL", "3XL"],
-  "Kích cỡ": ["38", "39", "40", "41", "42", "43"],
-  "RAM": ["4GB", "8GB", "16GB", "32GB", "64GB"],
-  "Chất liệu": ["Cotton", "Da thật", "Nhôm nguyên khối", "Thép không gỉ", "Nhựa ABS"],
-  "Phiên bản": ["Tiêu chuẩn (Standard)", "Cao cấp (Pro)", "Đặc biệt (Limited)"],
-};
 
 interface Props {
   visible: boolean;
@@ -92,6 +75,16 @@ const AddSubProductModal = (props: Props) => {
   const [searchParams] = useSearchParams();
   const id = searchParams.get("id");
 
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [isLoading, setIsLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
   const [fileUrl, setFileUrl] = useState("");
@@ -99,6 +92,46 @@ const AddSubProductModal = (props: Props) => {
   const [previewImage, setPreviewImage] = useState("");
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [options, setOptions] = useState<SelectModel[]>([]);
+
+  // Ảnh đại diện đầu tiên của biến thể (thay thế cho ô màu cũ)
+  const primaryImage =
+    fileList && fileList.length > 0
+      ? fileList[0].url ||
+        fileList[0].preview ||
+        (fileList[0].originFileObj
+          ? URL.createObjectURL(fileList[0].originFileObj)
+          : "")
+      : "";
+
+  const handleQuickImageUpload = (file: any) => {
+    const newFileItem = {
+      uid: `sub-img-primary-${Date.now()}`,
+      name: file.name || "variant-primary.png",
+      status: "done",
+      originFileObj: file,
+      url: URL.createObjectURL(file),
+    };
+    setFileList((prev) => [
+      newFileItem,
+      ...(prev || []).filter((item) => item.uid !== newFileItem.uid),
+    ]);
+    message.success("Đã chọn ảnh đại diện sản phẩm cho màu này!");
+    return false;
+  };
+
+  const handleRemovePrimaryImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFileList((prev) => (prev || []).slice(1));
+    message.info("Đã gỡ ảnh đại diện");
+  };
+
+  const handlePreviewPrimaryImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (primaryImage) {
+      setPreviewImage(primaryImage);
+      setPreviewOpen(true);
+    }
+  };
 
   const [form] = Form.useForm();
 
@@ -136,30 +169,74 @@ const AddSubProductModal = (props: Props) => {
   useEffect(() => {
     if (visible) {
       setFileUrl("");
+      form.resetFields();
+
       if (subProduct) {
-        let customAttributes: { name: string; value: string }[] = [];
-        if (subProduct.attributes && typeof subProduct.attributes === "object") {
-          customAttributes = Object.entries(subProduct.attributes)
-            .filter(
-              ([k]) =>
-                k.toLowerCase() !== "color" &&
-                k.toLowerCase() !== "màu sắc" &&
-                k !== "discountType" &&
-                k !== "discountValue" &&
-                k !== "discountAmount"
-            )
-            .map(([name, value]) => ({ name, value: String(value ?? "") }));
-        } else if (subProduct.size) {
-          customAttributes = [{ name: "Size", value: subProduct.size }];
+        // 1. Phân tích an toàn attributes (chuỗi JSON, object hoặc mảng)
+        let rawAttrs: any = subProduct.attributes;
+        if (typeof rawAttrs === "string") {
+          try {
+            rawAttrs = JSON.parse(rawAttrs);
+          } catch {
+            rawAttrs = {};
+          }
+        }
+        if (!rawAttrs || typeof rawAttrs !== "object") {
+          rawAttrs = {};
         }
 
-        // Nhận diện loại giảm giá (2 loại: PERCENT hoặc DISCOUNT)
+        // 2. Trích xuất thuộc tính mở rộng (bỏ qua màu sắc và các trường hệ thống)
+        let customAttributes: { name: string; value: string }[] = [];
+        if (Array.isArray(rawAttrs)) {
+          customAttributes = rawAttrs
+            .map((item: any) => ({
+              name: String(item.name || item.key || "").trim(),
+              value: String(item.value ?? "").trim(),
+            }))
+            .filter((item) => item.name);
+        } else {
+          customAttributes = Object.entries(rawAttrs)
+            .filter(([k]) => {
+              const lower = k.trim().toLowerCase();
+              return (
+                lower !== "color" &&
+                lower !== "màu sắc" &&
+                lower !== "mau sac" &&
+                lower !== "màu" &&
+                lower !== "mau" &&
+                lower !== "discounttype" &&
+                lower !== "discountvalue" &&
+                lower !== "discountamount" &&
+                lower !== "price" &&
+                lower !== "cost" &&
+                lower !== "stock" &&
+                lower !== "qty"
+              );
+            })
+            .map(([name, value]) => ({
+              name: name.trim(),
+              value: String(value ?? "").trim(),
+            }));
+        }
+
+        // 3. Đảm bảo nếu có subProduct.size mà chưa có trong customAttributes thì bổ sung
+        if (
+          subProduct.size &&
+          !customAttributes.some((a) => a.name.toLowerCase() === "size")
+        ) {
+          customAttributes.unshift({
+            name: "Size",
+            value: String(subProduct.size).trim(),
+          });
+        }
+
+        // 4. Nhận diện loại giảm giá (PERCENT hoặc DISCOUNT)
         let initialDiscountType = "NONE";
         let initialDiscountValue = 0;
 
-        if (subProduct.attributes?.discountType) {
-          initialDiscountType = subProduct.attributes.discountType;
-          initialDiscountValue = Number(subProduct.attributes.discountValue) || 0;
+        if (rawAttrs?.discountType) {
+          initialDiscountType = rawAttrs.discountType;
+          initialDiscountValue = Number(rawAttrs.discountValue) || 0;
         } else if (
           subProduct.discount &&
           subProduct.discount < subProduct.price &&
@@ -176,79 +253,213 @@ const AddSubProductModal = (props: Props) => {
           }
         }
 
+        // 5. Lấy tên màu hiện có (từ color hoặc attributes)
+        const existingColor =
+          subProduct.color ||
+          rawAttrs?.["Màu sắc"] ||
+          rawAttrs?.["Color"] ||
+          rawAttrs?.["màu sắc"] ||
+          rawAttrs?.["color"] ||
+          rawAttrs?.["Mau sac"] ||
+          rawAttrs?.["mau sac"] ||
+          rawAttrs?.["Màu"] ||
+          rawAttrs?.["màu"] ||
+          "";
+
+        // 6. Số lượng tồn kho (ưu tiên qty -> stock -> quantity -> 0)
+        const existingQty =
+          subProduct.qty !== undefined && subProduct.qty !== null
+            ? subProduct.qty
+            : subProduct.stock !== undefined && subProduct.stock !== null
+            ? subProduct.stock
+            : (subProduct as any).quantity ?? 0;
+
+        // 7. Điền toàn bộ dữ liệu vào Form
         form.setFieldsValue({
           ...subProduct,
+          productId: subProduct.productId || product?.id || id || undefined,
           sku: subProduct.sku || "",
-          qty:
-            subProduct.qty !== undefined && subProduct.qty !== null
-              ? subProduct.qty
-              : subProduct.stock,
-          cost: subProduct.cost ?? 0,
-          price: subProduct.price ?? 0,
+          color: existingColor,
+          qty: existingQty,
+          cost: Number(subProduct.cost ?? 0),
+          price: Number(subProduct.price ?? 0),
           discountType: initialDiscountType,
           discountValue: initialDiscountValue,
           customAttributes:
             customAttributes.length > 0
               ? customAttributes
-              : [{ name: "Dung lượng", value: "" }],
+              : [{ name: "", value: "" }],
         });
 
-        if (subProduct.images && subProduct.images.length > 0) {
-          const items = subProduct.images.map((item, index) => ({
-            uid: `sub-img-${index}-${Date.now()}`,
-            name: `image-${index + 1}.png`,
-            url: typeof item === "string" ? item : item.url,
-            status: "done",
-          }));
+        // 8. Xử lý an toàn bộ sưu tập ảnh
+        let rawImages: any = subProduct.images;
+        if (typeof rawImages === "string") {
+          try {
+            rawImages = JSON.parse(rawImages);
+          } catch {
+            if (rawImages.startsWith("http")) {
+              rawImages = [rawImages];
+            } else {
+              rawImages = [];
+            }
+          }
+        }
+
+        if (Array.isArray(rawImages) && rawImages.length > 0) {
+          const items = rawImages
+            .map((item: any, index: number) => ({
+              uid: `sub-img-${index}-${Date.now()}`,
+              name: `image-${index + 1}.png`,
+              url: typeof item === "string" ? item : item?.url || "",
+              status: "done",
+            }))
+            .filter((item: any) => item.url);
           setFileList(items);
+        } else if (
+          (subProduct as any).image &&
+          typeof (subProduct as any).image === "string"
+        ) {
+          setFileList([
+            {
+              uid: `sub-img-0-${Date.now()}`,
+              name: `image-1.png`,
+              url: (subProduct as any).image,
+              status: "done",
+            },
+          ]);
         } else {
           setFileList([]);
         }
       } else if (initialValues) {
+        let rawAttrs: any = initialValues.attributes;
+        if (typeof rawAttrs === "string") {
+          try {
+            rawAttrs = JSON.parse(rawAttrs);
+          } catch {
+            rawAttrs = {};
+          }
+        }
+        if (!rawAttrs || typeof rawAttrs !== "object") {
+          rawAttrs = {};
+        }
+
         let customAttributes: { name: string; value: string }[] = [];
+        if (Array.isArray(rawAttrs)) {
+          customAttributes = rawAttrs
+            .map((item: any) => ({
+              name: String(item.name || item.key || "").trim(),
+              value: String(item.value ?? "").trim(),
+            }))
+            .filter((item) => item.name);
+        } else {
+          customAttributes = Object.entries(rawAttrs)
+            .filter(([k]) => {
+              const lower = k.trim().toLowerCase();
+              return (
+                lower !== "color" &&
+                lower !== "màu sắc" &&
+                lower !== "mau sac" &&
+                lower !== "màu" &&
+                lower !== "mau" &&
+                lower !== "discounttype" &&
+                lower !== "discountvalue" &&
+                lower !== "discountamount" &&
+                lower !== "price" &&
+                lower !== "cost" &&
+                lower !== "stock" &&
+                lower !== "qty"
+              );
+            })
+            .map(([name, value]) => ({
+              name: name.trim(),
+              value: String(value ?? "").trim(),
+            }));
+        }
+
         if (
-          initialValues.attributes &&
-          typeof initialValues.attributes === "object"
+          initialValues.size &&
+          !customAttributes.some((a) => a.name.toLowerCase() === "size")
         ) {
-          customAttributes = Object.entries(initialValues.attributes)
-            .filter(
-              ([k]) =>
-                k.toLowerCase() !== "color" &&
-                k.toLowerCase() !== "màu sắc" &&
-                k !== "discountType" &&
-                k !== "discountValue" &&
-                k !== "discountAmount"
-            )
-            .map(([name, value]) => ({ name, value: String(value ?? "") }));
-        } else if (initialValues.size) {
-          customAttributes = [{ name: "Size", value: initialValues.size }];
+          customAttributes.unshift({
+            name: "Size",
+            value: String(initialValues.size).trim(),
+          });
+        }
+
+        const existingCloneColor =
+          initialValues.color ||
+          rawAttrs?.["Màu sắc"] ||
+          rawAttrs?.["Color"] ||
+          rawAttrs?.["màu sắc"] ||
+          rawAttrs?.["color"] ||
+          rawAttrs?.["Mau sac"] ||
+          rawAttrs?.["mau sac"] ||
+          rawAttrs?.["Màu"] ||
+          rawAttrs?.["màu"] ||
+          "";
+
+        let cloneDiscountType = "NONE";
+        let cloneDiscountValue = 0;
+        if (rawAttrs?.discountType) {
+          cloneDiscountType = rawAttrs.discountType;
+          cloneDiscountValue = Number(rawAttrs.discountValue) || 0;
+        } else if (
+          initialValues.discount &&
+          initialValues.discount < initialValues.price &&
+          initialValues.discount > 0
+        ) {
+          const diff = initialValues.price - initialValues.discount;
+          const pct = Math.round((diff / initialValues.price) * 100);
+          if (pct > 0 && Math.abs((initialValues.price * pct) / 100 - diff) < 1) {
+            cloneDiscountType = "PERCENT";
+            cloneDiscountValue = pct;
+          } else {
+            cloneDiscountType = "DISCOUNT";
+            cloneDiscountValue = diff;
+          }
         }
 
         form.setFieldsValue({
           ...initialValues,
+          productId: initialValues.productId || product?.id || id || undefined,
           sku: initialValues.sku ? `${initialValues.sku}-COPY` : "",
-          color: initialValues.color || colors.primary500,
-          price: initialValues.price !== undefined ? initialValues.price : 0,
+          color: existingCloneColor,
+          price: Number(initialValues.price ?? 0),
           qty:
-            initialValues.qty !== undefined
+            initialValues.qty !== undefined && initialValues.qty !== null
               ? initialValues.qty
               : initialValues.stock ?? 10,
-          cost: initialValues.cost !== undefined ? initialValues.cost : 0,
-          discountType: initialValues.attributes?.discountType || "NONE",
-          discountValue: Number(initialValues.attributes?.discountValue) || 0,
+          cost: Number(initialValues.cost ?? 0),
+          discountType: cloneDiscountType,
+          discountValue: cloneDiscountValue,
           customAttributes:
             customAttributes.length > 0
               ? customAttributes
-              : [{ name: "Dung lượng", value: "" }],
+              : [{ name: "", value: "" }],
         });
 
-        if (initialValues.images && initialValues.images.length > 0) {
-          const items = initialValues.images.map((img: any, index: number) => ({
-            uid: `init-img-${index}-${Date.now()}`,
-            name: `image-${index + 1}.png`,
-            url: typeof img === "string" ? img : img.url || "",
-            status: "done",
-          }));
+        let rawImages: any = initialValues.images;
+        if (typeof rawImages === "string") {
+          try {
+            rawImages = JSON.parse(rawImages);
+          } catch {
+            if (rawImages.startsWith("http")) {
+              rawImages = [rawImages];
+            } else {
+              rawImages = [];
+            }
+          }
+        }
+
+        if (Array.isArray(rawImages) && rawImages.length > 0) {
+          const items = rawImages
+            .map((img: any, index: number) => ({
+              uid: `init-img-${index}-${Date.now()}`,
+              name: `image-${index + 1}.png`,
+              url: typeof img === "string" ? img : img?.url || "",
+              status: "done",
+            }))
+            .filter((item: any) => item.url);
           setFileList(items);
         } else {
           setFileList([]);
@@ -257,13 +468,13 @@ const AddSubProductModal = (props: Props) => {
         form.resetFields();
         setFileList([]);
         form.setFieldsValue({
-          color: "#000000",
+          color: "",
           qty: 10,
           price: 0,
           cost: 0,
           discountType: "NONE",
           discountValue: 0,
-          customAttributes: [{ name: "Dung lượng", value: "" }],
+          customAttributes: [{ name: "", value: "" }],
         });
       }
     }
@@ -282,10 +493,23 @@ const AddSubProductModal = (props: Props) => {
     const values = form.getFieldsValue();
     let variantPart = "";
 
+    // Thêm mã viết tắt của màu sắc vào SKU nếu có
+    if (values.color && typeof values.color === "string" && values.color.trim()) {
+      const cleanColor = values.color
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase()
+        .substring(0, 6);
+      if (cleanColor) {
+        variantPart += `-${cleanColor}`;
+      }
+    }
+
     if (values.customAttributes && Array.isArray(values.customAttributes)) {
       const firstAttr = values.customAttributes.find((a: any) => a?.value);
       if (firstAttr) {
-        variantPart = `-${firstAttr.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()}`;
+        variantPart += `-${firstAttr.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()}`;
       }
     }
 
@@ -324,8 +548,10 @@ const AddSubProductModal = (props: Props) => {
       if (data.color) {
         data.color =
           typeof data.color === "string"
-            ? data.color
-            : data.color.toHexString();
+            ? data.color.trim()
+            : String(data.color).trim();
+      } else {
+        data.color = "";
       }
 
       // Xử lý Dynamic Attributes
@@ -344,8 +570,10 @@ const AddSubProductModal = (props: Props) => {
           }
         });
       }
-      if (data.color && !attributesObj["Màu sắc"] && !attributesObj["Color"]) {
+      if (data.color) {
         attributesObj["Màu sắc"] = data.color;
+      } else if (attributesObj["Màu sắc"]) {
+        data.color = attributesObj["Màu sắc"];
       }
 
       // XỬ LÝ 2 LOẠI GIẢM GIÁ (PERCENT hoặc DISCOUNT)
@@ -357,17 +585,22 @@ const AddSubProductModal = (props: Props) => {
         const pct = Math.min(100, Math.max(0, Number(values.discountValue || 0)));
         calculatedDiscountAmount = Math.round((basePrice * pct) / 100);
         calculatedSalePrice = Math.max(0, basePrice - calculatedDiscountAmount);
+        attributesObj["discountType"] = "PERCENT";
+        attributesObj["discountValue"] = String(pct);
       } else if (values.discountType === "DISCOUNT") {
         calculatedDiscountAmount = Math.min(
           basePrice,
           Math.max(0, Number(values.discountValue || 0))
         );
         calculatedSalePrice = Math.max(0, basePrice - calculatedDiscountAmount);
+        attributesObj["discountType"] = "DISCOUNT";
+        attributesObj["discountValue"] = String(calculatedDiscountAmount);
+      } else {
+        delete attributesObj["discountType"];
+        delete attributesObj["discountValue"];
       }
 
-      // Đảm bảo không lưu các trường giá / giảm giá vào bảng thuộc tính phân loại (attributes)
-      delete attributesObj["discountType"];
-      delete attributesObj["discountValue"];
+      // Xóa các trường nhạy cảm không phải thuộc tính biến thể
       delete attributesObj["discountAmount"];
       delete attributesObj["price"];
       delete attributesObj["cost"];
@@ -510,10 +743,19 @@ const AddSubProductModal = (props: Props) => {
 
   return (
     <Modal
-      width={800}
+      width={isMobile ? "calc(100vw - 16px)" : 780}
       title={
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingRight: 24 }}>
-          <Space size={10}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "flex-start" : "center",
+            justifyContent: "space-between",
+            paddingRight: isMobile ? 32 : 24,
+            gap: isMobile ? 6 : 12,
+          }}
+        >
+          <Space size={10} align="center">
             <div
               style={{
                 width: 36,
@@ -524,21 +766,24 @@ const AddSubProductModal = (props: Props) => {
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#1677ff",
+                flexShrink: 0,
               }}
             >
               <AppstoreOutlined style={{ fontSize: 18 }} />
             </div>
             <div>
-              <Title level={5} style={{ margin: 0, fontWeight: 600 }}>
+              <Title level={5} style={{ margin: 0, fontWeight: 600, fontSize: isMobile ? 15 : 16 }}>
                 {subProduct
                   ? "Cập nhật biến thể sản phẩm"
                   : initialValues
                   ? "Nhân bản biến thể sản phẩm"
                   : "Thêm biến thể sản phẩm mới"}
               </Title>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Thiết lập định danh, thuộc tính, giá bán và hình ảnh cho biến thể
-              </Text>
+              {!isMobile && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Thiết lập định danh, thuộc tính, giá bán và hình ảnh cho biến thể
+                </Text>
+              )}
             </div>
           </Space>
           {product?.title && (
@@ -552,10 +797,11 @@ const AddSubProductModal = (props: Props) => {
                 backgroundColor: "#eff6ff",
                 color: "#1d4ed8",
                 fontWeight: 500,
-                maxWidth: 240,
+                maxWidth: isMobile ? "100%" : 220,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
+                margin: 0,
               }}
             >
               {product.title}
@@ -575,32 +821,133 @@ const AddSubProductModal = (props: Props) => {
       okButtonProps={{
         loading: isLoading,
         disabled: isLoading,
+        style: { height: 38, borderRadius: 6, fontWeight: 500, minWidth: isMobile ? 100 : 120 },
       }}
       cancelButtonProps={{
         disabled: isLoading,
+        style: { height: 38, borderRadius: 6, minWidth: isMobile ? 80 : 90 },
       }}
       closable={!isLoading}
       maskClosable={!isLoading}
-      style={{ top: 20 }}
+      style={{
+        top: isMobile ? 8 : 24,
+        maxWidth: isMobile ? "calc(100vw - 16px)" : 780,
+        margin: "0 auto",
+      }}
+      bodyStyle={{
+        maxHeight: isMobile ? "calc(88vh - 110px)" : "calc(84vh - 130px)",
+        overflowY: "auto",
+        padding: isMobile ? "8px 12px 16px" : "12px 24px 20px",
+      }}
     >
       <Form
         layout="vertical"
+        className="compact-variant-modal-form"
         onFinish={handleAddSubproduct}
         form={form}
         disabled={isLoading}
-        style={{ marginTop: 16 }}
+        style={{ marginTop: 8 }}
       >
+        <style>{`
+          /* Tăng khoảng cách giữa các trường dữ liệu */
+          .compact-variant-modal-form .ant-form-item {
+            margin-bottom: 16px !important;
+          }
+          .compact-variant-modal-form .ant-form-item-label {
+            display: block !important;
+            width: 100% !important;
+            padding-bottom: 6px !important;
+          }
+          /* Cho phép label chiếm 100% chiều ngang để dồn nút chức năng (Tạo tự động, Thư viện ảnh) sang lề phải */
+          .compact-variant-modal-form .ant-form-item-label > label {
+            display: flex !important;
+            width: 100% !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #334155 !important;
+          }
+          .compact-variant-modal-form .ant-form-item-label > label > div {
+            width: 100% !important;
+          }
+          .compact-variant-modal-form .form-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 12px;
+          }
+          .compact-variant-modal-form .ant-card-head {
+            min-height: 40px !important;
+          }
+          .compact-variant-modal-form .ant-card-head-title {
+            padding: 8px 0 !important;
+            white-space: normal !important;
+            overflow: visible !important;
+          }
+          /* Tiêu đề nhóm card */
+          .compact-variant-modal-form .modal-card-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+          }
+          .compact-variant-modal-form .modal-card-title .anticon {
+            font-size: 15px;
+            color: #1677ff;
+          }
+          /* Khoảng cách giữa prefix icon và text/placeholder trong ô nhập liệu */
+          .compact-variant-modal-form .ant-input-prefix,
+          .compact-variant-modal-form .ant-input-affix-wrapper .ant-input-prefix {
+            margin-inline-end: 8px !important;
+          }
+          /* Khoảng cách giữa icon và chữ trong Button */
+          .compact-variant-modal-form .ant-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .compact-variant-modal-form .ant-btn > .anticon + span {
+            margin-inline-start: 6px !important;
+          }
+          /* Tối ưu Segmented trên mobile */
+          .compact-variant-modal-form .ant-segmented {
+            background-color: #f1f5f9;
+            padding: 3px;
+            border: 1px solid #e2e8f0;
+          }
+          .compact-variant-modal-form .ant-segmented-item {
+            border-radius: 4px;
+          }
+          .compact-variant-modal-form .ant-segmented-item-label {
+            font-size: 12px !important;
+            font-weight: 500;
+            padding: 0 6px !important;
+            line-height: 28px !important;
+            min-height: 28px !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+          }
+        `}</style>
+
         {!product && (
           <Form.Item
             name={"productId"}
             label="Sản phẩm chính"
             rules={[{ required: true, message: "Vui lòng chọn sản phẩm chính" }]}
+            style={{ marginBottom: 16 }}
           >
             <Select
               allowClear
               options={options}
               showSearch
               placeholder="Chọn sản phẩm liên kết"
+              style={{ height: 38 }}
             />
           </Form.Item>
         )}
@@ -609,12 +956,10 @@ const AddSubProductModal = (props: Props) => {
         <Card
           size="small"
           title={
-            <Space size={8}>
-              <BarcodeOutlined style={{ color: "#1677ff", fontSize: 15 }} />
-              <Text strong style={{ fontSize: 13, color: "#1e293b" }}>
-                Định danh & Thuộc tính phân loại
-              </Text>
-            </Space>
+            <div className="modal-card-title">
+              <BarcodeOutlined />
+              <span>Định danh & Thuộc tính phân loại</span>
+            </div>
           }
           style={{
             marginBottom: 16,
@@ -625,23 +970,16 @@ const AddSubProductModal = (props: Props) => {
           headStyle={{
             backgroundColor: "#f8fafc",
             borderBottom: "1px solid #f1f5f9",
-            padding: "8px 16px",
+            padding: isMobile ? "8px 12px" : "10px 16px",
           }}
-          bodyStyle={{ padding: "16px" }}
+          bodyStyle={{ padding: isMobile ? "12px 12px" : "16px 18px" }}
         >
-          <Row gutter={16}>
-            <Col span={14}>
+          <Row gutter={[20, 16]}>
+            <Col xs={24} sm={10}>
               <Form.Item
                 name="sku"
                 label={
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      alignItems: "center",
-                    }}
-                  >
+                  <div className="form-item-header">
                     <span>Mã SKU phân loại</span>
                     <Button
                       type="link"
@@ -654,65 +992,184 @@ const AddSubProductModal = (props: Props) => {
                     </Button>
                   </div>
                 }
-                extra={
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    Mã định danh quản lý kho duy nhất (VD: IPHONE15-128G-BLK)
-                  </Text>
-                }
+                style={{ marginBottom: isMobile ? 14 : 0 }}
               >
                 <Input
                   prefix={<BarcodeOutlined style={{ color: "#94a3b8" }} />}
-                  placeholder="Nhập mã SKU hoặc bấm 'Tạo tự động'"
-                  style={{ textTransform: "uppercase" }}
+                  placeholder="Mã SKU (VD: IPHONE15-128G-BLK)"
+                  style={{ textTransform: "uppercase", height: 38, borderRadius: 6 }}
                   allowClear
                 />
               </Form.Item>
             </Col>
-            <Col span={10}>
+            <Col xs={24} sm={14}>
               <Form.Item
-                name="color"
                 label={
-                  <Space size={6}>
-                    <BgColorsOutlined style={{ color: "#64748b" }} />
-                    <span>Màu sắc đại diện</span>
-                  </Space>
-                }
-              >
-                <Space direction="vertical" style={{ width: "100%" }} size={6}>
-                  <ColorPicker
-                    format="hex"
-                    showText
-                    style={{ width: "100%", justifyContent: "flex-start" }}
-                  />
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
-                    {COLOR_PRESETS.map((c) => {
-                      const currentColor = form.getFieldValue("color");
-                      const isSelected = currentColor?.toLowerCase() === c.value.toLowerCase();
-                      return (
-                        <Tooltip key={c.value} title={`${c.label} (${c.value})`}>
-                          <div
-                            onClick={() => form.setFieldValue("color", c.value)}
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: 4,
-                              backgroundColor: c.value,
-                              border: isSelected ? "2px solid #1677ff" : "1px solid #d1d5db",
-                              boxShadow: isSelected ? "0 0 0 2px rgba(22, 119, 255, 0.2)" : undefined,
-                              cursor: "pointer",
-                              transition: "all 0.15s ease",
-                            }}
-                          />
-                        </Tooltip>
-                      );
-                    })}
+                  <div className="form-item-header">
+                    <span>Màu sắc & Ảnh đại diện</span>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<PictureOutlined />}
+                      onClick={() => setMediaPickerOpen(true)}
+                      disabled={isLoading}
+                      style={{ padding: 0, height: "auto", fontSize: 12 }}
+                    >
+                      Thư viện ảnh
+                    </Button>
                   </div>
-                </Space>
+                }
+                style={{ marginBottom: isMobile ? 14 : 0 }}
+              >
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {/* Ô Ảnh đại diện sản phẩm thay cho ô màu cũ */}
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    {primaryImage ? (
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 6,
+                          border: "2px solid #1677ff",
+                          overflow: "hidden",
+                          position: "relative",
+                          backgroundColor: "#f8fafc",
+                          boxShadow: "0 2px 5px rgba(22, 119, 255, 0.15)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <img
+                          src={primaryImage}
+                          alt="Ảnh màu sản phẩm"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          onClick={handlePreviewPrimaryImage}
+                        />
+                        {/* Nút xem ảnh */}
+                        <Tooltip title="Xem ảnh lớn">
+                          <button
+                            type="button"
+                            onClick={handlePreviewPrimaryImage}
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              width: "50%",
+                              height: 14,
+                              background: "rgba(0, 0, 0, 0.65)",
+                              border: "none",
+                              color: "#fff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              padding: 0,
+                            }}
+                          >
+                            <EyeOutlined style={{ fontSize: 9 }} />
+                          </button>
+                        </Tooltip>
+                        {/* Nút đổi ảnh */}
+                        <Upload
+                          accept="image/*"
+                          showUploadList={false}
+                          beforeUpload={handleQuickImageUpload}
+                          disabled={isLoading}
+                        >
+                          <Tooltip title="Đổi ảnh">
+                            <button
+                              type="button"
+                              style={{
+                                position: "absolute",
+                                bottom: 0,
+                                right: 0,
+                                width: "50%",
+                                height: 14,
+                                background: "rgba(22, 119, 255, 0.85)",
+                                border: "none",
+                                color: "#fff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                                padding: 0,
+                              }}
+                            >
+                              <CameraOutlined style={{ fontSize: 9 }} />
+                            </button>
+                          </Tooltip>
+                        </Upload>
+                        {/* Nút gỡ ảnh ở góc trên */}
+                        <Tooltip title="Gỡ ảnh">
+                          <div
+                            onClick={handleRemovePrimaryImage}
+                            style={{
+                              position: "absolute",
+                              top: 1,
+                              right: 1,
+                              width: 13,
+                              height: 13,
+                              borderRadius: "50%",
+                              backgroundColor: "rgba(239, 68, 68, 0.9)",
+                              color: "#fff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              fontSize: 8,
+                              lineHeight: 1,
+                            }}
+                          >
+                            <CloseOutlined />
+                          </div>
+                        </Tooltip>
+                      </div>
+                    ) : (
+                      <Upload
+                        accept="image/*"
+                        showUploadList={false}
+                        beforeUpload={handleQuickImageUpload}
+                        disabled={isLoading}
+                      >
+                        <Tooltip title="Tải ảnh sản phẩm thực tế cho màu này">
+                          <div
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 6,
+                              border: "1.5px dashed #cbd5e1",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              backgroundColor: "#f8fafc",
+                              transition: "all 0.2s",
+                            }}
+                          >
+                            <CameraOutlined style={{ fontSize: 14, color: "#1677ff" }} />
+                            <span style={{ fontSize: 8, color: "#64748b", fontWeight: 500 }}>
+                              + Ảnh
+                            </span>
+                          </div>
+                        </Tooltip>
+                      </Upload>
+                    )}
+                  </div>
+
+                  {/* Ô nhập tên màu sắc viết đè tự do - không trùng icon prefix vì đã có thumbnail ảnh */}
+                  <Form.Item name="color" noStyle>
+                    <Input
+                      placeholder="Nhập tên màu (VD: Đen đỏ sọc, Xanh Navy, Trắng...)"
+                      allowClear
+                      style={{ height: 38, borderRadius: 6 }}
+                    />
+                  </Form.Item>
+                </div>
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider style={{ margin: "14px 0" }} />
+          <Divider style={{ margin: "18px 0 14px" }} />
 
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -720,121 +1177,79 @@ const AddSubProductModal = (props: Props) => {
                 <Text strong style={{ fontSize: 13, color: "#1e293b" }}>
                   Thuộc tính bổ sung
                 </Text>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                  Dung lượng, Size, RAM, Bộ nhớ, Phiên bản...
-                </div>
+                <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>
+                  (Dung lượng, Size, RAM, Bộ nhớ, Phiên bản...)
+                </span>
               </div>
             </div>
 
             <Form.List name="customAttributes">
               {(fields, { add, remove }) => (
                 <>
-                  {fields.map(({ key, name, ...restField }) => {
-                    const currentAttrName = form.getFieldValue([
-                      "customAttributes",
-                      name,
-                      "name",
-                    ]);
-                    const presets = ATTRIBUTE_PRESETS[currentAttrName] || [];
-
-                    return (
-                      <div
-                        key={key}
-                        style={{
-                          backgroundColor: "#f8fafc",
-                          padding: 12,
-                          borderRadius: 8,
-                          border: "1px solid #e2e8f0",
-                          marginBottom: 8,
-                        }}
-                      >
-                        <Space style={{ display: "flex", width: "100%" }} align="center">
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div
+                      key={key}
+                      style={{
+                        backgroundColor: "#f8fafc",
+                        padding: isMobile ? "8px 10px" : "10px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #e2e8f0",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Row gutter={[10, 10]} align="middle">
+                        <Col xs={11} sm={11}>
                           <Form.Item
                             {...restField}
                             name={[name, "name"]}
-                            rules={[{ required: true, message: "Chọn thuộc tính" }]}
-                            style={{ minWidth: 170, marginBottom: 0 }}
+                            rules={[{ required: true, message: "Nhập tên thuộc tính" }]}
+                            style={{ marginBottom: 0 }}
                           >
-                            <Select
-                              placeholder="Tên thuộc tính"
-                              options={[
-                                { label: "Dung lượng", value: "Dung lượng" },
-                                { label: "Size (Kích cỡ)", value: "Size" },
-                                { label: "RAM", value: "RAM" },
-                                { label: "Bộ nhớ", value: "Bộ nhớ" },
-                                { label: "Chất liệu", value: "Chất liệu" },
-                                { label: "Phiên bản", value: "Phiên bản" },
-                              ]}
+                            <Input
+                              placeholder="Tên thuộc tính (VD: Size, RAM...)"
                               allowClear
-                              showSearch
+                              style={{ borderRadius: 6, height: 36 }}
                             />
                           </Form.Item>
+                        </Col>
+                        <Col xs={11} sm={11}>
                           <Form.Item
                             {...restField}
                             name={[name, "value"]}
                             rules={[{ required: true, message: "Nhập giá trị" }]}
-                            style={{ flex: 1, minWidth: 240, marginBottom: 0 }}
+                            style={{ marginBottom: 0 }}
                           >
-                            <Input placeholder="Giá trị (VD: 128GB, XL, Đen bóng...)" />
+                            <Input
+                              placeholder="Giá trị (VD: XL, 128GB...)"
+                              allowClear
+                              style={{ borderRadius: 6, height: 36 }}
+                            />
                           </Form.Item>
-                          {fields.length > 1 && (
+                        </Col>
+                        <Col xs={2} sm={2} style={{ textAlign: "right" }}>
+                          {fields.length > 1 ? (
                             <Tooltip title="Xóa thuộc tính này">
                               <Button
                                 type="text"
                                 danger
                                 icon={<DeleteOutlined />}
                                 onClick={() => remove(name)}
-                                style={{ borderRadius: 4 }}
+                                style={{ borderRadius: 4, padding: 0 }}
                               />
                             </Tooltip>
+                          ) : (
+                            <div style={{ width: 24 }} />
                           )}
-                        </Space>
-
-                        {/* Preset chips for fast input */}
-                        {presets.length > 0 && (
-                          <div
-                            style={{
-                              marginTop: 8,
-                              display: "flex",
-                              gap: 6,
-                              flexWrap: "wrap",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                              Gợi ý nhanh:
-                            </Text>
-                            {presets.map((presetVal) => (
-                              <Tag
-                                key={presetVal}
-                                style={{
-                                  cursor: "pointer",
-                                  fontSize: 11,
-                                  borderRadius: 4,
-                                  backgroundColor: "#ffffff",
-                                  border: "1px solid #cbd5e1",
-                                }}
-                                onClick={() => {
-                                  form.setFieldValue(
-                                    ["customAttributes", name, "value"],
-                                    presetVal
-                                  );
-                                }}
-                              >
-                                {presetVal}
-                              </Tag>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        </Col>
+                      </Row>
+                    </div>
+                  ))}
                   <Button
                     type="dashed"
                     onClick={() => add()}
                     block
                     icon={<PlusOutlined />}
-                    style={{ marginTop: 4, borderRadius: 6 }}
+                    style={{ marginTop: 2, borderRadius: 6, height: 34, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                   >
                     Thêm thuộc tính phân loại
                   </Button>
@@ -848,12 +1263,10 @@ const AddSubProductModal = (props: Props) => {
         <Card
           size="small"
           title={
-            <Space size={8}>
-              <DollarOutlined style={{ color: "#1677ff", fontSize: 15 }} />
-              <Text strong style={{ fontSize: 13, color: "#1e293b" }}>
-                Quản lý Tồn kho & Định giá bán
-              </Text>
-            </Space>
+            <div className="modal-card-title">
+              <DollarOutlined />
+              <span>Quản lý Tồn kho & Định giá bán</span>
+            </div>
           }
           style={{
             marginBottom: 16,
@@ -864,66 +1277,56 @@ const AddSubProductModal = (props: Props) => {
           headStyle={{
             backgroundColor: "#f8fafc",
             borderBottom: "1px solid #f1f5f9",
-            padding: "8px 16px",
+            padding: isMobile ? "8px 12px" : "10px 16px",
           }}
-          bodyStyle={{ padding: "16px" }}
+          bodyStyle={{ padding: isMobile ? "12px 12px" : "16px 18px" }}
         >
-          <Row gutter={16}>
-            <Col span={8}>
+          <Row gutter={[20, 16]}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 name="qty"
                 label="Tồn kho ban đầu"
                 rules={[{ required: true, message: "Nhập số lượng tồn" }]}
-                extra={
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    Số lượng nhập khởi tạo
-                  </Text>
-                }
+                style={{ marginBottom: isMobile ? 14 : 0 }}
               >
                 <InputNumber<number>
                   min={0}
-                  style={{ width: "100%" }}
+                  style={{ width: "100%", borderRadius: 6, height: 38 }}
                   placeholder="0"
                   formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 name="cost"
                 label="Giá vốn (Nhập hàng)"
                 rules={[{ required: true, message: "Nhập giá vốn" }]}
-                extra={
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    Dùng để tính lãi gộp
-                  </Text>
-                }
+                style={{ marginBottom: isMobile ? 14 : 0 }}
               >
                 <InputNumber<number>
                   min={0}
-                  style={{ width: "100%" }}
+                  style={{ width: "100%", borderRadius: 6, height: 38 }}
                   addonAfter="₫"
+                  placeholder="0"
                   formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 name="price"
                 label="Giá bán niêm yết (Gốc)"
                 rules={[{ required: true, message: "Nhập giá bán" }]}
-                extra={
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    Giá niêm yết trước giảm
-                  </Text>
-                }
+                style={{ marginBottom: isMobile ? 14 : 0 }}
               >
                 <InputNumber<number>
                   min={0}
-                  style={{ width: "100%" }}
+                  style={{ width: "100%", borderRadius: 6, height: 38 }}
                   addonAfter="₫"
+                  placeholder="0"
                   formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
                 />
@@ -931,96 +1334,98 @@ const AddSubProductModal = (props: Props) => {
             </Col>
           </Row>
 
-          <Divider style={{ margin: "12px 0" }} />
+          <Divider style={{ margin: "18px 0 14px" }} />
 
           {/* KHỐI CẤU HÌNH GIẢM GIÁ */}
           <div
             style={{
               backgroundColor: "#f8fafc",
-              padding: "14px 16px",
+              padding: isMobile ? "12px 14px" : "14px 16px",
               borderRadius: 8,
               border: "1px solid #e2e8f0",
-              marginBottom: 16,
+              marginBottom: 14,
             }}
           >
             <div
               style={{
                 display: "flex",
+                flexDirection: isMobile ? "column" : "row",
                 justifyContent: "space-between",
-                alignItems: "center",
+                alignItems: isMobile ? "stretch" : "center",
                 marginBottom: 12,
-                flexWrap: "wrap",
-                gap: 8,
+                gap: isMobile ? 10 : 12,
               }}
             >
-              <Space size={8}>
-                <GiftOutlined style={{ color: "#1677ff", fontSize: 16 }} />
-                <Text strong style={{ fontSize: 13, color: "#1e293b" }}>
-                  Chương trình Giảm giá riêng cho biến thể
-                </Text>
-              </Space>
-              <Form.Item name="discountType" initialValue="NONE" noStyle>
-                <Radio.Group
-                  size="small"
-                  optionType="button"
-                  buttonStyle="solid"
-                  onChange={(e) => {
-                    if (e.target.value === "NONE") {
-                      form.setFieldValue("discountValue", 0);
-                    }
-                  }}
-                >
-                  <Radio.Button value="NONE">Không giảm</Radio.Button>
-                  <Radio.Button value="PERCENT">
-                    <Space size={4}>
-                      <PercentageOutlined />
-                      <span>Giảm theo %</span>
-                    </Space>
-                  </Radio.Button>
-                  <Radio.Button value="DISCOUNT">
-                    <Space size={4}>
-                      <DollarOutlined />
-                      <span>Giảm tiền mặt</span>
-                    </Space>
-                  </Radio.Button>
-                </Radio.Group>
-              </Form.Item>
+              <div className="modal-card-title">
+                <GiftOutlined />
+                <span>Chương trình giảm giá riêng</span>
+              </div>
+              <div style={{ width: isMobile ? "100%" : "auto", minWidth: isMobile ? "100%" : 300 }}>
+                <Form.Item name="discountType" initialValue="NONE" noStyle>
+                  <Segmented
+                    block
+                    value={watchedDiscountType || "NONE"}
+                    onChange={(val) => {
+                      form.setFieldValue("discountType", val);
+                      if (val === "NONE") {
+                        form.setFieldValue("discountValue", 0);
+                      }
+                    }}
+                    options={[
+                      {
+                        value: "NONE",
+                        label: isMobile ? "Không" : "Không giảm",
+                      },
+                      {
+                        value: "PERCENT",
+                        label: "Giảm %",
+                        icon: <PercentageOutlined />,
+                      },
+                      {
+                        value: "DISCOUNT",
+                        label: "Giảm tiền",
+                        icon: <DollarOutlined />,
+                      },
+                    ]}
+                  />
+                </Form.Item>
+              </div>
             </div>
 
             {watchedDiscountType === "PERCENT" && (
-              <div>
-                <Row gutter={16} align="middle">
-                  <Col span={10}>
+              <div style={{ marginTop: 10 }}>
+                <Row gutter={[16, 10]} align="middle">
+                  <Col xs={24} sm={10}>
                     <Form.Item
                       name="discountValue"
                       label="Mức giảm theo phần trăm (%)"
-                      style={{ marginBottom: 6 }}
+                      style={{ marginBottom: 0 }}
                       rules={[{ required: true, message: "Nhập % giảm (1-100)" }]}
                     >
                       <InputNumber
                         min={1}
                         max={100}
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", borderRadius: 6, height: 36 }}
                         addonAfter="%"
                         placeholder="VD: 15, 20"
                       />
                     </Form.Item>
                   </Col>
-                  <Col span={14}>
-                    <div style={{ marginTop: 12 }}>
-                      <Space size={6} wrap>
-                        <Text type="secondary" style={{ fontSize: 12 }}>Gợi ý % nhanh:</Text>
+                  <Col xs={24} sm={14}>
+                    <div style={{ marginTop: isMobile ? 8 : 0 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Gợi ý nhanh:</Text>
                         {[5, 10, 15, 20, 25, 30, 50].map((pct) => (
                           <Tag
                             key={pct}
                             color={watchedDiscountValue === pct ? "blue" : undefined}
-                            style={{ cursor: "pointer", fontSize: 12, padding: "2px 8px", borderRadius: 4 }}
+                            style={{ cursor: "pointer", fontSize: 12, padding: "2px 8px", borderRadius: 4, margin: 0 }}
                             onClick={() => form.setFieldValue("discountValue", pct)}
                           >
                             -{pct}%
                           </Tag>
                         ))}
-                      </Space>
+                      </div>
                     </div>
                   </Col>
                 </Row>
@@ -1028,19 +1433,19 @@ const AddSubProductModal = (props: Props) => {
             )}
 
             {watchedDiscountType === "DISCOUNT" && (
-              <div>
-                <Row gutter={16} align="middle">
-                  <Col span={10}>
+              <div style={{ marginTop: 10 }}>
+                <Row gutter={[16, 10]} align="middle">
+                  <Col xs={24} sm={10}>
                     <Form.Item
                       name="discountValue"
                       label="Số tiền giảm trực tiếp (VND)"
-                      style={{ marginBottom: 6 }}
+                      style={{ marginBottom: 0 }}
                       rules={[{ required: true, message: "Nhập số tiền giảm" }]}
                     >
                       <InputNumber<number>
                         min={1000}
                         max={watchedPrice || undefined}
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", borderRadius: 6, height: 38 }}
                         addonAfter="₫"
                         placeholder="VD: 50,000"
                         formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -1048,21 +1453,21 @@ const AddSubProductModal = (props: Props) => {
                       />
                     </Form.Item>
                   </Col>
-                  <Col span={14}>
-                    <div style={{ marginTop: 12 }}>
-                      <Space size={6} wrap>
-                        <Text type="secondary" style={{ fontSize: 12 }}>Gợi ý số tiền nhanh:</Text>
+                  <Col xs={24} sm={14}>
+                    <div style={{ marginTop: isMobile ? 8 : 0 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Gợi ý nhanh:</Text>
                         {[20000, 50000, 100000, 200000, 500000].map((amt) => (
                           <Tag
                             key={amt}
                             color={watchedDiscountValue === amt ? "blue" : undefined}
-                            style={{ cursor: "pointer", fontSize: 12, padding: "2px 8px", borderRadius: 4 }}
+                            style={{ cursor: "pointer", fontSize: 12, padding: "2px 8px", borderRadius: 4, margin: 0 }}
                             onClick={() => form.setFieldValue("discountValue", amt)}
                           >
                             -{VND.format(amt)}
                           </Tag>
                         ))}
-                      </Space>
+                      </div>
                     </div>
                   </Col>
                 </Row>
@@ -1070,7 +1475,7 @@ const AddSubProductModal = (props: Props) => {
             )}
 
             {watchedDiscountType === "NONE" && (
-              <div style={{ color: "#64748b", fontSize: 12 }}>
+              <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>
                 Biến thể sẽ bán theo đúng giá niêm yết (Không áp dụng chương trình giảm giá riêng).
               </div>
             )}
@@ -1079,7 +1484,7 @@ const AddSubProductModal = (props: Props) => {
           {/* REAL-TIME PROFIT MARGIN & UNIT ECONOMICS KPI BAR */}
           <div
             style={{
-              padding: 14,
+              padding: isMobile ? "10px 12px" : "12px 14px",
               borderRadius: 8,
               backgroundColor: isLoss ? "#fff1f0" : isThinMargin ? "#fffbe6" : "#f6ffed",
               border: `1px solid ${isLoss ? "#ffa39e" : isThinMargin ? "#ffe58f" : "#b7eb8f"}`,
@@ -1093,7 +1498,7 @@ const AddSubProductModal = (props: Props) => {
                 icon={<CloseCircleOutlined />}
                 message="Cảnh báo: Bán dưới giá vốn"
                 description={`Giá bán (${VND.format(effectivePrice)}) thấp hơn giá vốn (${VND.format(watchedCost)}). Mỗi sản phẩm bán ra sẽ lỗ ${VND.format(Math.abs(profitPerUnit))}.`}
-                style={{ marginBottom: 12, borderRadius: 6 }}
+                style={{ marginBottom: 8, borderRadius: 6 }}
               />
             )}
             {isThinMargin && (
@@ -1103,7 +1508,7 @@ const AddSubProductModal = (props: Props) => {
                 icon={<WarningOutlined />}
                 message="Biên lợi nhuận mỏng (< 15%)"
                 description={`Biên lãi gộp hiện tại đạt ${marginPercent.toFixed(1)}%. Cân nhắc tối ưu giá vốn hoặc giá bán.`}
-                style={{ marginBottom: 12, borderRadius: 6 }}
+                style={{ marginBottom: 8, borderRadius: 6 }}
               />
             )}
             {isGoodMargin && (
@@ -1113,20 +1518,21 @@ const AddSubProductModal = (props: Props) => {
                 icon={<CheckCircleOutlined />}
                 message="Biên lợi nhuận an toàn"
                 description={`Biên lãi gộp đạt ${marginPercent.toFixed(1)}%, tạo ra ${VND.format(profitPerUnit)} lợi nhuận trên mỗi đơn vị.`}
-                style={{ marginBottom: 12, borderRadius: 6 }}
+                style={{ marginBottom: 8, borderRadius: 6 }}
               />
             )}
 
-            <Row gutter={[12, 12]} align="middle">
+            <Row gutter={[8, 8]} align="middle">
               <Col xs={12} sm={6}>
-                <div style={{ backgroundColor: "#ffffff", padding: "8px 12px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)" }}>
+                <div style={{ backgroundColor: "#ffffff", padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)", height: "100%" }}>
                   <Text type="secondary" style={{ fontSize: 11 }}>Giá niêm yết</Text>
                   <div
                     style={{
                       fontWeight: 600,
-                      fontSize: 14,
+                      fontSize: isMobile ? 13 : 14,
                       textDecoration: discountAmount > 0 ? "line-through" : undefined,
                       color: discountAmount > 0 ? "#94a3b8" : "#1e293b",
+                      marginTop: 1,
                     }}
                   >
                     {VND.format(watchedPrice)}
@@ -1134,25 +1540,25 @@ const AddSubProductModal = (props: Props) => {
                 </div>
               </Col>
               <Col xs={12} sm={6}>
-                <div style={{ backgroundColor: "#ffffff", padding: "8px 12px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)" }}>
+                <div style={{ backgroundColor: "#ffffff", padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)", height: "100%" }}>
                   <Text type="secondary" style={{ fontSize: 11 }}>Mức giảm</Text>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: discountAmount > 0 ? "#dc2626" : "#64748b" }}>
+                  <div style={{ fontWeight: 600, fontSize: isMobile ? 13 : 14, color: discountAmount > 0 ? "#dc2626" : "#64748b", marginTop: 1 }}>
                     {discountAmount > 0 ? `-${VND.format(discountAmount)} (${discountPercent.toFixed(0)}%)` : "0₫"}
                   </div>
                 </div>
               </Col>
               <Col xs={12} sm={6}>
-                <div style={{ backgroundColor: "#ffffff", padding: "8px 12px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)" }}>
+                <div style={{ backgroundColor: "#ffffff", padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)", height: "100%" }}>
                   <Text type="secondary" style={{ fontSize: 11 }}>Khách trả thực tế</Text>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "#1677ff" }}>
+                  <div style={{ fontWeight: 700, fontSize: isMobile ? 14 : 15, color: "#1677ff", marginTop: 1 }}>
                     {VND.format(effectivePrice)}
                   </div>
                 </div>
               </Col>
               <Col xs={12} sm={6}>
-                <div style={{ backgroundColor: "#ffffff", padding: "8px 12px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)" }}>
+                <div style={{ backgroundColor: "#ffffff", padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.06)", height: "100%" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text type="secondary" style={{ fontSize: 11 }}>Lãi gộp & Biên</Text>
+                    <Text type="secondary" style={{ fontSize: 11 }}>Lãi gộp</Text>
                     <Tag
                       color={isLoss ? "error" : isThinMargin ? "warning" : "success"}
                       style={{ fontSize: 10, fontWeight: 700, margin: 0, padding: "0 4px", borderRadius: 4 }}
@@ -1163,8 +1569,9 @@ const AddSubProductModal = (props: Props) => {
                   <div
                     style={{
                       fontWeight: 700,
-                      fontSize: 14,
+                      fontSize: isMobile ? 13 : 14,
                       color: profitPerUnit >= 0 ? "#16a34a" : "#dc2626",
+                      marginTop: 1,
                     }}
                   >
                     {profitPerUnit >= 0 ? `+${VND.format(profitPerUnit)}` : VND.format(profitPerUnit)}
@@ -1182,29 +1589,36 @@ const AddSubProductModal = (props: Props) => {
             <div
               style={{
                 display: "flex",
+                flexDirection: isMobile ? "column" : "row",
                 justifyContent: "space-between",
-                alignItems: "center",
+                alignItems: isMobile ? "flex-start" : "center",
+                width: "100%",
+                gap: isMobile ? 6 : 8,
               }}
             >
-              <Space size={8}>
-                <PictureOutlined style={{ color: "#1677ff", fontSize: 15 }} />
-                <Text strong style={{ fontSize: 13, color: "#1e293b" }}>
-                  Hình ảnh riêng cho biến thể
-                </Text>
-              </Space>
+              <div className="modal-card-title">
+                <PictureOutlined />
+                <span>Bộ sưu tập hình ảnh</span>
+              </div>
               <Button
                 type="link"
-                icon={<PictureOutlined />}
+                size="small"
                 onClick={() => setMediaPickerOpen(true)}
                 disabled={isLoading}
-                style={{ padding: 0, fontSize: 12 }}
+                style={{
+                  padding: 0,
+                  height: "auto",
+                  fontSize: 12,
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
               >
                 Chọn từ thư viện ảnh
               </Button>
             </div>
           }
           style={{
-            marginBottom: 8,
+            marginBottom: 0,
             borderRadius: 8,
             border: "1px solid #e2e8f0",
             boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
@@ -1212,9 +1626,9 @@ const AddSubProductModal = (props: Props) => {
           headStyle={{
             backgroundColor: "#f8fafc",
             borderBottom: "1px solid #f1f5f9",
-            padding: "8px 16px",
+            padding: isMobile ? "8px 12px" : "10px 16px",
           }}
-          bodyStyle={{ padding: "16px" }}
+          bodyStyle={{ padding: isMobile ? "12px 12px" : "16px 18px" }}
         >
           <Upload
             multiple
@@ -1229,6 +1643,7 @@ const AddSubProductModal = (props: Props) => {
               );
             }}
             disabled={isLoading}
+            style={{ width: "100%", marginBottom: 8 }}
           >
             <div>
               <PlusOutlined style={{ fontSize: 18, color: "#94a3b8" }} />
@@ -1236,11 +1651,11 @@ const AddSubProductModal = (props: Props) => {
             </div>
           </Upload>
 
-          <div style={{ marginTop: 12 }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f1f5f9" }}>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
               Hoặc dán trực tiếp đường link ảnh (URL):
             </Text>
-            <Space.Compact style={{ width: "100%", marginTop: 6 }}>
+            <div style={{ display: "flex", gap: 10, flexDirection: isMobile ? "column" : "row" }}>
               <Input
                 prefix={<LinkOutlined style={{ color: "#94a3b8" }} />}
                 placeholder="https://example.com/hinh-anh-san-pham.jpg"
@@ -1252,15 +1667,26 @@ const AddSubProductModal = (props: Props) => {
                 }}
                 allowClear
                 disabled={isLoading}
+                style={{ flex: 1, borderRadius: 6, height: 38 }}
               />
               <Button
                 type="primary"
+                icon={<PlusOutlined />}
                 onClick={handleAddImageUrlToSubProduct}
                 disabled={isLoading}
+                style={{
+                  borderRadius: 6,
+                  height: 38,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  width: isMobile ? "100%" : "auto",
+                }}
               >
                 Nạp link ảnh
               </Button>
-            </Space.Compact>
+            </div>
           </div>
         </Card>
       </Form>

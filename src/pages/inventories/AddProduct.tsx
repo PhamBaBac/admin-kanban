@@ -141,14 +141,28 @@ const AddProduct = () => {
     form.setFieldsValue({
       title: product.title || "",
       description: product.description || "",
-      categories: product.categories?.map((category: any) => category.id) || [],
-      supplier: product.supplierId || null,
+      categories:
+        product.categories?.map((category: any) =>
+          typeof category === "object" ? category?.id : category
+        ) || [],
+      supplier:
+        product.supplierId ||
+        ((product as any)?.supplier?.id ?? (product as any)?.supplier) ||
+        null,
     });
     setcontent(product.content || "");
+    if (editorRef.current) {
+      try {
+        editorRef.current.setContent(product.content || "");
+      } catch {
+        // TinyMCE might not be initialized yet
+      }
+    }
     setFileList(
       product.images?.map((image: any, index: number) => ({
-        url: image,
+        url: typeof image === "string" ? image : image?.url || "",
         uid: index,
+        status: "done",
       })) || []
     );
   };
@@ -175,15 +189,28 @@ const AddProduct = () => {
           title: item.title || "",
           description: item.description || "",
           categories:
-            item.categories?.map((category: any) => category.id) || [],
-          supplier: item.supplierId || item.supplier || null,
+            item.categories?.map((category: any) =>
+              typeof category === "object" ? category?.id : category
+            ) || [],
+          supplier:
+            item.supplierId ||
+            ((item as any)?.supplier?.id ?? (item as any)?.supplier) ||
+            null,
         });
         setcontent(item.content || "");
+        if (editorRef.current) {
+          try {
+            editorRef.current.setContent(item.content || "");
+          } catch {
+            // TinyMCE might not be initialized yet
+          }
+        }
         if (item.images && item.images.length > 0) {
           setFileList(
             item.images.map((image: any, index: number) => ({
-              url: image,
+              url: typeof image === "string" ? image : image?.url || "",
               uid: index,
+              status: "done",
             }))
           );
         } else {
@@ -462,6 +489,7 @@ const AddProduct = () => {
     {
       title: "Phân loại",
       key: "attributes",
+      width: 220,
       render: (_: any, item: SubProductModel) => {
         const isSystemAttr = (k: string) => {
           const lower = k.trim().toLowerCase();
@@ -484,7 +512,7 @@ const AddProduct = () => {
 
         if (validEntries.length > 0) {
           return (
-            <Space wrap size={[4, 4]}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, width: "100%", maxWidth: "100%" }}>
               {validEntries.map(([key, val]) => {
                 const isColor =
                   key.toLowerCase() === "color" || key.toLowerCase() === "màu sắc";
@@ -496,20 +524,41 @@ const AddProduct = () => {
                     style={{
                       border: isHexColor ? "1px solid #bbb" : undefined,
                       fontSize: 11,
+                      maxWidth: "100%",
+                      whiteSpace: "normal",
+                      wordBreak: "break-word",
+                      height: "auto",
+                      lineHeight: 1.4,
+                      padding: "2px 8px",
+                      margin: 0,
                     }}
                   >
                     {key}: {val}
                   </Tag>
                 );
               })}
-            </Space>
+            </div>
           );
         }
         return (
-          <Space wrap size={[4, 4]}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", width: "100%", maxWidth: "100%" }}>
             {item.color && <ColorBadge color={item.color} size={14} />}
-            {item.size && <Tag style={{ margin: 0 }}>Size {item.size}</Tag>}
-          </Space>
+            {item.size && (
+              <Tag
+                style={{
+                  margin: 0,
+                  maxWidth: "100%",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  height: "auto",
+                  lineHeight: 1.4,
+                  padding: "2px 8px",
+                }}
+              >
+                Size {item.size}
+              </Tag>
+            )}
+          </div>
         );
       },
     },
@@ -665,8 +714,8 @@ const AddProduct = () => {
       <Spin size="large" />
     </div>
   ) : (
-    <div>
-      <div className="container">
+    <div style={{ padding: "8px 0" }}>
+      <div className="container-fluid px-2 px-md-3">
         <Form
           disabled={isCreating}
           size="large"
@@ -674,7 +723,7 @@ const AddProduct = () => {
           onFinish={handleAddNewProduct}
           layout="vertical"
         >
-          <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
             <Title level={3} style={{ margin: 0 }}>
               {id ? "Cập nhật sản phẩm" : "Thêm mới sản phẩm"}
             </Title>
@@ -697,8 +746,8 @@ const AddProduct = () => {
             </Space>
           </div>
 
-          <div className="row">
-            <div className="col-8">
+          <div className="row g-3">
+            <div className="col-12 col-lg-8">
               <Form.Item
                 name={"title"}
                 label={<Text strong>Tên sản phẩm</Text>}
@@ -841,6 +890,7 @@ const AddProduct = () => {
                     loading={loadingSubProducts}
                     pagination={false}
                     size="small"
+                    scroll={{ x: 750 }}
                     locale={{
                       emptyText: (
                         <Empty
@@ -866,7 +916,7 @@ const AddProduct = () => {
               )}
             </div>
 
-            <div className="col-4">
+            <div className="col-12 col-lg-4">
               <Card size="small" title="Danh mục ngành hàng">
                 <Form.Item name={"categories"} initialValue={[]}>
                   <TreeSelect

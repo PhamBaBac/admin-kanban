@@ -211,6 +211,7 @@ const TableComponent = (props: Props) => {
       <Table
         pagination={{
           showSizeChanger: true,
+          responsive: true,
           onShowSizeChange: (current, size) => {
             setPageInfo({ ...pageInfo, pageSize: size });
           },
@@ -225,7 +226,7 @@ const TableComponent = (props: Props) => {
           showQuickJumper: true,
         }}
         scroll={{
-          x: 1600,
+          x: 1400,
           y: scrollHeight ? scrollHeight : "calc(100vh - 300px)",
         }}
         loading={loading}
@@ -241,14 +242,16 @@ const TableComponent = (props: Props) => {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
             }}
           >
             <Title level={5} style={{ margin: 0, fontWeight: 700 }}>
               {forms.title === "Suppliers" || forms.title === "Supplier" ? "Danh sách nhà cung cấp" : forms.title}
             </Title>
-            <Space>
+            <Space wrap>
               <Button type="primary" onClick={onAddNew}>
-                Thêm nhà cung cấp
+                {forms.title === "Suppliers" || forms.title === "Supplier" ? "Thêm nhà cung cấp" : "Thêm mới"}
               </Button>
               <Button icon={<Sort size={18} color={colors.gray600} />}>
                 Bộ lọc
