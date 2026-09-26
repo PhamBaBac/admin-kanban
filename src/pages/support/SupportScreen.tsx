@@ -76,6 +76,11 @@ const SupportScreen: React.FC = () => {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedConvIdRef = useRef<string | null>(null);
   const processedMsgIdsRef = useRef<Set<string>>(new Set());
+  const currentUserIdRef = useRef<string>(currentUserId);
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   // Luôn đồng bộ selectedConvId vào ref để các socket callback không bị dính stale closure
   useEffect(() => {
@@ -221,11 +226,23 @@ const SupportScreen: React.FC = () => {
     socket.on("admin_channel_message", handleIncomingMessage);
 
     // Lắng nghe trạng thái đang gõ phím
-    socket.on("user_typing", (data: { conversationId: string; isTyping: boolean }) => {
-      if (data.conversationId === selectedConvIdRef.current) {
-        setIsCustomerTyping(data.isTyping);
+    socket.on(
+      "user_typing",
+      (data: {
+        conversationId: string;
+        isTyping: boolean;
+        senderId?: string;
+        role?: string;
+      }) => {
+        // Bỏ qua nếu sự kiện do chính admin này gửi đi hoặc người gửi là ADMIN / MANAGER
+        if (data.senderId && data.senderId === currentUserIdRef.current) return;
+        if (data.role && (data.role === "ADMIN" || data.role === "MANAGER")) return;
+
+        if (data.conversationId === selectedConvIdRef.current) {
+          setIsCustomerTyping(data.isTyping);
+        }
       }
-    });
+    );
 
     return () => {
       if (socket) {
@@ -340,6 +357,8 @@ const SupportScreen: React.FC = () => {
 
     socketRef.current.emit("typing", {
       conversationId: selectedConvId,
+      senderId: currentUserId,
+      role: currentUserRole,
       username: currentUsername,
       isTyping: true,
     });
@@ -348,6 +367,8 @@ const SupportScreen: React.FC = () => {
     typingTimeoutRef.current = setTimeout(() => {
       socketRef.current?.emit("typing", {
         conversationId: selectedConvId,
+        senderId: currentUserId,
+        role: currentUserRole,
         username: currentUsername,
         isTyping: false,
       });
@@ -420,6 +441,18 @@ const SupportScreen: React.FC = () => {
         overflow: "hidden",
       }}
     >
+      <style>{`
+        @keyframes adminTypingBlink {
+          0%, 80%, 100% {
+            transform: scale(0.6);
+            opacity: 0.4;
+          }
+          40% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
       {/* Container 2 cột */}
       <div
         style={{
@@ -736,13 +769,7 @@ const SupportScreen: React.FC = () => {
                       </Tag>
                     </div>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      {isCustomerTyping ? (
-                        <span style={{ color: colors.primary500, fontWeight: 500 }}>
-                          Khách hàng đang soạn tin nhắn...
-                        </span>
-                      ) : (
-                        "Khách mua hàng"
-                      )}
+                      Khách mua hàng
                     </Text>
                   </div>
                 </div>
@@ -929,21 +956,61 @@ const SupportScreen: React.FC = () => {
 
                 {/* Khách hàng đang gõ tin */}
                 {isCustomerTyping && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Avatar size={28} style={{ backgroundColor: "#94a3b8", fontSize: 12 }}>
-                      ...
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginTop: 4 }}>
+                    <Avatar
+                      size={32}
+                      src={activeConversation?.customerAvatar}
+                      style={{
+                        backgroundColor: "#64748b",
+                        color: "#fff",
+                        flexShrink: 0,
+                        marginBottom: 2,
+                      }}
+                    >
+                      {(activeConversation?.customerName || "K")[0].toUpperCase()}
                     </Avatar>
                     <div
                       style={{
                         padding: "8px 14px",
-                        borderRadius: 14,
+                        borderRadius: "16px 16px 16px 4px",
                         background: "#e2e8f0",
-                        color: "#475569",
-                        fontSize: 12,
-                        fontStyle: "italic",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        width: "fit-content",
+                        minHeight: 32,
                       }}
                     >
-                      Khách hàng đang soạn tin...
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          backgroundColor: "#64748b",
+                          display: "inline-block",
+                          animation: "adminTypingBlink 1.4s infinite both",
+                        }}
+                      />
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          backgroundColor: "#64748b",
+                          display: "inline-block",
+                          animation: "adminTypingBlink 1.4s infinite both 0.2s",
+                        }}
+                      />
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          backgroundColor: "#64748b",
+                          display: "inline-block",
+                          animation: "adminTypingBlink 1.4s infinite both 0.4s",
+                        }}
+                      />
                     </div>
                   </div>
                 )}
