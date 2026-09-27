@@ -34,26 +34,47 @@ export interface NotificationPageResponse {
   data: AdminNotification[];
 }
 
+export interface NotificationStatsResponse {
+  total: number;
+  unread: number;
+  orders: number;
+  stock: number;
+}
+
 export interface GetNotificationsParams {
   page?: number;
   size?: number;
   type?: NotificationType;
+  isRead?: boolean;
   unreadOnly?: boolean;
+  search?: string;
 }
 
 export const notificationService = {
   /**
-   * Lấy danh sách thông báo phân trang và lọc theo trạng thái/loại
+   * Lấy danh sách thông báo phân trang và lọc theo trạng thái/loại/từ khóa từ Backend API
    */
   getNotifications: async (
     params?: GetNotificationsParams
   ): Promise<NotificationPageResponse> => {
-    const response = await handleAPI("/admin/notifications", {
+    const queryParams: Record<string, any> = {
       page: params?.page ?? 1,
       size: params?.size ?? 10,
-      type: params?.type,
-      unreadOnly: params?.unreadOnly ?? false,
-    });
+    };
+    if (params?.type) {
+      queryParams.type = params.type;
+    }
+    if (typeof params?.isRead === "boolean") {
+      queryParams.isRead = params.isRead;
+    }
+    if (typeof params?.unreadOnly === "boolean") {
+      queryParams.unreadOnly = params.unreadOnly;
+    }
+    if (params?.search && params.search.trim()) {
+      queryParams.search = params.search.trim();
+    }
+
+    const response = await handleAPI("/admin/notifications", queryParams);
     return response.data || {
       currentPage: 1,
       totalPages: 1,
@@ -61,6 +82,21 @@ export const notificationService = {
       totalElements: 0,
       data: [],
     };
+  },
+
+  /**
+   * Lấy số lượng thống kê thông báo tổng quan từ database
+   */
+  getStats: async (): Promise<NotificationStatsResponse> => {
+    const response = await handleAPI("/admin/notifications/stats");
+    return (
+      response.data || {
+        total: 0,
+        unread: 0,
+        orders: 0,
+        stock: 0,
+      }
+    );
   },
 
   /**

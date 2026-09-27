@@ -30,6 +30,7 @@ import { useSuppliers } from "../../hooks/useSuppliers";
 import { replaceName } from "../../utils/replaceName";
 import { Add, Edit2, Trash } from "iconsax-react";
 import {
+  AppstoreOutlined,
   CopyOutlined,
   PictureOutlined,
   PlusOutlined,
@@ -562,17 +563,21 @@ const AddProduct = () => {
       key: "cost",
       title: "Giá vốn",
       dataIndex: "cost",
-      render: (cost: number) => (cost ? VND.format(cost) : "—"),
+      minWidth: 110,
+      render: (cost: number) => (
+        <span style={{ whiteSpace: "nowrap" }}>{cost ? VND.format(cost) : "—"}</span>
+      ),
       align: "right" as const,
     },
     {
       key: "price",
       title: "Giá gốc",
       dataIndex: "price",
+      minWidth: 110,
       render: (price: number, item: SubProductModel) => {
         const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
         return (
-          <Text style={{ textDecoration: hasDiscount ? "line-through" : undefined, color: hasDiscount ? "#8c8c8c" : undefined }}>
+          <Text style={{ textDecoration: hasDiscount ? "line-through" : undefined, color: hasDiscount ? "#8c8c8c" : undefined, whiteSpace: "nowrap" }}>
             {VND.format(price)}
           </Text>
         );
@@ -582,14 +587,15 @@ const AddProduct = () => {
     {
       key: "discount",
       title: "Khuyến mãi",
+      minWidth: 110,
       render: (_: any, item: SubProductModel) => {
         const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
         if (!hasDiscount || item.discount === undefined) return <Text type="secondary">—</Text>;
         const discountAmount = item.price - item.discount;
         const discountPercent = Math.round((discountAmount / item.price) * 100);
         return (
-          <Space direction="vertical" size={0} align="end">
-            <Text style={{ color: "#cf1322", fontWeight: 500, fontSize: 11 }}>
+          <Space direction="vertical" size={0} align="end" style={{ width: "100%" }}>
+            <Text style={{ color: "#cf1322", fontWeight: 500, fontSize: 11, whiteSpace: "nowrap" }}>
               -{VND.format(discountAmount)}
             </Text>
             <Tag color="red" style={{ margin: 0, fontSize: 10 }}>
@@ -603,11 +609,12 @@ const AddProduct = () => {
     {
       key: "salePrice",
       title: "Giá bán thực tế",
+      minWidth: 120,
       render: (_: any, item: SubProductModel) => {
         const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
         const actualPrice = hasDiscount && item.discount !== undefined ? item.discount : item.price;
         return (
-          <Text strong style={{ color: "#1677ff", fontSize: 12 }}>
+          <Text strong style={{ color: "#1677ff", fontSize: 12, whiteSpace: "nowrap" }}>
             {VND.format(actualPrice)}
           </Text>
         );
@@ -617,6 +624,7 @@ const AddProduct = () => {
     {
       key: "profit",
       title: "Lãi gộp ước tính",
+      minWidth: 120,
       render: (_: any, item: SubProductModel) => {
         const hasDiscount = typeof item.discount === "number" && item.discount > 0 && item.discount < item.price;
         const actualPrice = hasDiscount && item.discount !== undefined ? item.discount : item.price;
@@ -625,8 +633,8 @@ const AddProduct = () => {
         const margin = actualPrice > 0 ? (profit / actualPrice) * 100 : 0;
         if (!item.cost) return <Text type="secondary">—</Text>;
         return (
-          <Space direction="vertical" size={0} align="end">
-            <Text style={{ fontWeight: 600, color: profit >= 0 ? "#52c41a" : "#cf1322", fontSize: 12 }}>
+          <Space direction="vertical" size={0} align="end" style={{ width: "100%" }}>
+            <Text style={{ fontWeight: 600, color: profit >= 0 ? "#52c41a" : "#cf1322", fontSize: 12, whiteSpace: "nowrap" }}>
               {profit >= 0 ? `+${VND.format(profit)}` : VND.format(profit)}
             </Text>
             <Tag color={profit < 0 ? "error" : margin < 15 ? "warning" : "success"} style={{ margin: 0, fontSize: 10 }}>
@@ -641,7 +649,12 @@ const AddProduct = () => {
       key: "stock",
       title: "Tồn kho",
       dataIndex: "stock",
-      render: (stock: number) => stock?.toLocaleString() ?? 0,
+      minWidth: 80,
+      render: (stock: number) => (
+        <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+          {stock?.toLocaleString() ?? 0}
+        </span>
+      ),
       align: "right" as const,
     },
     {
@@ -856,60 +869,6 @@ const AddProduct = () => {
                 }}
               />
 
-              {/* CARD QUẢN LÝ BIẾN THỂ TRỰC TIẾP KHI Ở CHẾ ĐỘ SỬA SẢN PHẨM */}
-              {id && (
-                <Card
-                  title={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Text strong>Danh sách biến thể phân loại (SKU & Tồn kho)</Text>
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        size="small"
-                        onClick={() => {
-                          setSelectedSubProduct(undefined);
-                          setCloneVariant(undefined);
-                          setIsVisibleAddSubProduct(true);
-                        }}
-                      >
-                        Thêm biến thể mới
-                      </Button>
-                    </div>
-                  }
-                  style={{ marginTop: 20 }}
-                >
-                  <Table
-                    bordered
-                    columns={subProductColumns}
-                    dataSource={subProducts}
-                    rowKey="id"
-                    loading={loadingSubProducts}
-                    pagination={false}
-                    size="small"
-                    scroll={{ x: 750 }}
-                    locale={{
-                      emptyText: (
-                        <Empty
-                          description="Sản phẩm này chưa có biến thể phân loại nào"
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        >
-                          <Button
-                            type="dashed"
-                            icon={<PlusOutlined />}
-                            onClick={() => {
-                              setSelectedSubProduct(undefined);
-                              setCloneVariant(undefined);
-                              setIsVisibleAddSubProduct(true);
-                            }}
-                          >
-                            Tạo biến thể đầu tiên
-                          </Button>
-                        </Empty>
-                      ),
-                    }}
-                  />
-                </Card>
-              )}
             </div>
 
             <div className="col-12 col-lg-4">
@@ -1038,6 +997,71 @@ const AddProduct = () => {
                 </div>
               </Card>
             </div>
+
+            {/* CARD QUẢN LÝ BIẾN THỂ TRỰC TIẾP KHI Ở CHẾ ĐỘ SỬA SẢN PHẨM - KÉO RỘNG TOÀN BỘ 100% */}
+            {id && (
+              <div className="col-12 mt-2">
+                <Card
+                  title={
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Space size={8}>
+                        <AppstoreOutlined style={{ color: "#1677ff", fontSize: 18 }} />
+                        <Text strong style={{ fontSize: 15 }}>
+                          Danh sách biến thể phân loại (SKU & Tồn kho)
+                        </Text>
+                        <Tag color="blue" style={{ borderRadius: 12, fontWeight: 600 }}>
+                          {subProducts.length} biến thể
+                        </Tag>
+                      </Space>
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                          setSelectedSubProduct(undefined);
+                          setCloneVariant(undefined);
+                          setIsVisibleAddSubProduct(true);
+                        }}
+                        style={{ borderRadius: 6, fontWeight: 500 }}
+                      >
+                        Thêm biến thể mới
+                      </Button>
+                    </div>
+                  }
+                  style={{ borderRadius: 8, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+                >
+                  <Table
+                    bordered
+                    columns={subProductColumns}
+                    dataSource={subProducts}
+                    rowKey="id"
+                    loading={loadingSubProducts}
+                    pagination={false}
+                    size="middle"
+                    scroll={{ x: "max-content" }}
+                    locale={{
+                      emptyText: (
+                        <Empty
+                          description="Sản phẩm này chưa có biến thể phân loại nào"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        >
+                          <Button
+                            type="dashed"
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                              setSelectedSubProduct(undefined);
+                              setCloneVariant(undefined);
+                              setIsVisibleAddSubProduct(true);
+                            }}
+                          >
+                            Tạo biến thể đầu tiên
+                          </Button>
+                        </Empty>
+                      ),
+                    }}
+                  />
+                </Card>
+              </div>
+            )}
           </div>
         </Form>
       </div>

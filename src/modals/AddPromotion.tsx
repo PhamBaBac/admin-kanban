@@ -244,21 +244,53 @@ const AddPromotion = (props: Props) => {
           </div>
         </div>
       }
+      wrapClassName="add-promotion-modal"
       open={visible}
       destroyOnClose
+      centered
       onCancel={handleClose}
       okButtonProps={{
         loading: isLoading || promotionLoading,
+        style: { height: 38, borderRadius: 6, fontWeight: 500, minWidth: 110 },
       }}
       cancelButtonProps={{
         loading: isLoading || promotionLoading,
+        style: { height: 38, borderRadius: 6, minWidth: 90 },
       }}
       okText={promotion ? "Lưu thay đổi" : "Tạo khuyến mãi"}
       cancelText="Hủy bỏ"
       onOk={() => form.submit()}
-      style={{ top: 20 }}
+      style={{
+        maxWidth: "calc(100vw - 32px)",
+      }}
+      bodyStyle={{
+        maxHeight: "calc(82vh - 110px)",
+        overflowY: "auto",
+        overflowX: "hidden",
+        paddingRight: 8,
+      }}
+      styles={{
+        body: {
+          maxHeight: "calc(82vh - 110px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          paddingRight: 8,
+        },
+      }}
     >
       <div style={{ marginTop: 12 }}>
+        <style>{`
+          .add-promotion-modal .ant-modal-body::-webkit-scrollbar {
+            width: 6px;
+          }
+          .add-promotion-modal .ant-modal-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+          }
+          .add-promotion-modal .ant-modal-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+          }
+        `}</style>
         <Card
           size="small"
           title={

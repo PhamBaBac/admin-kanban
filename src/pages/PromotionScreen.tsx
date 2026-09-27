@@ -138,7 +138,7 @@ const PromotionScreen = () => {
           onClick={() => setIsVisibleModalAddPromotion(true)}
           style={{ borderRadius: 6, fontWeight: 500 }}
         >
-          + Thêm khuyến mãi mới
+          Thêm khuyến mãi mới
         </Button>
       </div>
 

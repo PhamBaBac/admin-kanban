@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Button,
   Card,
@@ -64,43 +64,52 @@ const NotificationScreen: React.FC = () => {
   const [selectedType, setSelectedType] = useState<NotificationType | "ALL">("ALL");
   const [filterReadStatus, setFilterReadStatus] = useState<"ALL" | "UNREAD" | "READ">("ALL");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [overviewTotal, setOverviewTotal] = useState<number>(0);
   const [overviewOrders, setOverviewOrders] = useState<number>(0);
   const [overviewStock, setOverviewStock] = useState<number>(0);
 
-  const fetchUnreadCount = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchStats = async () => {
     try {
-      const count = await notificationService.getUnreadCount();
-      setUnreadCount(count);
+      const stats = await notificationService.getStats();
+      setOverviewTotal(stats.total);
+      setUnreadCount(stats.unread);
+      setOverviewOrders(stats.orders);
+      setOverviewStock(stats.stock);
     } catch (err) {
-      console.error("Lỗi khi lấy số lượng chưa đọc:", err);
+      console.error("Lỗi khi lấy thống kê thông báo:", err);
     }
   };
 
   const fetchNotifications = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
+      const isReadParam =
+        filterReadStatus === "ALL"
+          ? undefined
+          : filterReadStatus === "READ"
+          ? true
+          : false;
+
       const res = await notificationService.getNotifications({
         page,
         size: pageSize,
         type: selectedType === "ALL" ? undefined : selectedType,
-        unreadOnly: filterReadStatus === "UNREAD",
+        isRead: isReadParam,
+        search: debouncedSearch.trim() || undefined,
       });
 
       setNotifications(res.data || []);
       setTotalElements(res.totalElements || 0);
-
-      if (selectedType === "ALL" && filterReadStatus === "ALL") {
-        setOverviewTotal(res.totalElements || 0);
-        const items = res.data || [];
-        setOverviewOrders(
-          items.filter((n) => n.type === "ORDER_NEW" || n.type === "ORDER_CANCEL").length
-        );
-        setOverviewStock(
-          items.filter((n) => n.type === "LOW_STOCK" || n.type === "OUT_OF_STOCK").length
-        );
-      }
     } catch (err) {
       console.error("Lỗi khi tải thông báo:", err);
       message.error("Không thể tải danh sách thông báo");
@@ -110,11 +119,11 @@ const NotificationScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUnreadCount();
+    fetchStats();
 
     const handleNewNoti = () => {
       fetchNotifications(true);
-      fetchUnreadCount();
+      fetchStats();
     };
 
     const handleDeletedEvent = (e: any) => {
@@ -123,17 +132,18 @@ const NotificationScreen: React.FC = () => {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
         setTotalElements((t) => Math.max(0, t - 1));
       }
-      fetchUnreadCount();
+      fetchStats();
     };
 
     const handleClearReadEvent = () => {
-      setNotifications((prev) => prev.filter((n) => !n.isRead));
-      fetchUnreadCount();
+      fetchNotifications(true);
+      fetchStats();
     };
 
     const handleReadAllEvent = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      fetchStats();
     };
 
     const handleReadOneEvent = (e: any) => {
@@ -143,7 +153,7 @@ const NotificationScreen: React.FC = () => {
           prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
         );
       }
-      fetchUnreadCount();
+      fetchStats();
     };
 
     window.addEventListener("new_admin_notification", handleNewNoti);
@@ -163,7 +173,7 @@ const NotificationScreen: React.FC = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, [page, pageSize, selectedType, filterReadStatus]);
+  }, [page, pageSize, selectedType, filterReadStatus, debouncedSearch]);
 
   const handleMarkAsRead = async (item: AdminNotification) => {
     if (item.isRead) return;
@@ -176,6 +186,7 @@ const NotificationScreen: React.FC = () => {
       window.dispatchEvent(
         new CustomEvent("admin_notification_read", { detail: { id: item.id } })
       );
+      fetchStats();
       message.success("Đã đánh dấu là đã đọc");
     } catch (err) {
       message.error("Lỗi khi đánh dấu đã đọc");
@@ -188,6 +199,7 @@ const NotificationScreen: React.FC = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       window.dispatchEvent(new CustomEvent("admin_notification_read_all"));
+      fetchStats();
       message.success("Đã đánh dấu tất cả thông báo là đã đọc");
     } catch (err) {
       message.error("Không thể đánh dấu đọc tất cả");
@@ -199,12 +211,10 @@ const NotificationScreen: React.FC = () => {
       await notificationService.deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       setTotalElements((t) => Math.max(0, t - 1));
-      if (!isRead) {
-        setUnreadCount((c) => Math.max(0, c - 1));
-      }
       window.dispatchEvent(
         new CustomEvent("admin_notification_deleted", { detail: { id } })
       );
+      fetchStats();
       message.success("Đã xóa thông báo");
     } catch (err) {
       message.error("Lỗi khi xóa thông báo");
@@ -214,10 +224,7 @@ const NotificationScreen: React.FC = () => {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      await Promise.all([
-        fetchNotifications(true),
-        fetchUnreadCount(),
-      ]);
+      await Promise.all([fetchNotifications(true), fetchStats()]);
       message.success("Đã làm mới danh sách");
     } catch (err) {
       message.error("Lỗi khi làm mới thông báo");
@@ -230,10 +237,9 @@ const NotificationScreen: React.FC = () => {
     try {
       const deleted = await notificationService.clearAllRead();
       message.success(`Đã xóa ${deleted} thông báo đã đọc`);
-      setNotifications((prev) => prev.filter((n) => !n.isRead));
-      setTotalElements((prev) => Math.max(0, prev - deleted));
-      fetchUnreadCount();
       window.dispatchEvent(new CustomEvent("admin_notification_clear_read"));
+      fetchNotifications(true);
+      fetchStats();
     } catch (err) {
       message.error("Lỗi khi dọn dẹp thông báo");
     }
@@ -282,37 +288,6 @@ const NotificationScreen: React.FC = () => {
     }
   };
 
-  const filteredNotifications = useMemo(() => {
-    let list = notifications;
-
-    if (filterReadStatus === "READ") {
-      list = list.filter((n) => n.isRead);
-    }
-
-    if (!searchTerm.trim()) return list;
-
-    const term = searchTerm.toLowerCase();
-    return list.filter(
-      (n) =>
-        n.title.toLowerCase().includes(term) ||
-        n.content.toLowerCase().includes(term)
-    );
-  }, [notifications, searchTerm, filterReadStatus]);
-
-  const orderCount = useMemo(
-    () =>
-      notifications.filter(
-        (n) => n.type === "ORDER_NEW" || n.type === "ORDER_CANCEL"
-      ).length,
-    [notifications]
-  );
-  const stockCount = useMemo(
-    () =>
-      notifications.filter(
-        (n) => n.type === "LOW_STOCK" || n.type === "OUT_OF_STOCK"
-      ).length,
-    [notifications]
-  );
 
   return (
     <div className="p-3 p-md-4" style={{ minHeight: "100%", backgroundColor: "#f8fafc" }}>
@@ -395,7 +370,7 @@ const NotificationScreen: React.FC = () => {
               <div>
                 <Text style={{ fontSize: 12, color: "#64748b" }}>Tổng thông báo</Text>
                 <div style={{ fontSize: 24, fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
-                  {overviewTotal > 0 ? overviewTotal : totalElements}
+                  {overviewTotal}
                 </div>
               </div>
               <div
@@ -463,7 +438,7 @@ const NotificationScreen: React.FC = () => {
               <div>
                 <Text style={{ fontSize: 12, color: "#64748b" }}>Đơn hàng</Text>
                 <div style={{ fontSize: 24, fontWeight: 700, color: "#059669", marginTop: 4 }}>
-                  {overviewOrders > 0 ? overviewOrders : orderCount}
+                  {overviewOrders}
                 </div>
               </div>
               <div
@@ -497,7 +472,7 @@ const NotificationScreen: React.FC = () => {
               <div>
                 <Text style={{ fontSize: 12, color: "#64748b" }}>Cảnh báo kho</Text>
                 <div style={{ fontSize: 24, fontWeight: 700, color: "#d97706", marginTop: 4 }}>
-                  {overviewStock > 0 ? overviewStock : stockCount}
+                  {overviewStock}
                 </div>
               </div>
               <div
@@ -688,7 +663,7 @@ const NotificationScreen: React.FC = () => {
         {/* Notifications List */}
         <Spin spinning={loading} size="default" wrapperClassName="notification-spin">
           <div style={{ minHeight: 480, display: "flex", flexDirection: "column" }}>
-            {filteredNotifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <div
                 className="d-flex flex-column align-items-center justify-content-center"
                 style={{ flex: 1, minHeight: 480, padding: "40px 0" }}
@@ -698,7 +673,7 @@ const NotificationScreen: React.FC = () => {
                   description={
                     loading
                       ? "Đang tải dữ liệu..."
-                      : searchTerm
+                      : debouncedSearch
                       ? "Không tìm thấy thông báo phù hợp"
                       : filterReadStatus === "UNREAD"
                       ? "Không có thông báo chưa đọc nào"
@@ -710,7 +685,7 @@ const NotificationScreen: React.FC = () => {
               </div>
             ) : (
               <div className="d-flex flex-column gap-2" style={{ flex: 1 }}>
-              {filteredNotifications.map((item) => {
+              {notifications.map((item) => {
               const config = getNotificationIcon(item.type);
               return (
                 <div
