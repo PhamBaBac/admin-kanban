@@ -142,6 +142,20 @@ axiosClient.interceptors.response.use(
       }
     }
 
+    const isServerErrorOrOffline =
+      !error.response ||
+      (error.response?.status >= 500 && error.response?.status <= 599);
+
+    if (
+      isServerErrorOrOffline &&
+      !isLoginRequest &&
+      !isRefreshRequest &&
+      typeof window !== "undefined" &&
+      !window.location.pathname.includes("/500")
+    ) {
+      window.location.href = "/500";
+    }
+
     return Promise.reject(error.response?.data || error.message);
   }
 );

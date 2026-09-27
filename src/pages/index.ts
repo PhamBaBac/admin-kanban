@@ -14,6 +14,7 @@ import FinanceScreen from "./finance";
 import AccountsScreen from "./accounts/AccountsScreen";
 import SupportScreen from "./support/SupportScreen";
 import NotificationScreen from "./NotificationScreen";
+import ServerErrorScreen from "./ServerErrorScreen";
 
 export {
   Login,
@@ -32,4 +33,5 @@ export {
   AccountsScreen,
   SupportScreen,
   NotificationScreen,
+  ServerErrorScreen,
 };

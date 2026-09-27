@@ -31,6 +31,7 @@ import {
   AccountsScreen,
   SupportScreen,
   NotificationScreen,
+  ServerErrorScreen,
 } from "../pages";
 import AdminRoute from "./AdminRoute";
 
@@ -141,7 +142,7 @@ const MainRouter = () => {
               }
             />
             <Route path="/notifications" element={<NotificationScreen />} />
-
+            <Route path="/500" element={<ServerErrorScreen />} />
 
             {/* Redirect auth routes if already authenticated */}
             <Route path="/login" element={<Navigate to="/" replace />} />
