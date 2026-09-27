@@ -20,6 +20,7 @@ import {
 } from "../services/notificationService";
 import NotificationPopover, { getNotificationIcon } from "./NotificationPopover";
 import { playNotificationSound } from "../utils/notificationSound";
+import { subscribeNotificationSync } from "../utils/notificationBroadcast";
 
 const { Text } = Typography;
 
@@ -86,11 +87,32 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
     window.addEventListener("admin_notification_read_all", handleSync);
     window.addEventListener("admin_notification_read", handleSync);
 
+    const unsubscribeBroadcast = subscribeNotificationSync((msg) => {
+      if (msg.type === "READ") {
+        setNotifyCount((prev) => Math.max(0, prev - 1));
+        window.dispatchEvent(
+          new CustomEvent("admin_notification_read", { detail: msg.payload })
+        );
+      } else if (msg.type === "READ_ALL") {
+        setNotifyCount(0);
+        window.dispatchEvent(new CustomEvent("admin_notification_read_all"));
+      } else if (msg.type === "DELETED") {
+        fetchUnreadCount();
+        window.dispatchEvent(
+          new CustomEvent("admin_notification_deleted", { detail: msg.payload })
+        );
+      } else if (msg.type === "CLEAR_READ") {
+        fetchUnreadCount();
+        window.dispatchEvent(new CustomEvent("admin_notification_clear_read"));
+      }
+    });
+
     return () => {
       window.removeEventListener("admin_notification_deleted", handleSync);
       window.removeEventListener("admin_notification_clear_read", handleSync);
       window.removeEventListener("admin_notification_read_all", handleSync);
       window.removeEventListener("admin_notification_read", handleSync);
+      unsubscribeBroadcast();
     };
   }, [auth?.accessToken]);
 
@@ -158,8 +180,41 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
       });
     });
 
+    socket.on("admin_notification_read", (data: { id: string; unreadCount?: number }) => {
+      if (typeof data?.unreadCount === "number") {
+        setNotifyCount(data.unreadCount);
+      } else {
+        setNotifyCount((prev) => Math.max(0, prev - 1));
+      }
+      window.dispatchEvent(new CustomEvent("admin_notification_read", { detail: data }));
+    });
+
+    socket.on("admin_notification_read_all", (data: { unreadCount?: number }) => {
+      setNotifyCount(data?.unreadCount ?? 0);
+      window.dispatchEvent(new CustomEvent("admin_notification_read_all"));
+    });
+
+    socket.on("admin_notification_deleted", (data: { id: string; unreadCount?: number }) => {
+      if (typeof data?.unreadCount === "number") {
+        setNotifyCount(data.unreadCount);
+      }
+      window.dispatchEvent(new CustomEvent("admin_notification_deleted", { detail: data }));
+    });
+
+    socket.on("admin_notification_clear_read", (data: { unreadCount?: number }) => {
+      if (typeof data?.unreadCount === "number") {
+        setNotifyCount(data.unreadCount);
+      }
+      window.dispatchEvent(new CustomEvent("admin_notification_clear_read"));
+    });
+
     return () => {
       socket.off("admin_notification");
+      socket.off("admin_notification_read");
+      socket.off("admin_notification_read_all");
+      socket.off("admin_notification_deleted");
+      socket.off("admin_notification_clear_read");
+      socket.disconnect();
     };
   }, [auth?.accessToken]);
 

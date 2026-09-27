@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Col,
+  Dropdown,
   Empty,
   Input,
   Pagination,
@@ -34,6 +35,7 @@ import {
   BellOutlined,
   AppstoreOutlined,
   ExclamationCircleOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import {
@@ -42,6 +44,7 @@ import {
   notificationService,
 } from "../services/notificationService";
 import { productService } from "../services/productService";
+import { postNotificationSync } from "../utils/notificationBroadcast";
 import {
   formatRelativeTime,
   getNotificationIcon,
@@ -186,6 +189,7 @@ const NotificationScreen: React.FC = () => {
       window.dispatchEvent(
         new CustomEvent("admin_notification_read", { detail: { id: item.id } })
       );
+      postNotificationSync({ type: "READ", payload: { id: item.id } });
       fetchStats();
       message.success("Đã đánh dấu là đã đọc");
     } catch (err) {
@@ -199,6 +203,7 @@ const NotificationScreen: React.FC = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       window.dispatchEvent(new CustomEvent("admin_notification_read_all"));
+      postNotificationSync({ type: "READ_ALL" });
       fetchStats();
       message.success("Đã đánh dấu tất cả thông báo là đã đọc");
     } catch (err) {
@@ -214,6 +219,7 @@ const NotificationScreen: React.FC = () => {
       window.dispatchEvent(
         new CustomEvent("admin_notification_deleted", { detail: { id } })
       );
+      postNotificationSync({ type: "DELETED", payload: { id } });
       fetchStats();
       message.success("Đã xóa thông báo");
     } catch (err) {
@@ -238,12 +244,66 @@ const NotificationScreen: React.FC = () => {
       const deleted = await notificationService.clearAllRead();
       message.success(`Đã xóa ${deleted} thông báo đã đọc`);
       window.dispatchEvent(new CustomEvent("admin_notification_clear_read"));
+      postNotificationSync({ type: "CLEAR_READ" });
       fetchNotifications(true);
       fetchStats();
     } catch (err) {
       message.error("Lỗi khi dọn dẹp thông báo");
     }
   };
+
+  const [simulating, setSimulating] = useState(false);
+
+  const handleSimulate = async (type: NotificationType) => {
+    try {
+      setSimulating(true);
+      await notificationService.simulateEvent(type);
+      message.success(`Đã kích hoạt sự kiện ${type}!`);
+    } catch (err) {
+      message.error("Lỗi khi mô phỏng sự kiện");
+    } finally {
+      setSimulating(false);
+    }
+  };
+
+  const simulateMenuItems = [
+    {
+      key: "ORDER_NEW",
+      label: "Đơn hàng mới (ORDER_NEW)",
+      icon: <ShoppingOutlined style={{ color: "#059669" }} />,
+      onClick: () => handleSimulate("ORDER_NEW"),
+    },
+    {
+      key: "ORDER_CANCEL",
+      label: "Hủy đơn hàng (ORDER_CANCEL)",
+      icon: <CloseCircleOutlined style={{ color: "#dc2626" }} />,
+      onClick: () => handleSimulate("ORDER_CANCEL"),
+    },
+    {
+      key: "LOW_STOCK",
+      label: "Sắp hết hàng (LOW_STOCK)",
+      icon: <WarningOutlined style={{ color: "#d97706" }} />,
+      onClick: () => handleSimulate("LOW_STOCK"),
+    },
+    {
+      key: "OUT_OF_STOCK",
+      label: "Hết hàng kho (OUT_OF_STOCK)",
+      icon: <StopOutlined style={{ color: "#b91c1c" }} />,
+      onClick: () => handleSimulate("OUT_OF_STOCK"),
+    },
+    {
+      key: "SUPPORT_MESSAGE",
+      label: "Tin nhắn hỗ trợ (SUPPORT_MESSAGE)",
+      icon: <MessageOutlined style={{ color: "#2563eb" }} />,
+      onClick: () => handleSimulate("SUPPORT_MESSAGE"),
+    },
+    {
+      key: "NEW_REVIEW",
+      label: "Đánh giá 5 sao (NEW_REVIEW)",
+      icon: <StarOutlined style={{ color: "#ca8a04" }} />,
+      onClick: () => handleSimulate("NEW_REVIEW"),
+    },
+  ];
 
   const handleItemClick = async (item: AdminNotification) => {
     if (!item.isRead) {
@@ -319,6 +379,23 @@ const NotificationScreen: React.FC = () => {
 
         {/* Global Action Buttons */}
         <Space wrap>
+          <Dropdown menu={{ items: simulateMenuItems }} trigger={["click"]}>
+            <Button
+              htmlType="button"
+              icon={<ThunderboltOutlined style={{ color: "#d97706" }} />}
+              loading={simulating}
+              style={{
+                borderRadius: 8,
+                borderColor: "#fde68a",
+                backgroundColor: "#fffbeb",
+                color: "#b45309",
+                fontWeight: 500,
+              }}
+            >
+              Bắn test sự kiện
+            </Button>
+          </Dropdown>
+
           <Button
             htmlType="button"
             icon={<ReloadOutlined />}

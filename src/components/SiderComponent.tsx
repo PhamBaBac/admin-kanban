@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Layout, Menu, MenuProps, Typography, Tooltip, Drawer, Button } from "antd";
+import { Layout, Menu, MenuProps, Typography, Tooltip, Drawer, Button, Badge } from "antd";
+import { notificationService } from "../services/notificationService";
 import {
   Box,
   Chart,
@@ -48,6 +49,35 @@ const SiderComponent = ({
   const canViewReport = userRole === "ADMIN" || userRole === "MANAGER";
 
   const pathname = location.pathname;
+  const [unreadNotiCount, setUnreadNotiCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const count = await notificationService.getUnreadCount();
+        setUnreadNotiCount(count);
+      } catch {}
+    };
+
+    if (auth?.accessToken) {
+      fetchUnread();
+    }
+
+    const handleSync = () => fetchUnread();
+    window.addEventListener("new_admin_notification", handleSync);
+    window.addEventListener("admin_notification_read", handleSync);
+    window.addEventListener("admin_notification_read_all", handleSync);
+    window.addEventListener("admin_notification_deleted", handleSync);
+    window.addEventListener("admin_notification_clear_read", handleSync);
+
+    return () => {
+      window.removeEventListener("new_admin_notification", handleSync);
+      window.removeEventListener("admin_notification_read", handleSync);
+      window.removeEventListener("admin_notification_read_all", handleSync);
+      window.removeEventListener("admin_notification_deleted", handleSync);
+      window.removeEventListener("admin_notification_clear_read", handleSync);
+    };
+  }, [auth?.accessToken]);
   let selectedKey = "dashboard";
   if (pathname.startsWith("/inventory/add-product")) selectedKey = "inventory-add-product";
   else if (pathname.startsWith("/inventory")) selectedKey = "inventory-all";
@@ -188,8 +218,29 @@ const SiderComponent = ({
     },
     {
       key: "Notifications",
-      label: <Link to={"/notifications"}>Thông báo</Link>,
-      icon: <Notification size={20} variant="Bulk" color={selectedKey === "Notifications" ? colors.primary500 : "#64748b"} />,
+      label: (
+        <Link to={"/notifications"} className="d-flex align-items-center justify-content-between w-100 pe-1">
+          <span>Thông báo</span>
+          {unreadNotiCount > 0 && (
+            <Badge
+              count={unreadNotiCount}
+              size="small"
+              overflowCount={99}
+              style={{
+                backgroundColor: "#ef4444",
+                boxShadow: "none",
+                fontWeight: 600,
+                fontSize: 10,
+              }}
+            />
+          )}
+        </Link>
+      ),
+      icon: (
+        <Badge dot={unreadNotiCount > 0 && collapsed} offset={[-2, 2]}>
+          <Notification size={20} variant="Bulk" color={selectedKey === "Notifications" ? colors.primary500 : "#64748b"} />
+        </Badge>
+      ),
     },
     ...(isAdmin
       ? [

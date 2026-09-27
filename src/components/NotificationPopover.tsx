@@ -30,6 +30,7 @@ import {
   notificationService,
 } from "../services/notificationService";
 import { productService } from "../services/productService";
+import { postNotificationSync } from "../utils/notificationBroadcast";
 
 const { Text } = Typography;
 
@@ -198,6 +199,7 @@ const NotificationPopover: React.FC<Props> = ({
         window.dispatchEvent(
           new CustomEvent("admin_notification_read", { detail: { id: item.id } })
         );
+        postNotificationSync({ type: "READ", payload: { id: item.id } });
       } catch (err) {
         console.error("Lỗi khi đánh dấu đã đọc:", err);
       }
@@ -250,6 +252,7 @@ const NotificationPopover: React.FC<Props> = ({
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       window.dispatchEvent(new CustomEvent("admin_notification_read_all"));
+      postNotificationSync({ type: "READ_ALL" });
       message.success("Đã đánh dấu tất cả thông báo là đã đọc");
     } catch (err) {
       message.error("Không thể đánh dấu đọc tất cả");
@@ -267,6 +270,7 @@ const NotificationPopover: React.FC<Props> = ({
       window.dispatchEvent(
         new CustomEvent("admin_notification_deleted", { detail: { id } })
       );
+      postNotificationSync({ type: "DELETED", payload: { id } });
       message.success("Đã xóa thông báo");
     } catch (err) {
       message.error("Lỗi khi xóa thông báo");
