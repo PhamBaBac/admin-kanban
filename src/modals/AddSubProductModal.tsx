@@ -214,16 +214,6 @@ const AddSubProductModal = (props: Props) => {
             }));
         }
 
-        if (
-          subProduct.size &&
-          !customAttributes.some((a) => a.name.toLowerCase() === "size")
-        ) {
-          customAttributes.unshift({
-            name: "Size",
-            value: String(subProduct.size).trim(),
-          });
-        }
-
         let initialDiscountType = "NONE";
         let initialDiscountValue = 0;
 
@@ -265,8 +255,11 @@ const AddSubProductModal = (props: Props) => {
             ? subProduct.stock
             : (subProduct as any).quantity ?? 0;
 
+        // Exclude size from subProduct when setting form fields so size isn't stored in form state unless user defined it
+        const { size: _unusedSize, ...cleanSubProduct } = subProduct as any;
+
         form.setFieldsValue({
-          ...subProduct,
+          ...cleanSubProduct,
           productId: subProduct.productId || product?.id || id || undefined,
           sku: subProduct.sku || "",
           color: existingColor,
@@ -365,28 +358,6 @@ const AddSubProductModal = (props: Props) => {
             }));
         }
 
-        if (
-          initialValues.size &&
-          !customAttributes.some((a) => a.name.toLowerCase() === "size")
-        ) {
-          customAttributes.unshift({
-            name: "Size",
-            value: String(initialValues.size).trim(),
-          });
-        }
-
-        const existingCloneColor =
-          initialValues.color ||
-          rawAttrs?.["Màu sắc"] ||
-          rawAttrs?.["Color"] ||
-          rawAttrs?.["màu sắc"] ||
-          rawAttrs?.["color"] ||
-          rawAttrs?.["Mau sac"] ||
-          rawAttrs?.["mau sac"] ||
-          rawAttrs?.["Màu"] ||
-          rawAttrs?.["màu"] ||
-          "";
-
         let cloneDiscountType = "NONE";
         let cloneDiscountValue = 0;
         if (rawAttrs?.discountType) {
@@ -408,8 +379,23 @@ const AddSubProductModal = (props: Props) => {
           }
         }
 
+        const existingCloneColor =
+          initialValues.color ||
+          rawAttrs?.["Màu sắc"] ||
+          rawAttrs?.["Color"] ||
+          rawAttrs?.["màu sắc"] ||
+          rawAttrs?.["color"] ||
+          rawAttrs?.["Mau sac"] ||
+          rawAttrs?.["mau sac"] ||
+          rawAttrs?.["Màu"] ||
+          rawAttrs?.["màu"] ||
+          "";
+
+        // Exclude size from initialValues when setting form fields so old size is not carried over unless in customAttributes
+        const { size: _unusedInitSize, ...cleanInitialValues } = initialValues as any;
+
         form.setFieldsValue({
-          ...initialValues,
+          ...cleanInitialValues,
           productId: initialValues.productId || product?.id || id || undefined,
           sku: initialValues.sku ? `${initialValues.sku}-COPY` : "",
           color: existingCloneColor,
@@ -525,7 +511,8 @@ const AddSubProductModal = (props: Props) => {
         if (
           i !== "customAttributes" &&
           i !== "discountType" &&
-          i !== "discountValue"
+          i !== "discountValue" &&
+          i !== "size"
         ) {
           data[i] = values[i] ?? "";
         }
@@ -541,6 +528,7 @@ const AddSubProductModal = (props: Props) => {
         data.color = "";
       }
 
+      let explicitSize = "";
       const attributesObj: Record<string, string> = {};
       if (values.customAttributes && Array.isArray(values.customAttributes)) {
         values.customAttributes.forEach((attr: any) => {
@@ -549,13 +537,15 @@ const AddSubProductModal = (props: Props) => {
             const attrVal = String(attr.value).trim();
             if (attrName && attrVal) {
               attributesObj[attrName] = attrVal;
-              if (!data.size) {
-                data.size = attrVal;
+              const lowerName = attrName.toLowerCase();
+              if (lowerName === "size" || lowerName === "kích thước" || lowerName === "kich thuoc") {
+                explicitSize = attrVal;
               }
             }
           }
         });
       }
+      data.size = explicitSize;
       if (data.color) {
         attributesObj["Màu sắc"] = data.color;
       } else if (attributesObj["Màu sắc"]) {
