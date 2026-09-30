@@ -14,4 +14,7 @@ export interface PromotionModel {
   createdAt: string;
   updatedAt: string;
   v: number;
+  minOrderAmount?: number;
+  maxDiscountAmount?: number;
 }
+

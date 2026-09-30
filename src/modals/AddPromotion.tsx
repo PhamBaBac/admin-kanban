@@ -34,7 +34,7 @@ import { PromotionModel } from "../models/PromotionModel";
 import dayjs from "dayjs";
 import { usePromotions } from "../hooks/usePromotions";
 import { BsStars } from "react-icons/bs";
-import { aiService } from "../services";
+import { aiService, promotionService } from "../services";
 
 const { Title, Text } = Typography;
 
@@ -52,9 +52,25 @@ const AddPromotion = (props: Props) => {
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   const [form] = Form.useForm();
   const watchedType = Form.useWatch("type", form) || "DISCOUNT";
+
+  const handleAutoGenerateCode = async () => {
+    try {
+      setIsGeneratingCode(true);
+      const code = await promotionService.generateUniqueCode("SALE");
+      if (code) {
+        form.setFieldsValue({ code });
+        message.success(`Đã sinh mã ngẫu nhiên: ${code}`);
+      }
+    } catch (err: any) {
+      message.error("Lỗi khi sinh mã tự động");
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
 
   const {
     createPromotion,
@@ -393,7 +409,20 @@ const AddPromotion = (props: Props) => {
             <Col span={12}>
               <Form.Item
                 name="code"
-                label={<span style={{ fontWeight: 600 }}>Mã Voucher / Khuyến mãi</span>}
+                label={
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                    <span style={{ fontWeight: 600 }}>Mã Voucher / Khuyến mãi</span>
+                    <Button
+                      type="link"
+                      size="small"
+                      loading={isGeneratingCode}
+                      onClick={handleAutoGenerateCode}
+                      style={{ padding: 0, height: "auto", fontSize: 12, fontWeight: 600, color: "#1677ff" }}
+                    >
+                      Sinh mã tự động
+                    </Button>
+                  </div>
+                }
                 rules={[{ required: true, message: "Vui lòng nhập mã code" }]}
                 extra={<Text type="secondary" style={{ fontSize: 11 }}>Khách hàng nhập mã này để nhận ưu đãi</Text>}
               >
@@ -401,6 +430,9 @@ const AddPromotion = (props: Props) => {
                   prefix={<BarcodeOutlined style={{ color: "#94a3b8" }} />}
                   placeholder="VD: SALE10K, CHAOHANH..."
                   style={{ textTransform: "uppercase" }}
+                  onChange={(e) => {
+                    form.setFieldsValue({ code: e.target.value.toUpperCase() });
+                  }}
                 />
               </Form.Item>
             </Col>
@@ -473,6 +505,41 @@ const AddPromotion = (props: Props) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
+                name="minOrderAmount"
+                label={<span style={{ fontWeight: 600 }}>Đơn hàng tối thiểu để áp dụng</span>}
+                extra={<Typography.Text type="secondary" style={{ fontSize: 11 }}>Để trống nếu không có yêu cầu tối thiểu</Typography.Text>}
+              >
+                <InputNumber<number>
+                  min={0}
+                  style={{ width: "100%" }}
+                  placeholder="VD: 80000 (80k), 300000 (300k)"
+                  addonAfter="₫"
+                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                  parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="maxDiscountAmount"
+                label={<span style={{ fontWeight: 600 }}>Giảm giá tối đa (cap)</span>}
+                extra={<Typography.Text type="secondary" style={{ fontSize: 11 }}>Áp dụng cho loại %. Để trống nếu không giới hạn</Typography.Text>}
+              >
+                <InputNumber<number>
+                  min={0}
+                  style={{ width: "100%" }}
+                  placeholder="VD: 50000 (tối đa 50k)"
+                  addonAfter="₫"
+                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                  parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
                 name="startAt"
                 label={<span style={{ fontWeight: 600 }}>Thời gian bắt đầu</span>}
               >
@@ -501,6 +568,7 @@ const AddPromotion = (props: Props) => {
         </Form>
       </div>
     </Modal>
+
   );
 };
 

@@ -57,9 +57,15 @@ const CreateShipmentModal: React.FC<Props> = ({
 
       setPackQuantities(initialQtys);
 
-      const codValue = order.paymentType === "COD"
-        ? order.orderResponses.reduce((sum, it) => sum + it.totalPrice, 0)
-        : 0;
+      const itemsSum = order.orderResponses.reduce((sum, it) => sum + it.totalPrice, 0);
+      const effectiveShipFee = order.shippingFee !== undefined && order.shippingFee !== null
+        ? order.shippingFee
+        : (itemsSum >= 400000 ? 0 : 20000);
+      const orderTotal = order.total !== undefined && order.total !== null
+        ? order.total
+        : Math.max(0, itemsSum - (order.discountAmount || 0)) + effectiveShipFee;
+
+      const codValue = order.paymentType === "COD" ? orderTotal : 0;
 
       form.setFieldsValue({
         weight: calculatedWeight > 0 ? calculatedWeight : 500,
@@ -82,14 +88,18 @@ const CreateShipmentModal: React.FC<Props> = ({
     try {
       setCalculatingFee(true);
       const values = form.getFieldsValue();
-      const fee = await shipmentService.calculateFee({
-        orderId: order?.id,
-        weight: weight ?? values.weight ?? 500,
-        length: length ?? values.length ?? 20,
-        width: width ?? values.width ?? 15,
-        height: height ?? values.height ?? 10,
-      });
-      setEstimatedFee(fee);
+      if (order?.shippingFee !== undefined && order?.shippingFee !== null) {
+        setEstimatedFee(order.shippingFee);
+      } else {
+        const fee = await shipmentService.calculateFee({
+          orderId: order?.id,
+          weight: weight ?? values.weight ?? 500,
+          length: length ?? values.length ?? 20,
+          width: width ?? values.width ?? 15,
+          height: height ?? values.height ?? 10,
+        });
+        setEstimatedFee(fee);
+      }
     } catch (error) {
       console.error("Calculate fee error", error);
     } finally {
@@ -540,7 +550,7 @@ const CreateShipmentModal: React.FC<Props> = ({
             <div>
               <Space size={8}>
                 <Calculator size={20} color="#16a34a" />
-                <span style={{ fontWeight: 600, color: "#166534" }}>Cước phí vận chuyển ước tính từ GHN:</span>
+                <span style={{ fontWeight: 600, color: "#166534" }}>Cước phí vận chuyển:</span>
               </Space>
               <div style={{ marginTop: 2, paddingLeft: 28 }}>
                 <Button
@@ -559,7 +569,7 @@ const CreateShipmentModal: React.FC<Props> = ({
                 <Text type="secondary">Đang tính toán cước...</Text>
               ) : estimatedFee !== null ? (
                 <span style={{ fontSize: 20, fontWeight: 700, color: "#15803d" }}>
-                  {estimatedFee.toLocaleString("vi-VN")} ₫
+                  {estimatedFee === 0 ? "Miễn phí (0 ₫)" : `${estimatedFee.toLocaleString("vi-VN")} ₫`}
                 </span>
               ) : (
                 <Text type="secondary">Chưa tính được cước</Text>

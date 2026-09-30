@@ -593,7 +593,19 @@ const AddSubProductModal = (props: Props) => {
 
       data.attributes = attributesObj;
       data.price = basePrice;
-      data.discount = calculatedDiscountAmount > 0 ? calculatedSalePrice : 0;
+      // If there is a calculated discount, use it.
+      // If discountType is NONE:
+      //   - If subProduct originally had no discount (or is new) → send null to avoid overwriting
+      //   - If subProduct originally had a discount but user cleared it → send 0 to explicitly remove
+      if (calculatedDiscountAmount > 0) {
+        data.discount = calculatedSalePrice;
+      } else if (subProduct && typeof subProduct.discount === 'number' && subProduct.discount > 0) {
+        // User explicitly selected NONE on a product that previously had a discount → clear it
+        data.discount = 0;
+      } else {
+        // No discount before and none now → don't send the field (null = no change)
+        data.discount = null;
+      }
 
       const finalQty = Number(values.qty ?? 0);
       data.qty = finalQty;

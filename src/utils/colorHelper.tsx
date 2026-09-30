@@ -32,6 +32,15 @@ export const COLOR_HEX_MAP: Record<string, string> = {
   "#64748b": "Xám tro",
   "#f8fafc": "Trắng kem",
   "#f1f5f9": "Trắng xám",
+  "#ee7d71": "Hồng san hô",
+  "#e056fd": "Tím nhạt",
+  "#686de0": "Xanh tím",
+  "#30336b": "Xanh đen",
+  "#badc58": "Xanh lá chuối",
+  "#ff7979": "Hồng cam",
+  "#f6e58d": "Vàng kem",
+  "#7ed6df": "Xanh bạc hà",
+  "#22a6b3": "Xanh ngọc bích",
 };
 
 /**
@@ -49,59 +58,46 @@ export const getColorName = (colorCode?: string): string => {
 export const ColorBadge: React.FC<{ color?: string; showText?: boolean; size?: number }> = ({
   color,
   showText = true,
-  size = 14,
+  size = 13,
 }) => {
   if (!color) return null;
 
   const colorLower = color.trim().toLowerCase();
-  const colorName = COLOR_HEX_MAP[colorLower] || color;
+  const mappedName = COLOR_HEX_MAP[colorLower];
   const isHex = color.startsWith("#") || color.startsWith("rgb");
-
-  if (!isHex) {
-    return (
-      <Tag
-        style={{
-          margin: 0,
-          fontSize: 12,
-          fontWeight: 500,
-          backgroundColor: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          color: "#1e293b",
-          borderRadius: 4,
-          padding: "1px 8px",
-        }}
-      >
-        {color}
-      </Tag>
-    );
-  }
+  const displayName = mappedName || (isHex ? `Màu ${color}` : color);
 
   return (
-    <span
+    <Tag
       style={{
+        margin: 0,
+        fontSize: 12,
+        fontWeight: 500,
         display: "inline-flex",
         alignItems: "center",
-        gap: 5,
-        verticalAlign: "middle",
+        gap: 6,
+        borderRadius: 4,
+        padding: "1px 8px",
+        border: "1px solid #e2e8f0",
+        backgroundColor: "#f8fafc",
+        color: "#334155",
       }}
     >
-      <span
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          backgroundColor: color,
-          display: "inline-block",
-          border: colorLower === "#ffffff" || colorLower === "white" ? "1px solid #d1d5db" : "1px solid rgba(0,0,0,0.1)",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-          flexShrink: 0,
-        }}
-      />
-      {showText && (
-        <span style={{ fontSize: 12, color: "#334155", fontWeight: 500 }}>
-          {colorName}
-        </span>
+      {isHex && (
+        <span
+          style={{
+            width: size,
+            height: size,
+            borderRadius: "50%",
+            backgroundColor: color,
+            display: "inline-block",
+            border: colorLower === "#ffffff" || colorLower === "white" ? "1px solid #cbd5e1" : "1px solid rgba(0,0,0,0.15)",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+            flexShrink: 0,
+          }}
+        />
       )}
-    </span>
+      {showText && <span>{displayName}</span>}
+    </Tag>
   );
 };

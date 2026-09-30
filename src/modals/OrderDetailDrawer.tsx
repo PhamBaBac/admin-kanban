@@ -33,6 +33,7 @@ import {
 import { orderService } from "../services/orderService";
 import { VND } from "../utils/handleCurrency";
 import { ColorBadge } from "../utils/colorHelper";
+import { formatDateTime } from "../utils/dateTime";
 import {
   ReceiptItem,
   User,
@@ -74,7 +75,7 @@ const getOrderStatusColor = (orderStatus?: string) => {
 };
 
 const getRoleBadge = (role?: string) => {
-  switch (role) {
+  switch (role?.toUpperCase()) {
     case "ADMIN":
       return <Tag color="purple">ADMIN</Tag>;
     case "SYSTEM":
@@ -82,10 +83,46 @@ const getRoleBadge = (role?: string) => {
     case "SHIPPER":
       return <Tag color="orange">GIAO HÀNG</Tag>;
     case "CUSTOMER":
+    case "USER":
       return <Tag color="green">KHÁCH HÀNG</Tag>;
     default:
       return <Tag color="default">{role || "N/A"}</Tag>;
   }
+};
+
+const getActorDisplay = (item: OrderStatusHistoryModel, order: BillModel | null) => {
+  const role = item.changedByRole?.toUpperCase();
+  if (role === "USER" || role === "CUSTOMER") {
+    const customerName = order?.nameRecipient || order?.userName || "Khách mua";
+    return (
+      <Tooltip title={`User ID: ${item.changedById}`}>
+        <span style={{ fontSize: 11, color: "#475569" }}>
+          Bởi: <strong style={{ color: "#0f172a" }}>{customerName}</strong>
+        </span>
+      </Tooltip>
+    );
+  }
+  if (role === "SYSTEM") {
+    return (
+      <span style={{ fontSize: 11, color: "#475569" }}>
+        Bởi: <strong style={{ color: "#1e40af" }}>Hệ thống tự động</strong>
+      </span>
+    );
+  }
+  if (role === "ADMIN") {
+    return (
+      <Tooltip title={`Mã Admin: ${item.changedById}`}>
+        <span style={{ fontSize: 11, color: "#475569" }}>
+          Bởi: <strong style={{ color: "#7e22ce" }}>Quản trị viên</strong> {item.changedById ? `(${item.changedById.slice(0, 8)})` : ""}
+        </span>
+      </Tooltip>
+    );
+  }
+  return (
+    <span style={{ fontSize: 11, color: "#64748b" }}>
+      Bởi: <code>{item.changedById || "N/A"}</code>
+    </span>
+  );
 };
 
 const getStepCurrent = (status?: string) => {
@@ -190,17 +227,34 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
               {item.productTitle || item.title}
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
-              Mã SKU: <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#334155" }}>{item.skuCode || "N/A"}</span>
-              {item.skuCode && (
-                <Tooltip title="Sao chép SKU">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<Copy size={12} color="#64748b" />}
-                    onClick={() => handleCopyCode(item.skuCode!, "Mã SKU")}
-                    style={{ padding: 0, height: 16, width: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                  />
-                </Tooltip>
+              {item.skuCode ? (
+                <>
+                  Mã SKU: <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#334155" }}>{item.skuCode}</span>
+                  <Tooltip title="Sao chép SKU">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<Copy size={12} color="#64748b" />}
+                      onClick={() => handleCopyCode(item.skuCode!, "Mã SKU")}
+                      style={{ padding: 0, height: 16, width: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    />
+                  </Tooltip>
+                </>
+              ) : item.subProductId ? (
+                <>
+                  Mã biến thể: <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#334155" }}>{item.subProductId.length > 8 ? item.subProductId.slice(0, 8).toUpperCase() : item.subProductId}</span>
+                  <Tooltip title="Sao chép mã biến thể">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<Copy size={12} color="#64748b" />}
+                      onClick={() => handleCopyCode(item.subProductId!, "Mã biến thể")}
+                      style={{ padding: 0, height: 16, width: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    />
+                  </Tooltip>
+                </>
+              ) : (
+                <span style={{ color: "#94a3b8" }}>Mã SKU: —</span>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
@@ -308,7 +362,7 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                 </Tooltip>
               </div>
               <div style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>
-                Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "—"}
+                Ngày tạo: {formatDateTime(order.createdAt)}
               </div>
             </div>
           </div>
@@ -523,9 +577,7 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                           <Tag color={getOrderStatusColor(item.toStatus)}>{item.toStatus}</Tag>
                         </span>
                         {getRoleBadge(item.changedByRole)}
-                        <span style={{ fontSize: 11, color: "#64748b" }}>
-                          Bởi: <code>{item.changedById}</code>
-                        </span>
+                        {getActorDisplay(item, order)}
                       </div>
                       {item.reason && (
                         <div style={{ marginTop: 4, fontSize: 12, color: "#334155" }}>
@@ -533,12 +585,15 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                         </div>
                       )}
                       {item.metadata && (
-                        <div style={{ marginTop: 2, fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
-                          Metadata: {item.metadata}
+                        <div style={{ marginTop: 3, fontSize: 11, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ color: "#94a3b8" }}>Chi tiết:</span>
+                          <Tag style={{ fontSize: 11, margin: 0, background: "#f8fafc", border: "1px solid #e2e8f0", color: "#475569" }}>
+                            {item.metadata.replace(/paymentType:\s*cod/i, "Hình thức thanh toán: COD")}
+                          </Tag>
                         </div>
                       )}
-                      <div style={{ marginTop: 2, fontSize: 11, color: "#94a3b8" }}>
-                        {new Date(item.createdAt).toLocaleString("vi-VN")}
+                      <div style={{ marginTop: 3, fontSize: 11, color: "#94a3b8" }}>
+                        {formatDateTime(item.createdAt)}
                       </div>
                     </div>
                   ),
@@ -647,7 +702,7 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                     key: "createdAt",
                     render: (d: string) => (
                       <span style={{ fontSize: 11, color: "#64748b" }}>
-                        {d ? new Date(d).toLocaleString("vi-VN") : "—"}
+                        {formatDateTime(d)}
                       </span>
                     ),
                   },

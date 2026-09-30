@@ -49,4 +49,10 @@ export const promotionService = {
   deletePromotion: async (id: string): Promise<void> => {
     await handleAPI(`/promotions/${id}`, undefined, "delete");
   },
+
+  generateUniqueCode: async (prefix?: string): Promise<string> => {
+    const url = prefix ? `/promotions/generate-code?prefix=${encodeURIComponent(prefix)}` : "/promotions/generate-code";
+    const response = await handleAPI(url);
+    return response?.data || response;
+  },
 };

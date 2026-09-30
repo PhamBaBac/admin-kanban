@@ -32,6 +32,7 @@ import {
 import { orderService } from "../services/orderService";
 import { VND } from "../utils/handleCurrency";
 import { ColorBadge } from "../utils/colorHelper";
+import { formatDateTime } from "../utils/dateTime";
 import {
   ReceiptItem,
   User,
@@ -79,6 +80,7 @@ const getRoleBadge = (role?: string) => {
     case "SHIPPER":
       return <Tag color="orange">GIAO HÀNG</Tag>;
     case "CUSTOMER":
+    case "USER":
       return <Tag color="green">KHÁCH HÀNG</Tag>;
     default:
       return <Tag color="default">{role || "N/A"}</Tag>;
@@ -338,7 +340,7 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
       width: 150,
       render: (dateStr: string) => (
         <span style={{ fontSize: 12, color: "#64748b" }}>
-          {dateStr ? new Date(dateStr).toLocaleString("vi-VN") : "—"}
+          {formatDateTime(dateStr)}
         </span>
       ),
     },
@@ -472,7 +474,7 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
                         <Descriptions.Item label="Ngày đặt hàng">
                           <span style={{ color: "#64748b", display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <Clock size={14} color="#64748b" />
-                            {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "—"}
+                            {formatDateTime(order.createdAt)}
                           </span>
                         </Descriptions.Item>
                       </Descriptions>
@@ -603,7 +605,7 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
                               </div>
                             )}
                             <div style={{ marginTop: 4, fontSize: 11, color: "#94a3b8" }}>
-                              {new Date(item.createdAt).toLocaleString("vi-VN")}
+                              {formatDateTime(item.createdAt)}
                             </div>
                           </div>
                         ),

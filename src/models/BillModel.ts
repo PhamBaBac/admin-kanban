@@ -17,6 +17,7 @@ export interface BillModel {
   subtotal?: number;
   shippingFee?: number;
   discountAmount?: number;
+  total?: number;
   shippingProvince?: string;
   shippingDistrict?: string;
   shippingWard?: string;

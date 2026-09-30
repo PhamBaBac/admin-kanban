@@ -7,6 +7,7 @@ import { Provider } from "react-redux";
 import store from "./redux/store";
 import "./App.css";
 import { BrowserRouter } from "react-router-dom"; // ✅ Thêm import này
+import SessionExpiredModal from "./modals/SessionExpiredModal";
 
 message.config({
   top: 20,
@@ -61,6 +62,7 @@ function App() {
       <Provider store={store}>
         <BrowserRouter>
           <Routers />
+          <SessionExpiredModal />
         </BrowserRouter>
       </Provider>
     </ConfigProvider>

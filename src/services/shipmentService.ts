@@ -61,6 +61,10 @@ export const shipmentService = {
 
   calculateFee: async (payload: CalculateFeePayload): Promise<number> => {
     const res: any = await handleAPI("/shipments/calculate-fee", payload, "post");
-    return res?.data?.data || res?.data || 30000;
+    const val = res?.data?.data !== undefined ? res.data.data : (res?.data !== undefined ? res.data : res);
+    if (typeof val === "number") {
+      return val;
+    }
+    return 20000;
   },
 };

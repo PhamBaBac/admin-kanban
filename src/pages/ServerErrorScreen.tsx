@@ -49,7 +49,7 @@ const ServerErrorScreen: React.FC = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const res = await fetch("http://localhost:8080/api/v1/auth/failure", {
+      const res = await fetch("http://localhost:8080/actuator/health", {
         method: "GET",
         signal: controller.signal,
       });

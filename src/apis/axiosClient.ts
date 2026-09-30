@@ -4,6 +4,7 @@ import axios from "axios";
 import queryString from "query-string";
 import { localDataNames } from "../constants/appInfos";
 import { addAuth, removeAuth } from "../redux/reducers/authReducer";
+import { setSessionExpired } from "../redux/reducers/sessionReducer";
 import store from "../redux/store";
 
 const baseURL = `http://localhost:8080/api/v1`;
@@ -76,10 +77,10 @@ const refreshToken = async (): Promise<string | null> => {
     processQueue(null, newToken);
     return newToken;
   } catch (error) {
-     alert("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
+    // Thay thế alert() bằng Redux action để hiển thị modal UI tùy chỉnh
+    store.dispatch(setSessionExpired());
     localStorage.removeItem(localDataNames.authData);
     store.dispatch(removeAuth());
-    window.location.href = "/login";
     return null;
   } finally {
     isRefreshing = false;

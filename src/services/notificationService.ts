@@ -137,12 +137,4 @@ export const notificationService = {
     const response = await handleAPI("/admin/notifications/clear-all", {}, "delete");
     return response.data || 0;
   },
-
-  /**
-   * Mô phỏng sự kiện thông báo thử nghiệm (ORDER_NEW, ORDER_CANCEL, LOW_STOCK, OUT_OF_STOCK, SUPPORT_MESSAGE, NEW_REVIEW)
-   */
-  simulateEvent: async (type: NotificationType): Promise<string> => {
-    const response = await handleAPI(`/admin/notifications/simulate?type=${type}`, {}, "post");
-    return response.data || "";
-  },
 };
