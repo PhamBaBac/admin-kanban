@@ -9,6 +9,7 @@ export interface BillModel {
   phoneNumber: string | null;
   email: string;
   paymentType: string;
+  paymentStatus?: "UNPAID" | "PAID" | "REFUNDED" | string;
   orderStatus: string;
   orderResponses: OrderItem[];
   cancelReason?: string;
