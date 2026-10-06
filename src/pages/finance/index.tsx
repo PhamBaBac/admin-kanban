@@ -260,7 +260,7 @@ const FinanceScreen: React.FC = () => {
   return (
     <div style={{ padding: "8px 0" }}>
       {/* TIÊU ĐỀ TRANG VÀ THỐNG KÊ DÒNG TIỀN */}
-      <Card bordered={false} className="app-card" style={{ marginBottom: 16 }}>
+      <Card variant="borderless" className="app-card" style={{ marginBottom: 16 }}>
         <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
           <Col>
             <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
@@ -285,7 +285,7 @@ const FinanceScreen: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8}>
             <Card
-              bordered={false}
+              variant="borderless"
               style={{ borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0" }}
             >
               <Statistic
@@ -299,7 +299,7 @@ const FinanceScreen: React.FC = () => {
           </Col>
           <Col xs={24} sm={8}>
             <Card
-              bordered={false}
+              variant="borderless"
               style={{ borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca" }}
             >
               <Statistic
@@ -313,7 +313,7 @@ const FinanceScreen: React.FC = () => {
           </Col>
           <Col xs={24} sm={8}>
             <Card
-              bordered={false}
+              variant="borderless"
               style={{ borderRadius: 8, background: "#eff6ff", border: "1px solid #bfdbfe" }}
             >
               <Statistic
@@ -329,7 +329,12 @@ const FinanceScreen: React.FC = () => {
       </Card>
 
       {/* BỘ LỌC ĐỐI SOÁT */}
-      <Card bordered={false} className="app-card" style={{ marginBottom: 16 }}>
+      <Card
+        variant="borderless"
+        className="app-card"
+        style={{ marginBottom: 16 }}
+        styles={{ body: { padding: "10px 16px" } }}
+      >
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col>
             <Space wrap>
@@ -365,6 +370,22 @@ const FinanceScreen: React.FC = () => {
                   { value: "FAILED", label: "Thất bại (FAILED)" },
                 ]}
               />
+              <Button
+                icon={<Refresh size={15} />}
+                onClick={() => fetchTransactions(page, pageSize)}
+                loading={loading}
+                style={{
+                  height: 32,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 13,
+                  padding: "0 12px",
+                  borderRadius: 6,
+                }}
+              >
+                Làm mới sổ cái
+              </Button>
             </Space>
           </Col>
           <Col>
@@ -376,7 +397,7 @@ const FinanceScreen: React.FC = () => {
       </Card>
 
       {/* BẢNG SỔ CÁI BÚT TOÁN */}
-      <Card bordered={false} className="app-card">
+      <Card variant="borderless" className="app-card">
         <Table
           bordered
           rowKey="id"

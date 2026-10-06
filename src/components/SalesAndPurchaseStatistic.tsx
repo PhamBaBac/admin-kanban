@@ -99,7 +99,7 @@ const SalesAndPurchaseStatistic = () => {
       <div className="col-sm-12 col-md-6">
         <Card
           className="app-card mb-4"
-          bordered={false}
+          variant="borderless"
           title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Mua hàng & Đơn hàng</span>}
           extra={
             <Radio.Group
@@ -130,7 +130,7 @@ const SalesAndPurchaseStatistic = () => {
         <Card
           className="app-card mb-4"
           title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Xu hướng doanh số bán</span>}
-          bordered={false}
+          variant="borderless"
         >
           <Spin spinning={loading}>
             <div style={{ height: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>

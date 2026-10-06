@@ -332,12 +332,14 @@ const Inventories = () => {
                 placement="right"
                 color="#fff"
                 mouseEnterDelay={0.12}
-                overlayInnerStyle={{
-                  padding: 6,
-                  borderRadius: 10,
-                  backgroundColor: "#fff",
-                  boxShadow:
-                    "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                styles={{
+                  body: {
+                    padding: 6,
+                    borderRadius: 10,
+                    backgroundColor: "#fff",
+                    boxShadow:
+                      "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                  },
                 }}
                 title={
                   <div style={{ textAlign: "center", padding: 2 }}>
@@ -416,11 +418,13 @@ const Inventories = () => {
                         placement="top"
                         color="#fff"
                         mouseEnterDelay={0.12}
-                        overlayInnerStyle={{
-                          padding: 6,
-                          borderRadius: 10,
-                          backgroundColor: "#fff",
-                          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+                        styles={{
+                          body: {
+                            padding: 6,
+                            borderRadius: 10,
+                            backgroundColor: "#fff",
+                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+                          },
                         }}
                         title={
                           <div style={{ textAlign: "center", padding: 2 }}>
@@ -655,10 +659,7 @@ const Inventories = () => {
   return (
     <div>
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
-        <div className="d-flex align-items-center flex-wrap gap-2">
-          <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
-            Quản lý sản phẩm
-          </Typography.Title>
+        <div className="d-flex align-items-center flex-wrap gap-2">          
           {selectedRowKeys.length > 0 && (
             <Space wrap>
               <Tooltip title="Xóa các mục đã chọn">
@@ -697,7 +698,19 @@ const Inventories = () => {
             </Space>
           )}
         </div>
-        <div className="d-flex align-items-center flex-wrap gap-2 w-100 w-md-auto justify-content-between justify-content-md-end">
+        <div className="d-flex align-items-center flex-wrap gap-2 w-100 w-md-auto justify-content-end ms-auto">
+          {isFilting && (
+            <Button
+              onClick={handleClearFilter}
+              style={{
+                height: 32,
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          )}
           <Input.Search
             value={searchKey}
             onChange={(e) => {
@@ -713,45 +726,43 @@ const Inventories = () => {
             placeholder="Tìm kiếm sản phẩm..."
             allowClear
             style={{
-              flex: 1,
+              flex: isMobile ? 1 : undefined,
+              width: isMobile ? undefined : 260,
               minWidth: isMobile ? 140 : 200,
-              maxWidth: isMobile ? "none" : 320,
+              height: 32,
             }}
           />
-          <div className="d-flex align-items-center gap-2 ms-auto" style={{ flexShrink: 0 }}>
-            {isFilting && (
-              <Button onClick={handleClearFilter}>
-                Xóa bộ lọc
-              </Button>
+          <Dropdown
+            open={isFilterOpen}
+            onOpenChange={setIsFilterOpen}
+            trigger={["click"]}
+            placement="bottomRight"
+            popupRender={() => (
+              <FilterProduct
+                values={filterValues}
+                onFilter={handleFilterProducts}
+                onClose={() => setIsFilterOpen(false)}
+              />
             )}
-            <Dropdown
-              open={isFilterOpen}
-              onOpenChange={setIsFilterOpen}
-              trigger={["click"]}
-              placement="bottomRight"
-              dropdownRender={() => (
-                <FilterProduct
-                  values={filterValues}
-                  onFilter={handleFilterProducts}
-                  onClose={() => setIsFilterOpen(false)}
-                />
-              )}
+          >
+            <Button
+              icon={<Sort size={18} />}
+              type={isFilting ? "primary" : "default"}
+              style={{
+                height: 32,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
             >
-              <Button
-                icon={<Sort size={18} />}
-                type={isFilting ? "primary" : "default"}
-              >
-                Bộ lọc {isFilting ? "(Đang bật)" : ""}
-              </Button>
-            </Dropdown>
-          </div>
+              Bộ lọc {isFilting ? "(Đang bật)" : ""}
+            </Button>
+          </Dropdown>
         </div>
       </div>
 
       {isMobile ? (
-        /* GIAO DIỆN MOBILE / TABLET: DẠNG THẺ SẢN PHẨM HIỆN ĐẠI (CARD VIEW) */
         <div className="d-flex flex-column gap-2">
-          {/* Thanh Chọn tất cả trên mobile */}
           {products.length > 0 && (
             <div
               style={{
@@ -798,10 +809,11 @@ const Inventories = () => {
                 border: "1px solid #e2e8f0",
               }}
             >
-              <Spin tip="Đang tải sản phẩm..." />
+              <Spin />
+              <div style={{ marginTop: 10, color: "#64748b", fontSize: 13 }}>Đang tải sản phẩm...</div>
             </div>
           ) : products.length === 0 ? (
-            <Card className="app-card" style={{ textAlign: "center", borderRadius: 12 }} bordered={false}>
+            <Card className="app-card" style={{ textAlign: "center", borderRadius: 12 }} variant="borderless">
               <Empty description="Không tìm thấy sản phẩm nào" />
             </Card>
           ) : (
@@ -825,7 +837,6 @@ const Inventories = () => {
                     transition: "all 0.2s ease",
                   }}
                 >
-                  {/* Hàng 1: Checkbox + Thumbnail ảnh + Tên + Danh mục */}
                   <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                     <div style={{ paddingTop: 2 }}>
                       <Checkbox
@@ -912,10 +923,8 @@ const Inventories = () => {
                     </div>
                   </div>
 
-                  {/* Đường kẻ phân cách nhẹ */}
                   <div style={{ height: 1, background: "#f1f5f9", margin: "10px 0 10px 0" }} />
 
-                  {/* Hàng 2: Giá bán & Tồn kho */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <div>
                       <span style={{ fontSize: 12, color: "#64748b" }}>Giá bán: </span>
@@ -937,7 +946,6 @@ const Inventories = () => {
                     </div>
                   </div>
 
-                  {/* Hàng 3: Biến thể Màu sắc & Size */}
                   {(colorsList.length > 0 || sizesList.length > 0) && (
                     <div
                       style={{
@@ -988,7 +996,6 @@ const Inventories = () => {
                     </div>
                   )}
 
-                  {/* Hàng 4: Nhóm Nút Thao tác To bản, Dễ chạm */}
                   <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
                     <Button
                       size="middle"
@@ -1069,7 +1076,6 @@ const Inventories = () => {
             })
           )}
 
-          {/* Phân trang Mobile */}
           <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 20px 0" }}>
             <Pagination
               current={page}
@@ -1086,7 +1092,6 @@ const Inventories = () => {
           </div>
         </div>
       ) : (
-        /* GIAO DIỆN DESKTOP (>= 768px): BẢNG DỮ LIỆU ĐẦY ĐỦ CỘT */
         <div className="app-card p-3">
           <Table
             bordered

@@ -173,7 +173,7 @@ const ModalExportData = (props: Props) => {
             </Space>
           }
           style={{ marginBottom: 16, borderRadius: 8, border: "1px solid #e2e8f0" }}
-          headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
+          styles={{ header: { backgroundColor: "#f8fafc", padding: "8px 16px" } }}
         >
           <Radio.Group
             value={timeSelected}
@@ -235,7 +235,7 @@ const ModalExportData = (props: Props) => {
               </div>
             }
             style={{ borderRadius: 8, border: "1px solid #e2e8f0" }}
-            headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
+            styles={{ header: { backgroundColor: "#f8fafc", padding: "8px 16px" } }}
           >
             <List
               dataSource={forms.formItems}

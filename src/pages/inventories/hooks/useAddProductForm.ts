@@ -196,6 +196,8 @@ export const useAddProductForm = () => {
     getData();
   }, []);
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     if (id && productFromState) {
       setProductDetailFromState(productFromState);
@@ -205,10 +207,13 @@ export const useAddProductForm = () => {
       getProductDetail(id);
       fetchSubProducts(id);
     } else if (!id) {
-      form.resetFields();
+      if (!isFirstRender.current) {
+        form.resetFields();
+      }
       setSubProducts([]);
       setCurrentProduct(undefined);
     }
+    isFirstRender.current = false;
   }, [id, slug, productFromState]);
 
   const handleUploadChange: UploadProps["onChange"] = ({

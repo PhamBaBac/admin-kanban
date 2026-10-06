@@ -55,12 +55,14 @@ export const SubProductPricingSection: React.FC<Props> = ({
         border: "1px solid #e2e8f0",
         boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
       }}
-      headStyle={{
-        backgroundColor: "#f8fafc",
-        borderBottom: "1px solid #f1f5f9",
-        padding: isMobile ? "8px 12px" : "10px 16px",
+      styles={{
+        header: {
+          backgroundColor: "#f8fafc",
+          borderBottom: "1px solid #f1f5f9",
+          padding: isMobile ? "8px 12px" : "10px 16px",
+        },
+        body: { padding: isMobile ? "12px 12px" : "16px 18px" },
       }}
-      bodyStyle={{ padding: isMobile ? "12px 12px" : "16px 18px" }}
     >
       <Row gutter={[20, 16]}>
         <Col xs={24} sm={8}>

@@ -545,7 +545,7 @@ const Categories = () => {
             <div className="col-lg-4 col-md-5">
               <Card
                 className="app-card"
-                bordered={false}
+                variant="borderless"
                 title={
                   <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 15 }}>
                     {categorySelected ? "Cập nhật danh mục" : "Thêm danh mục mới"}
@@ -617,7 +617,7 @@ const Categories = () => {
                   </div>
                 </div>
 
-                <Space wrap size={8}>
+                <Space wrap size={8} align="center">
                   <Segmented
                     value={viewMode}
                     onChange={(val) => setViewMode(val as "table" | "cards")}
@@ -647,12 +647,15 @@ const Categories = () => {
                       }
                     }}
                     style={{
-                      borderRadius: 8,
+                      borderRadius: 6,
                       fontWeight: 500,
-                      height: 36,
+                      height: 32,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
                     }}
                   >
-                    {isMobile ? "Thêm mới" : showAddPanel ? "Thêm mới" : "Mở khung thêm mới"}
+                    Thêm mới
                   </Button>
                 </Space>
               </div>
@@ -704,13 +707,14 @@ const Categories = () => {
                   border: "1px solid #e2e8f0",
                 }}
               >
-                <Spin tip="Đang tải danh mục..." />
+                <Spin />
+                <div style={{ marginTop: 10, color: "#64748b", fontSize: 13 }}>Đang tải danh mục...</div>
               </div>
             ) : displayedCategories.length === 0 ? (
               <Card
                 className="app-card"
                 style={{ textAlign: "center", padding: "36px 0", borderRadius: 12 }}
-                bordered={false}
+                variant="borderless"
               >
                 <Empty
                   description={
@@ -748,7 +752,7 @@ const Categories = () => {
             <div className="col-lg-4 col-md-5">
               <Card
                 className="app-card"
-                bordered={false}
+                variant="borderless"
                 title={
                   <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 15 }}>
                     {categorySelected ? "Cập nhật danh mục" : "Thêm danh mục mới"}
@@ -787,19 +791,17 @@ const Categories = () => {
           <div className={!isMobile && showAddPanel ? "col-lg-8 col-md-7" : "col-12"}>
             <Card
               className="app-card"
-              bordered={false}
+              variant="borderless"
               title={
                 <div className="d-flex align-items-center gap-2 flex-wrap">
-                  <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 15 }}>
-                    Cây phân cấp danh mục
-                  </span>
+                  <span>Tổng danh mục: </span>
                   <Tag color="blue" style={{ fontWeight: 500, margin: 0, borderRadius: 6 }}>
-                    Tổng: {total} danh mục
+                    {total}
                   </Tag>
                 </div>
               }
               extra={
-                <Space wrap size={8}>
+                <Space wrap size={8} align="center">
                   <Segmented
                     value={viewMode}
                     onChange={(val) => setViewMode(val as "table" | "cards")}
@@ -829,14 +831,15 @@ const Categories = () => {
                         }
                       }}
                       style={{
-                        borderRadius: 8,
+                        borderRadius: 6,
                         fontWeight: 500,
+                        height: 30,
                         display: "inline-flex",
                         alignItems: "center",
                         gap: 6,
                       }}
                     >
-                      {showAddPanel ? "Ẩn khung thêm mới" : "Thêm danh mục mới"}
+                      {showAddPanel ? "Ẩn khung" : "Thêm mới"}
                     </Button>
                   )}
                   {isMobile && (
@@ -848,9 +851,12 @@ const Categories = () => {
                         setIsMobileFormOpen(true);
                       }}
                       style={{
-                        borderRadius: 8,
+                        borderRadius: 6,
                         fontWeight: 500,
-                        height: 36,
+                        height: 32,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
                       }}
                     >
                       Thêm mới
@@ -879,7 +885,6 @@ const Categories = () => {
         </div>
       )}
 
-      {/* Drawer thêm/sửa danh mục trên Mobile (Slide từ dưới lên như App native) */}
       <Drawer
         open={isMobileFormOpen}
         onClose={() => {
@@ -897,7 +902,7 @@ const Categories = () => {
         placement="bottom"
         height="85vh"
         destroyOnClose
-        bodyStyle={{ padding: "16px 16px 24px" }}
+        styles={{ body: { padding: "16px 16px 24px" } }}
       >
         <AddCategory
           onClose={() => {

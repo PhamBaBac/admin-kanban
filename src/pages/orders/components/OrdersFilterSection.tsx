@@ -54,30 +54,13 @@ export const OrdersFilterSection: React.FC<OrdersFilterSectionProps> = ({
       <Card
         className="app-card"
         style={{ marginBottom: "16px" }}
-        bordered={false}
+        variant="borderless"
       >
         <div
-          className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3"
+          className="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-2"
           style={{ marginBottom: 14 }}
         >
-          <div>
-            <Typography.Title level={4} style={{ margin: 0, fontWeight: 700 }}>
-              Quản lý đơn hàng
-            </Typography.Title>
-          </div>
-          <div className="d-flex align-items-center flex-wrap gap-2 w-100 w-lg-auto justify-content-start justify-content-lg-end">
-            {selectedRowKeys.length > 0 && (
-              <Tooltip title="Xóa các đơn hàng đã chọn">
-                <Button
-                  danger
-                  type="primary"
-                  icon={<Trash size={16} />}
-                  onClick={onBatchDelete}
-                >
-                  Xóa ({selectedRowKeys.length})
-                </Button>
-              </Tooltip>
-            )}
+          <div className="d-flex align-items-center gap-2 flex-grow-1" style={{ minWidth: 0 }}>
             {orderIdFromUrl && (
               <Tag
                 closable
@@ -91,6 +74,7 @@ export const OrdersFilterSection: React.FC<OrdersFilterSectionProps> = ({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,
+                  flexShrink: 0,
                 }}
               >
                 Đang xem đơn #
@@ -105,13 +89,30 @@ export const OrdersFilterSection: React.FC<OrdersFilterSectionProps> = ({
               onSearch={onSearchSubmit}
               placeholder="Tìm kiếm theo mã đơn, khách hàng, sản phẩm..."
               allowClear
-              style={{ minWidth: 240, flex: 1, maxWidth: 360 }}
+              style={{ flex: 1, width: "100%", height: 32 }}
             />
+          </div>
+
+          <div className="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
             <DatePicker.RangePicker
               placeholder={["Từ ngày", "Đến ngày"]}
-              style={{ minWidth: 220, flex: 1, maxWidth: 280 }}
+              style={{ width: 250, height: 32 }}
+              className="w-100 w-md-auto"
               onChange={onDateRangeChange}
             />
+            {selectedRowKeys.length > 0 && (
+              <Tooltip title="Xóa các đơn hàng đã chọn">
+                <Button
+                  danger
+                  type="primary"
+                  icon={<Trash size={16} />}
+                  onClick={onBatchDelete}
+                  style={{ height: 32, display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  Xóa ({selectedRowKeys.length})
+                </Button>
+              </Tooltip>
+            )}
           </div>
         </div>
 

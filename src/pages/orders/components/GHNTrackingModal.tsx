@@ -66,7 +66,8 @@ export const GHNTrackingModal: React.FC<GHNTrackingModalProps> = ({
     >
       {trackingLoading ? (
         <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Spin tip="Đang lấy dữ liệu từ hệ thống GHN..." size="large" />
+          <Spin size="large" />
+          <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang lấy dữ liệu từ hệ thống GHN...</div>
         </div>
       ) : trackingData ? (
         <div>

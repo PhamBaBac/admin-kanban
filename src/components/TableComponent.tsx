@@ -16,6 +16,9 @@ interface Props {
   total: number;
   extraColumn?: (item: any) => void;
   api: string;
+  hideTitle?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
 const { Title } = Typography;
@@ -31,17 +34,32 @@ const TableComponent = (props: Props) => {
     scrollHeight,
     extraColumn,
     api,
+    hideTitle,
+    page: propPage,
+    pageSize: propPageSize,
   } = props;
 
   const [pageInfo, setPageInfo] = useState<{
     page: number;
     pageSize: number;
   }>({
-    page: 1,
-    pageSize: 10,
+    page: propPage || 1,
+    pageSize: propPageSize || 10,
   });
   const [columns, setColumns] = useState<ColumnProps<any>[]>([]);
   const [isVisibleModalExport, setIsVisibleModalExport] = useState(false);
+
+  useEffect(() => {
+    if (propPage && propPage !== pageInfo.page) {
+      setPageInfo((prev) => ({ ...prev, page: propPage }));
+    }
+  }, [propPage]);
+
+  useEffect(() => {
+    if (propPageSize && propPageSize !== pageInfo.pageSize) {
+      setPageInfo((prev) => ({ ...prev, pageSize: propPageSize }));
+    }
+  }, [propPageSize]);
 
   useEffect(() => {
     onPageChange(pageInfo);
@@ -212,6 +230,8 @@ const TableComponent = (props: Props) => {
         pagination={{
           showSizeChanger: true,
           responsive: true,
+          current: pageInfo.page,
+          pageSize: pageInfo.pageSize,
           onShowSizeChange: (current, size) => {
             setPageInfo({ ...pageInfo, pageSize: size });
           },
@@ -221,6 +241,7 @@ const TableComponent = (props: Props) => {
             setPageInfo({
               ...pageInfo,
               page,
+              pageSize,
             });
           },
           showQuickJumper: true,
@@ -237,32 +258,40 @@ const TableComponent = (props: Props) => {
         columns={columns}
         bordered
         style={{ minHeight: 450 }}
-        title={() => (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
-          >
-            <Title level={5} style={{ margin: 0, fontWeight: 700 }}>
-              {forms.title === "Suppliers" || forms.title === "Supplier" ? "Danh sách nhà cung cấp" : forms.title}
-            </Title>
-            <Space wrap>
-              <Button type="primary" onClick={onAddNew}>
-                {forms.title === "Suppliers" || forms.title === "Supplier" ? "Thêm nhà cung cấp" : "Thêm mới"}
-              </Button>
-              <Button icon={<Sort size={18} color={colors.gray600} />}>
-                Bộ lọc
-              </Button>
-              <Button onClick={() => setIsVisibleModalExport(true)}>
-                Xuất Excel
-              </Button>
-            </Space>
-          </div>
-        )}
+        title={
+          hideTitle
+            ? undefined
+            : () => (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}
+                >
+                  <Title level={5} style={{ margin: 0, fontWeight: 700 }}>
+                    {forms.title === "Suppliers" || forms.title === "Supplier"
+                      ? "Danh sách nhà cung cấp"
+                      : forms.title}
+                  </Title>
+                  <Space wrap>
+                    <Button type="primary" onClick={onAddNew}>
+                      {forms.title === "Suppliers" || forms.title === "Supplier"
+                        ? "Thêm nhà cung cấp"
+                        : "Thêm mới"}
+                    </Button>
+                    <Button icon={<Sort size={18} color={colors.gray600} />}>
+                      Bộ lọc
+                    </Button>
+                    <Button onClick={() => setIsVisibleModalExport(true)}>
+                      Xuất Excel
+                    </Button>
+                  </Space>
+                </div>
+              )
+        }
       />
       <ModalExportData
         visible={isVisibleModalExport}

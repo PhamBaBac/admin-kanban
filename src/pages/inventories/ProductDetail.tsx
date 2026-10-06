@@ -454,7 +454,7 @@ const ProductDetail = () => {
       {isMobile ? (
         <div className="d-flex flex-column gap-3">
           {subProducts.length === 0 ? (
-            <Card className="app-card" style={{ textAlign: "center", padding: "40px 0", borderRadius: 12 }} bordered={false}>
+            <Card className="app-card" style={{ textAlign: "center", padding: "40px 0", borderRadius: 12 }} variant="borderless">
               <Empty description="Sản phẩm này chưa có biến thể phân loại nào" />
               <Button
                 type="primary"

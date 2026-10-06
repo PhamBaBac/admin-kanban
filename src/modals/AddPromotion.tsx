@@ -262,7 +262,7 @@ const AddPromotion = (props: Props) => {
       }
       wrapClassName="add-promotion-modal"
       open={visible}
-      destroyOnClose
+      destroyOnHidden
       centered
       onCancel={handleClose}
       okButtonProps={{
@@ -278,12 +278,6 @@ const AddPromotion = (props: Props) => {
       onOk={() => form.submit()}
       style={{
         maxWidth: "calc(100vw - 32px)",
-      }}
-      bodyStyle={{
-        maxHeight: "calc(82vh - 110px)",
-        overflowY: "auto",
-        overflowX: "hidden",
-        paddingRight: 8,
       }}
       styles={{
         body: {
@@ -316,8 +310,10 @@ const AddPromotion = (props: Props) => {
             </Space>
           }
           style={{ marginBottom: 16, borderRadius: 8, border: "1px solid #e2e8f0" }}
-          headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
-          bodyStyle={{ padding: "14px 16px" }}
+          styles={{
+            header: { backgroundColor: "#f8fafc", padding: "8px 16px" },
+            body: { padding: "14px 16px" },
+          }}
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
             <Upload

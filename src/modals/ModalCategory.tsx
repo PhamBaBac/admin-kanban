@@ -52,7 +52,7 @@ const ModalCategory = (props: Props) => {
       open={visible}
       width={640}
       style={{ top: 30 }}
-      destroyOnClose
+      destroyOnHidden
       onCancel={handleClose}
       footer={null}
     >

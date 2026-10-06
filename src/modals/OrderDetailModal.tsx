@@ -566,7 +566,8 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
               <div style={{ padding: "16px 8px" }}>
                 {loadingHistory ? (
                   <div style={{ textAlign: "center", padding: "40px 0" }}>
-                    <Spin tip="Đang tải lịch sử audit trail..." />
+                    <Spin />
+                    <div style={{ marginTop: 10, color: "#64748b", fontSize: 13 }}>Đang tải lịch sử audit trail...</div>
                   </div>
                 ) : historyList.length === 0 ? (
                   <Empty description="Chưa có bản ghi nhật ký chuyển trạng thái" />
@@ -627,7 +628,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
             ),
             children: (
               <div style={{ padding: "8px 0" }}>
-                {/* Thống kê dòng tiền */}
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                   <Col xs={24} sm={8}>
                     <Card size="small" style={{ borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
@@ -663,7 +663,8 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
 
                 {loadingTx ? (
                   <div style={{ textAlign: "center", padding: "40px 0" }}>
-                    <Spin tip="Đang tải sổ cái dòng tiền..." />
+                    <Spin />
+                    <div style={{ marginTop: 10, color: "#64748b", fontSize: 13 }}>Đang tải sổ cái dòng tiền...</div>
                   </div>
                 ) : transactions.length === 0 ? (
                   <Empty description="Chưa có bút toán giao dịch nào được ghi nhận cho đơn hàng này" />

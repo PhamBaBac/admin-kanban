@@ -271,7 +271,7 @@ const ReportScreen: React.FC = () => {
         {/* KPI Financial Cards */}
         <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
           <Col xs={24} sm={12} lg={6}>
-            <Card className="app-card" bordered={false} style={{ borderRadius: 12 }}>
+            <Card className="app-card" variant="borderless" style={{ borderRadius: 12 }}>
               <Statistic
                 title="Tổng doanh thu thực nhận"
                 value={totalRevenue}
@@ -286,7 +286,7 @@ const ReportScreen: React.FC = () => {
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card className="app-card" bordered={false} style={{ borderRadius: 12 }}>
+            <Card className="app-card" variant="borderless" style={{ borderRadius: 12 }}>
               <Statistic
                 title="Ước tính lợi nhuận gộp"
                 value={totalProfit}
@@ -301,7 +301,7 @@ const ReportScreen: React.FC = () => {
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card className="app-card" bordered={false} style={{ borderRadius: 12 }}>
+            <Card className="app-card" variant="borderless" style={{ borderRadius: 12 }}>
               <Statistic
                 title="Chi phí vốn hàng bán"
                 value={totalCost}
@@ -316,7 +316,7 @@ const ReportScreen: React.FC = () => {
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card className="app-card" bordered={false} style={{ borderRadius: 12 }}>
+            <Card className="app-card" variant="borderless" style={{ borderRadius: 12 }}>
               <Statistic
                 title="Tỷ lệ giao hàng thành công"
                 value={deliverySuccessRate}
@@ -341,7 +341,7 @@ const ReportScreen: React.FC = () => {
             <Card
               className="app-card"
               title={<span style={{ fontWeight: 700 }}>Xu hướng doanh thu & Dòng tiền xuất nhập</span>}
-              bordered={false}
+              variant="borderless"
               style={{ borderRadius: 12 }}
             >
               <div style={{ height: 320 }}>
@@ -393,7 +393,7 @@ const ReportScreen: React.FC = () => {
             <Card
               className="app-card"
               title={<span style={{ fontWeight: 700 }}>Cơ cấu trạng thái đơn hàng</span>}
-              bordered={false}
+              variant="borderless"
               style={{ borderRadius: 12 }}
             >
               <div
@@ -446,7 +446,7 @@ const ReportScreen: React.FC = () => {
             <Card
               className="app-card"
               title={<span style={{ fontWeight: 700 }}>Top sản phẩm đóng góp doanh thu cao nhất</span>}
-              bordered={false}
+              variant="borderless"
               style={{ borderRadius: 12 }}
             >
               <Table

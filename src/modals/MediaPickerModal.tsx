@@ -80,10 +80,12 @@ const MediaPickerModal = ({
         maxWidth: isMobile ? "calc(100vw - 16px)" : 1040,
         margin: "0 auto",
       }}
-      bodyStyle={{
-        padding: isMobile ? "10px 8px" : "16px 24px",
+      styles={{
+        body: {
+          padding: isMobile ? "10px 8px" : "16px 24px",
+        },
       }}
-      destroyOnClose
+      destroyOnHidden
     >
       <div
         style={{

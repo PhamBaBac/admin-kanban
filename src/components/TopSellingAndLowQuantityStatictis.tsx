@@ -52,7 +52,7 @@ const TopSellingAndLowQuantityStatictis = () => {
       <div className="col-sm-12 col-md-8">
         <Card
           className="app-card mb-4"
-          bordered={false}
+          variant="borderless"
           loading={isLoading || statisticsLoading}
           title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Sản phẩm bán chạy nhất</span>}
           extra={<Link to={`/inventory`} style={{ color: "#1570EF", fontWeight: 500 }}>Xem tất cả</Link>}
@@ -181,7 +181,7 @@ const TopSellingAndLowQuantityStatictis = () => {
       <div className="col-sm-12 col-md-4">
         <Card
           className="app-card mb-4"
-          bordered={false}
+          variant="borderless"
           loading={isLoading || statisticsLoading}
           title={<span style={{ fontWeight: 600, color: "#1e293b" }}>Hàng sắp hết trong kho</span>}
           extra={<Link to={`/inventory`} style={{ color: "#1570EF", fontWeight: 500 }}>Xem tất cả</Link>}

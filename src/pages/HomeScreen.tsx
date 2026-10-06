@@ -202,21 +202,12 @@ const HomeScreen = () => {
   return (
     <div style={{ padding: "8px 0" }}>
       {/* Welcome Header */}
-      <div style={{ marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
-          Trung tâm điều hành hôm nay
-        </Title>
-        <Text type="secondary" style={{ fontSize: 13 }}>
-          Nắm bắt công việc cần xử lý ngay, cảnh báo tồn kho và các đơn hàng mới phát sinh
-        </Text>
-      </div>
-
       {/* 1. VIỆC CẦN LÀM NGAY (Action Required Alert Cards) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col xs={24} sm={8}>
           <Card
             className="app-card"
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               borderLeft: "4px solid #f79009",
@@ -257,7 +248,7 @@ const HomeScreen = () => {
         <Col xs={24} sm={8}>
           <Card
             className="app-card"
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               borderLeft: "4px solid #1570ef",
@@ -298,7 +289,7 @@ const HomeScreen = () => {
         <Col xs={24} sm={8}>
           <Card
             className="app-card"
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               borderLeft: "4px solid #f04438",
@@ -350,7 +341,7 @@ const HomeScreen = () => {
       {/* 2. LỐI TẮT THAO TÁC NHANH (Quick Action Hub) */}
       <Card
         className="app-card"
-        bordered={false}
+        variant="borderless"
         style={{ borderRadius: 12, marginBottom: 20 }}
       >
         <div
@@ -474,7 +465,7 @@ const HomeScreen = () => {
                 </Link>
               </div>
             }
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 12 }}
           >
           {isMobile ? (
@@ -577,7 +568,7 @@ const HomeScreen = () => {
                 </Link>
               </div>
             }
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 12 }}
           >
             {lowStockItems.length > 0 ? (

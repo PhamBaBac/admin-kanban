@@ -81,7 +81,6 @@ export const OrdersMobileCards: React.FC<OrdersMobileCardsProps> = ({
 }) => {
   return (
     <div className="d-flex flex-column" style={{ gap: 10 }}>
-      {/* Thanh Chọn tất cả trên mobile */}
       {bills.length > 0 && (
         <div
           style={{

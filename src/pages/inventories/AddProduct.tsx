@@ -58,97 +58,83 @@ const AddProduct: React.FC = () => {
     handleRemoveSubProduct,
   } = useAddProductForm();
 
-  if (isInitialLoading) {
-    return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "60vh" }}
-      >
-        <Spin size="large" />
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: "8px 0" }}>
-      <div className="container-fluid px-2 px-md-3">
-        <Form
-          disabled={isCreating}
-          size="large"
-          form={form}
-          onFinish={handleAddNewProduct}
-          layout="vertical"
-        >
-          {/* Header Bar */}
-          <ProductHeaderSection
-            isEditMode={Boolean(id)}
-            isCreating={isCreating}
-            onCancel={() => navigate("/inventory")}
-            onSubmit={() => form.submit()}
-          />
-
-          <div className="row g-3">
-            {/* Cột trái: Tên sản phẩm, mô tả ngắn, TinyMCE Editor */}
-            <ProductGeneralInfoSection
+      <Spin spinning={isInitialLoading} size="large" tip="Đang tải dữ liệu...">
+        <div className="container-fluid px-2 px-md-3">
+          <Form
+            disabled={isCreating}
+            size="large"
+            form={form}
+            onFinish={handleAddNewProduct}
+            layout="vertical"
+          >
+            <ProductHeaderSection
+              isEditMode={Boolean(id)}
               isCreating={isCreating}
-              content={content}
-              editorRef={editorRef}
-              isGeneratingDesc={isGeneratingDesc}
-              isGeneratingContent={isGeneratingContent}
-              onAiGenerateDescription={handleAiGenerateDescription}
-              onAiGenerateContent={handleAiGenerateContent}
+              onCancel={() => navigate("/inventory")}
+              onSubmit={() => form.submit()}
             />
 
-            {/* Cột phải: Danh mục, Nhà cung cấp, Ảnh */}
-            <ProductSidebarSection
-              categories={categories}
-              supplierOptions={supplierOptions}
-              fileList={fileList}
-              fileUrl={fileUrl}
-              onFileUrlChange={setFileUrl}
-              onOpenAddCategory={() => setIsVisibleAddCategory(true)}
-              onOpenAddSupplier={() => setIsVisibleAddSupplier(true)}
-              onOpenMediaPicker={() => setMediaPickerOpen(true)}
-              onUploadChange={handleUploadChange}
-              onRemoveFile={handleRemoveFile}
-              onAddImageUrl={handleAddImageUrlToProduct}
-            />
-
-            {/* Bảng biến thể (chỉ hiển thị khi đang sửa sản phẩm) */}
-            {id && (
-              <ProductVariantsTableSection
-                subProducts={subProducts}
-                loadingSubProducts={loadingSubProducts}
-                onOpenCreateModal={() => {
-                  setSelectedSubProduct(undefined);
-                  setCloneVariant(undefined);
-                  setIsVisibleAddSubProduct(true);
-                }}
-                onCloneVariant={(item) => {
-                  const { id: _, ...rest } = item;
-                  setCloneVariant({
-                    ...rest,
-                    images: item.images ? [...item.images] : [],
-                    attributes: item.attributes
-                      ? { ...item.attributes }
-                      : undefined,
-                  });
-                  setSelectedSubProduct(undefined);
-                  setIsVisibleAddSubProduct(true);
-                }}
-                onEditVariant={(item) => {
-                  setCloneVariant(undefined);
-                  setSelectedSubProduct(item);
-                  setIsVisibleAddSubProduct(true);
-                }}
-                onDeleteVariant={handleRemoveSubProduct}
+            <div className="row g-3">
+              <ProductGeneralInfoSection
+                isCreating={isCreating}
+                content={content}
+                editorRef={editorRef}
+                isGeneratingDesc={isGeneratingDesc}
+                isGeneratingContent={isGeneratingContent}
+                onAiGenerateDescription={handleAiGenerateDescription}
+                onAiGenerateContent={handleAiGenerateContent}
               />
-            )}
-          </div>
-        </Form>
-      </div>
 
-      {/* Modal danh mục */}
+              <ProductSidebarSection
+                categories={categories}
+                supplierOptions={supplierOptions}
+                fileList={fileList}
+                fileUrl={fileUrl}
+                onFileUrlChange={setFileUrl}
+                onOpenAddCategory={() => setIsVisibleAddCategory(true)}
+                onOpenAddSupplier={() => setIsVisibleAddSupplier(true)}
+                onOpenMediaPicker={() => setMediaPickerOpen(true)}
+                onUploadChange={handleUploadChange}
+                onRemoveFile={handleRemoveFile}
+                onAddImageUrl={handleAddImageUrlToProduct}
+              />
+
+              {id && (
+                <ProductVariantsTableSection
+                  subProducts={subProducts}
+                  loadingSubProducts={loadingSubProducts}
+                  onOpenCreateModal={() => {
+                    setSelectedSubProduct(undefined);
+                    setCloneVariant(undefined);
+                    setIsVisibleAddSubProduct(true);
+                  }}
+                  onCloneVariant={(item) => {
+                    const { id: _, ...rest } = item;
+                    setCloneVariant({
+                      ...rest,
+                      images: item.images ? [...item.images] : [],
+                      attributes: item.attributes
+                        ? { ...item.attributes }
+                        : undefined,
+                    });
+                    setSelectedSubProduct(undefined);
+                    setIsVisibleAddSubProduct(true);
+                  }}
+                  onEditVariant={(item) => {
+                    setCloneVariant(undefined);
+                    setSelectedSubProduct(item);
+                    setIsVisibleAddSubProduct(true);
+                  }}
+                  onDeleteVariant={handleRemoveSubProduct}
+                />
+              )}
+            </div>
+          </Form>
+        </div>
+      </Spin>
+
       <ModalCategory
         visible={isVisibleAddCategory}
         onClose={() => setIsVisibleAddCategory(false)}
@@ -163,7 +149,6 @@ const AddProduct: React.FC = () => {
         values={categories}
       />
 
-      {/* Modal nhà cung cấp */}
       <ToogleSupplier
         visible={isVisibleAddSupplier}
         onClose={() => setIsVisibleAddSupplier(false)}
@@ -178,7 +163,6 @@ const AddProduct: React.FC = () => {
         }}
       />
 
-      {/* Modal chọn ảnh từ thư viện */}
       <MediaPickerModal
         open={mediaPickerOpen}
         onClose={() => setMediaPickerOpen(false)}
@@ -194,7 +178,6 @@ const AddProduct: React.FC = () => {
         }}
       />
 
-      {/* Modal thêm/sửa biến thể trực tiếp */}
       {id && (
         <AddSubProductModal
           visible={isVisibleAddSubProduct}

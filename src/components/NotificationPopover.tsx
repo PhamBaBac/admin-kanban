@@ -533,7 +533,7 @@ const NotificationPopover: React.FC<Props> = ({
       open={open}
       onOpenChange={setOpen}
       placement="bottomRight"
-      overlayInnerStyle={{ padding: 0, borderRadius: 12 }}
+      styles={{ body: { padding: 0, borderRadius: 12 } }}
     >
       <Tooltip title="Thông báo hệ thống">
         <Button

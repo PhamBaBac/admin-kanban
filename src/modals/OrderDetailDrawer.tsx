@@ -552,7 +552,8 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
         >
           {loadingHistory ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <Spin tip="Đang tải nhật ký kiểm toán..." />
+              <Spin />
+              <div style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}>Đang tải nhật ký kiểm toán...</div>
             </div>
           ) : historyList.length === 0 ? (
             <Empty description="Chưa có bản ghi nhật ký chuyển trạng thái" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -617,7 +618,8 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
         >
           {loadingTx ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <Spin tip="Đang tải sổ cái giao dịch..." />
+              <Spin />
+              <div style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}>Đang tải sổ cái giao dịch...</div>
             </div>
           ) : transactions.length === 0 ? (
             <Empty description="Chưa có bút toán thanh toán nào được ghi nhận" image={Empty.PRESENTED_IMAGE_SIMPLE} />

@@ -79,8 +79,8 @@ const CreateShipmentModal: React.FC<Props> = ({
 
       handleCalculateFee(calculatedWeight > 0 ? calculatedWeight : 500, 20, 15, 10);
     } else {
-      form.resetFields();
       setEstimatedFee(null);
+      setPackQuantities({});
     }
   }, [visible, order]);
 
@@ -323,13 +323,7 @@ const CreateShipmentModal: React.FC<Props> = ({
           paddingRight: 8,
         },
       }}
-      bodyStyle={{
-        maxHeight: "calc(100vh - 210px)",
-        overflowY: "auto",
-        overflowX: "hidden",
-        paddingRight: 8,
-      }}
-      destroyOnClose
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onClose} disabled={loading}>
           Hủy bỏ
@@ -380,7 +374,7 @@ const CreateShipmentModal: React.FC<Props> = ({
           </div>
         }
         style={{ marginBottom: 16, borderRadius: 8, border: "1px solid #e2e8f0" }}
-        headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
+        styles={{ header: { backgroundColor: "#f8fafc", padding: "8px 16px" } }}
       >
         <Table
           dataSource={order?.orderResponses || []}
@@ -400,7 +394,7 @@ const CreateShipmentModal: React.FC<Props> = ({
           </Space>
         }
         style={{ borderRadius: 8, border: "1px solid #e2e8f0" }}
-        headStyle={{ backgroundColor: "#f8fafc", padding: "8px 16px" }}
+        styles={{ header: { backgroundColor: "#f8fafc", padding: "8px 16px" } }}
       >
         <div
           style={{

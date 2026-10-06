@@ -172,10 +172,12 @@ export const AddSubProductModal: React.FC<AddSubProductModalProps> = (props) => 
         maxWidth: isMobile ? "calc(100vw - 16px)" : 780,
         margin: "0 auto",
       }}
-      bodyStyle={{
-        maxHeight: isMobile ? "calc(88vh - 110px)" : "calc(84vh - 130px)",
-        overflowY: "auto",
-        padding: isMobile ? "8px 12px" : "12px 24px 20px",
+      styles={{
+        body: {
+          maxHeight: isMobile ? "calc(88vh - 110px)" : "calc(84vh - 130px)",
+          overflowY: "auto",
+          padding: isMobile ? "8px 12px" : "12px 24px 20px",
+        },
       }}
     >
       <Form

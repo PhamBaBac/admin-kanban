@@ -295,7 +295,7 @@ const ShipmentsScreen: React.FC = () => {
       {/* KPI Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={8}>
-          <Card className="app-card" bordered={false}>
+          <Card className="app-card" variant="borderless">
             <Statistic
               title="Tổng kiện hàng"
               value={total}
@@ -304,7 +304,7 @@ const ShipmentsScreen: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card className="app-card" bordered={false}>
+          <Card className="app-card" variant="borderless">
             <Statistic
               title="Tổng tiền COD cần thu"
               value={totalCod}
@@ -315,7 +315,7 @@ const ShipmentsScreen: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card className="app-card" bordered={false}>
+          <Card className="app-card" variant="borderless">
             <Statistic
               title="Kiện hàng đang xử lý/giao"
               value={deliveringCount}
@@ -326,7 +326,7 @@ const ShipmentsScreen: React.FC = () => {
       </Row>
 
       {/* Filter Bar */}
-      <Card className="app-card" style={{ marginBottom: 16 }} bordered={false}>
+      <Card className="app-card" style={{ marginBottom: 16 }} variant="borderless">
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col>
             <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
@@ -341,7 +341,7 @@ const ShipmentsScreen: React.FC = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 onSearch={() => fetchShipments()}
                 allowClear
-                style={{ minWidth: 200, flex: 1, maxWidth: 320 }}
+                style={{ minWidth: 200, flex: 1, maxWidth: 320, height: 32 }}
               />
               <Select
                 value={statusFilter}
@@ -354,7 +354,7 @@ const ShipmentsScreen: React.FC = () => {
                     setSearchParams({ status: val });
                   }
                 }}
-                style={{ minWidth: 160, flex: 1, maxWidth: 200 }}
+                style={{ minWidth: 160, flex: 1, maxWidth: 200, height: 32 }}
               >
                 <Select.Option value="ALL">Tất cả trạng thái</Select.Option>
                 <Select.Option value="ready_to_pick">Chờ lấy hàng</Select.Option>
@@ -363,7 +363,11 @@ const ShipmentsScreen: React.FC = () => {
                 <Select.Option value="cancel">Đã hủy</Select.Option>
                 <Select.Option value="return">Hàng hoàn</Select.Option>
               </Select>
-              <Button icon={<Refresh size={18} />} onClick={() => fetchShipments()}>
+              <Button
+                icon={<Refresh size={18} />}
+                onClick={() => fetchShipments()}
+                style={{ height: 32, display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
                 Làm mới
               </Button>
             </Space>
@@ -404,7 +408,8 @@ const ShipmentsScreen: React.FC = () => {
         <div className="d-flex flex-column gap-3">
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px 0", background: "#fff", borderRadius: 12 }}>
-              <Spin size="large" tip="Đang tải danh sách kiện hàng..." />
+              <Spin size="large" />
+              <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang tải danh sách kiện hàng...</div>
             </div>
           ) : shipments.length === 0 ? (
             <div style={{ padding: "40px 0", background: "#fff", borderRadius: 12 }}>
@@ -578,7 +583,7 @@ const ShipmentsScreen: React.FC = () => {
         </div>
       ) : (
         /* Giao diện Desktop: Bảng dữ liệu đầy đủ cột */
-        <Card className="app-card" bordered={false}>
+        <Card className="app-card" variant="borderless">
           <Table
             bordered
             rowKey="id"
@@ -649,7 +654,8 @@ const ShipmentsScreen: React.FC = () => {
       >
         {trackingLoading ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <Spin tip="Đang lấy dữ liệu từ hệ thống GHN..." size="large" />
+            <Spin size="large" />
+            <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang lấy dữ liệu từ hệ thống GHN...</div>
           </div>
         ) : trackingData ? (
           <div>

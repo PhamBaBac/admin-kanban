@@ -146,7 +146,8 @@ const PromotionScreen = () => {
         <div className="d-flex flex-column gap-3">
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px 0", background: "#fff", borderRadius: 12 }}>
-              <Spin size="large" tip="Đang tải danh sách khuyến mãi..." />
+              <Spin size="large" />
+              <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang tải danh sách khuyến mãi...</div>
             </div>
           ) : promotions.length === 0 ? (
             <div style={{ padding: "40px 0", background: "#fff", borderRadius: 12 }}>
@@ -278,7 +279,7 @@ const PromotionScreen = () => {
           )}
         </div>
       ) : (
-        <Card className="app-card" bordered={false}>
+        <Card className="app-card" variant="borderless">
           <Table
             bordered
             rowKey={(record) => record.id}

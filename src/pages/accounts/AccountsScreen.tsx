@@ -186,6 +186,10 @@ const AccountsScreen: React.FC = () => {
   };
 
   const handleOpenRoleModal = (record: UserModel) => {
+    if (record.role === "USER") {
+      message.warning("Tài khoản khách hàng thông thường trên app shopping không cho phép cập nhật quyền và vai trò!");
+      return;
+    }
     setSelectedUserForRole(record);
     setNewSelectedRole(record.role);
     setIsRoleModalOpen(true);
@@ -193,6 +197,11 @@ const AccountsScreen: React.FC = () => {
 
   const handleConfirmRoleChange = async () => {
     if (!selectedUserForRole || !newSelectedRole) return;
+
+    if (selectedUserForRole.role === "USER") {
+      message.warning("Tài khoản khách hàng thông thường trên app shopping không cho phép cập nhật quyền và vai trò!");
+      return;
+    }
 
     if (
       selectedUserForRole.email.toLowerCase() === currentAdminEmail.toLowerCase() &&
@@ -227,7 +236,7 @@ const AccountsScreen: React.FC = () => {
         return <Tag color="#1570ef" style={{ fontWeight: 600 }}>Quản lý (MANAGER)</Tag>;
       case "USER":
       default:
-        return <Tag color="#16a34a" style={{ fontWeight: 600 }}>Người dùng (USER)</Tag>;
+        return <Tag color="#16a34a" style={{ fontWeight: 600 }}>Khách hàng (USER)</Tag>;
     }
   };
 
@@ -313,18 +322,43 @@ const AccountsScreen: React.FC = () => {
     {
       title: "Thao tác",
       key: "actions",
-      width: 120,
+      width: 130,
       align: "center",
       render: (_, record) => {
         const isCurrent = record.email.toLowerCase() === currentAdminEmail.toLowerCase();
+        const isCustomer = record.role === "USER";
+
+        if (isCustomer) {
+          return (
+            <Tooltip title="Tài khoản khách hàng thông thường trên app shopping không cho phép cập nhật quyền và vai trò">
+              <Tag
+                icon={<Lock size={13} style={{ marginRight: 4, verticalAlign: "-2px" }} />}
+                style={{
+                  fontSize: 12,
+                  color: "#64748b",
+                  background: "#f1f5f9",
+                  borderColor: "#cbd5e1",
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  cursor: "not-allowed",
+                  userSelect: "none",
+                }}
+              >
+                Cố định
+              </Tag>
+            </Tooltip>
+          );
+        }
+
         return (
           <Space size={2}>
-            <Tooltip title="Cập nhật phân quyền / vai trò">
+            <Tooltip title={isCurrent ? "Không thể tự hạ quyền của chính mình" : "Cập nhật phân quyền / vai trò"}>
               <Button
                 type="text"
                 size="small"
                 icon={<TagUser size={16} />}
                 onClick={() => handleOpenRoleModal(record)}
+                style={{ color: "#1570ef", fontWeight: 500 }}
               >
                 Đổi vai trò
               </Button>
@@ -402,7 +436,7 @@ const AccountsScreen: React.FC = () => {
       <Card
         className="app-card"
         style={{ marginBottom: 16, borderRadius: 12 }}
-        bordered={false}
+        variant="borderless"
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -429,9 +463,6 @@ const AccountsScreen: React.FC = () => {
               </Text>
             </div>
           </div>
-          <Tag color="purple" style={{ padding: "4px 10px", borderRadius: 6, fontWeight: 600 }}>
-            Quyền hạn: ADMIN CHỈ ĐỊNH
-          </Tag>
         </div>
 
         {/* Khối thống kê nhanh */}
@@ -476,7 +507,7 @@ const AccountsScreen: React.FC = () => {
       </Card>
 
       {/* Tabs Chức năng chính */}
-      <Card className="app-card" style={{ borderRadius: 12 }} bordered={false}>
+      <Card className="app-card" style={{ borderRadius: 12 }} variant="borderless">
         <Tabs
           activeKey={activeTab}
           onChange={(key) => setActiveTab(key)}
@@ -504,7 +535,7 @@ const AccountsScreen: React.FC = () => {
                             fetchUsers(1, userPageSize, searchUser, filterRole);
                           }}
                           allowClear
-                          style={{ minWidth: 200, flex: 1, maxWidth: 320 }}
+                          style={{ minWidth: 200, flex: 1, maxWidth: 320, height: 32 }}
                         />
                         <Select
                           value={filterRole}
@@ -513,7 +544,7 @@ const AccountsScreen: React.FC = () => {
                             setUserPage(1);
                             fetchUsers(1, userPageSize, searchUser, val);
                           }}
-                          style={{ minWidth: 160, flex: 1, maxWidth: 200 }}
+                          style={{ minWidth: 160, flex: 1, maxWidth: 200, height: 32 }}
                           options={[
                             { value: "ALL", label: "Tất cả vai trò" },
                             { value: "ADMIN", label: "Quản trị viên (ADMIN)" },
@@ -525,6 +556,7 @@ const AccountsScreen: React.FC = () => {
                           icon={<Refresh size={16} />}
                           onClick={() => fetchUsers(userPage, userPageSize, searchUser, filterRole)}
                           loading={loadingUsers}
+                          style={{ height: 32, display: "inline-flex", alignItems: "center", gap: 6 }}
                         >
                           Làm mới
                         </Button>
@@ -535,7 +567,7 @@ const AccountsScreen: React.FC = () => {
                         type="primary"
                         icon={<ProfileAdd size={18} />}
                         onClick={() => setActiveTab("create")}
-                        style={{ borderRadius: 6 }}
+                        style={{ borderRadius: 6, height: 32, display: "inline-flex", alignItems: "center", gap: 6 }}
                       >
                         Thêm tài khoản mới
                       </Button>
@@ -547,7 +579,8 @@ const AccountsScreen: React.FC = () => {
                     <div className="d-flex flex-column gap-3">
                       {loadingUsers ? (
                         <div style={{ textAlign: "center", padding: "40px 0", background: "#fff", borderRadius: 12 }}>
-                          <Spin size="large" tip="Đang tải danh sách tài khoản..." />
+                          <Spin size="large" />
+                          <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang tải danh sách tài khoản...</div>
                         </div>
                       ) : users.length === 0 ? (
                         <div style={{ padding: "40px 0", background: "#fff", borderRadius: 12 }}>
@@ -616,21 +649,42 @@ const AccountsScreen: React.FC = () => {
                               </div>
 
                               {/* Action button */}
-                              <Button
-                                block
-                                size="middle"
-                                onClick={() => handleOpenRoleModal(record)}
-                                style={{
-                                  borderRadius: 8,
-                                  fontSize: 13,
-                                  fontWeight: 600,
-                                  color: "#1570ef",
-                                  borderColor: "#bfdbfe",
-                                  background: "#eff6ff",
-                                }}
-                              >
-                                Đổi vai trò & Phân quyền
-                              </Button>
+                              {record.role === "USER" ? (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 6,
+                                    padding: "8px 12px",
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    color: "#64748b",
+                                    background: "#f1f5f9",
+                                    border: "1px dashed #cbd5e1",
+                                  }}
+                                >
+                                  <Lock size={15} color="#64748b" />
+                                  <span>Khách hàng app shopping (Cố định vai trò)</span>
+                                </div>
+                              ) : (
+                                <Button
+                                  block
+                                  size="middle"
+                                  onClick={() => handleOpenRoleModal(record)}
+                                  style={{
+                                    borderRadius: 8,
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: "#1570ef",
+                                    borderColor: "#bfdbfe",
+                                    background: "#eff6ff",
+                                  }}
+                                >
+                                  Đổi vai trò & Phân quyền
+                                </Button>
+                              )}
                             </div>
                           );
                         })
@@ -699,7 +753,7 @@ const AccountsScreen: React.FC = () => {
                       <div style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4 }}>
                         <div><strong>• ADMIN (Quản trị viên cao nhất):</strong> Toàn quyền truy cập tất cả module, quản lý tài khoản, phân quyền, cấu hình hệ thống.</div>
                         <div><strong>• MANAGER (Quản lý cửa hàng):</strong> Quản lý danh mục, sản phẩm, xử lý đơn hàng, xuất vận đơn và xem báo cáo. Không được quản lý tài khoản admin.</div>
-                        <div><strong>• USER (Khách hàng / Nhân viên thường):</strong> Tài khoản khách hàng thông thường trên app shopping hoặc xem thông tin cơ bản.</div>
+                        <div><strong>• USER (Khách hàng mua sắm):</strong> Tài khoản khách hàng thông thường trên app shopping (cố định, không cho phép cập nhật quyền và vai trò trong trang quản trị).</div>
                       </div>
                     }
                     style={{ marginBottom: 24, borderRadius: 8 }}
@@ -835,7 +889,7 @@ const AccountsScreen: React.FC = () => {
                           fetchLogs(1, logPageSize, searchLog);
                         }}
                         allowClear
-                        style={{ minWidth: 240, width: "100%", maxWidth: 440 }}
+                        style={{ minWidth: 240, width: "100%", maxWidth: 440, height: 32 }}
                       />
                     </Col>
                     <Col xs={24} md={10} className="text-start text-md-end">
@@ -843,6 +897,7 @@ const AccountsScreen: React.FC = () => {
                         icon={<Refresh size={16} />}
                         onClick={() => fetchLogs(logPage, logPageSize, searchLog)}
                         loading={loadingLogs}
+                        style={{ height: 32, display: "inline-flex", alignItems: "center", gap: 6 }}
                       >
                         Làm mới nhật ký
                       </Button>
@@ -896,9 +951,10 @@ const AccountsScreen: React.FC = () => {
         }}
         onOk={handleConfirmRoleChange}
         confirmLoading={updatingRole}
+        okButtonProps={{ disabled: selectedUserForRole?.role === "USER" }}
         okText="Lưu thay đổi"
         cancelText="Hủy"
-        destroyOnClose
+        destroyOnHidden
       >
         {selectedUserForRole && (
           <div style={{ padding: "12px 0" }}>
@@ -909,29 +965,39 @@ const AccountsScreen: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>
-                Chọn vai trò mới:
-              </label>
-              <Select
-                value={newSelectedRole}
-                onChange={(val) => setNewSelectedRole(val)}
-                style={{ width: "100%" }}
-                options={[
-                  { value: "ADMIN", label: "Quản trị viên (ADMIN) - Toàn quyền" },
-                  { value: "MANAGER", label: "Quản lý (MANAGER) - Đơn hàng, Kho & Sản phẩm" },
-                  { value: "USER", label: "Người dùng (USER) - Khách hàng thông thường" },
-                ]}
+            {selectedUserForRole.role === "USER" ? (
+              <Alert
+                type="error"
+                showIcon
+                message="Không thể cập nhật"
+                description="Tài khoản khách hàng thông thường trên app shopping là tài khoản người dùng cố định, không được phép thay đổi quyền và vai trò trong hệ thống quản trị."
               />
-            </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>
+                    Chọn vai trò mới:
+                  </label>
+                  <Select
+                    value={newSelectedRole}
+                    onChange={(val) => setNewSelectedRole(val)}
+                    style={{ width: "100%" }}
+                    options={[
+                      { value: "ADMIN", label: "Quản trị viên (ADMIN) - Toàn quyền" },
+                      { value: "MANAGER", label: "Quản lý (MANAGER) - Đơn hàng, Kho & Sản phẩm" },
+                    ]}
+                  />
+                </div>
 
-            <Alert
-              type="warning"
-              showIcon
-              message="Lưu ý quan trọng"
-              description="Hành động thay đổi phân quyền sẽ được ghi lại trong Nhật ký hoạt động (Audit Logs) để đối soát bảo mật."
-              style={{ marginTop: 16 }}
-            />
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="Lưu ý quan trọng"
+                  description="Hành động thay đổi phân quyền sẽ được ghi lại trong Nhật ký hoạt động (Audit Logs) để đối soát bảo mật."
+                  style={{ marginTop: 16 }}
+                />
+              </>
+            )}
           </div>
         )}
       </Modal>

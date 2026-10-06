@@ -498,7 +498,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   ];
 
   return (
-    <Card className="app-card" bordered={false}>
+    <Card className="app-card" variant="borderless">
       <Table
         bordered
         rowKey={(record) => record.id}

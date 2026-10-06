@@ -568,164 +568,156 @@ const Suppliers = () => {
   }
 
   return (
-    <div style={{ padding: isMobile ? "4px 0" : "0" }}>
-      {viewMode === "cards" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: 12,
-              padding: isMobile ? "12px 14px" : "16px 20px",
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
-            }}
-          >
-            
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 10,
-                marginBottom: 12,
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <h4
-                    style={{
-                      margin: 0,
-                      fontWeight: 700,
-                      fontSize: isMobile ? 16 : 18,
-                      color: "#0f172a",
-                    }}
-                  >
-                    Danh sách nhà cung cấp
-                  </h4>
-                  <Tag
-                    color="blue"
-                    style={{
-                      borderRadius: 12,
-                      margin: 0,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {total}
-                  </Tag>
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#64748b",
-                    marginTop: 2,
-                    display: isMobile ? "none" : "block",
-                  }}
-                >
-                  Quản lý thông tin và trạng thái hợp tác các nhà cung ứng
-                </div>
-              </div>
-
-              <Space wrap size={8}>
-                <Segmented
-                  value={viewMode}
-                  onChange={(val) => setViewMode(val as "table" | "cards")}
-                  options={[
-                    {
-                      value: "cards",
-                      icon: <AppstoreOutlined />,
-                      label: isMobile ? undefined : "Dạng thẻ",
-                    },
-                    {
-                      value: "table",
-                      icon: <BarsOutlined />,
-                      label: isMobile ? undefined : "Dạng bảng",
-                    },
-                  ]}
-                />
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    setSupplierSelected(undefined);
-                    setIsVisibleModalAddNew(true);
-                  }}
-                  style={{
-                    borderRadius: 8,
-                    fontWeight: 600,
-                    height: 36,
-                    background: "#1677ff",
-                  }}
-                >
-                  {isMobile ? "Thêm" : "Thêm nhà cung cấp"}
-                </Button>
-              </Space>
-            </div>
-
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <Input
-                placeholder="Tìm theo tên, SĐT, email, danh mục..."
-                prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-                value={searchKey}
-                onChange={(e) => setSearchKey(e.target.value)}
-                allowClear
-                style={{ borderRadius: 8, height: 36, flex: 1 }}
-              />
-              <Button
-                onClick={() => setIsVisibleModalExport(true)}
+    <div style={{ padding: isMobile ? "4px 0" : "0", display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Header Toolbar dùng chung cho cả Dạng thẻ và Dạng bảng */}
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 12,
+          padding: isMobile ? "12px 14px" : "16px 20px",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h4
                 style={{
-                  borderRadius: 8,
-                  height: 36,
-                  fontSize: 13,
-                  flexShrink: 0,
+                  margin: 0,
+                  fontWeight: 700,
+                  fontSize: isMobile ? 16 : 18,
+                  color: "#0f172a",
                 }}
               >
-                Xuất Excel
-              </Button>
+                Danh sách nhà cung cấp
+              </h4>
+              <Tag
+                color="blue"
+                style={{
+                  borderRadius: 12,
+                  margin: 0,
+                  fontWeight: 600,
+                }}
+              >
+                {total}
+              </Tag>
             </div>
-
             <div
               style={{
-                display: "flex",
-                gap: 6,
-                overflowX: "auto",
-                paddingTop: 10,
-                scrollbarWidth: "none",
+                fontSize: 12,
+                color: "#64748b",
+                marginTop: 2,
+                display: isMobile ? "none" : "block",
               }}
             >
-              {FILTER_OPTIONS.map((f) => {
-                const isSelected = statusFilter === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => setStatusFilter(f.key as any)}
-                    style={{
-                      border: isSelected
-                        ? "1px solid #1677ff"
-                        : "1px solid #e2e8f0",
-                      backgroundColor: isSelected ? "#eff6ff" : "#f8fafc",
-                      color: isSelected ? "#1677ff" : "#64748b",
-                      fontWeight: isSelected ? 600 : 400,
-                      borderRadius: 20,
-                      padding: "4px 12px",
-                      fontSize: 12,
-                      whiteSpace: "nowrap",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    {f.label}
-                  </button>
-                );
-              })}
+              Quản lý thông tin và trạng thái hợp tác các nhà cung ứng
             </div>
           </div>
 
-          {/* Cards Grid / List */}
+          <Space wrap size={8} align="center">
+            <Segmented
+              value={viewMode}
+              onChange={(val) => setViewMode(val as "table" | "cards")}
+              options={[
+                {
+                  value: "cards",
+                  icon: <AppstoreOutlined />,
+                  label: isMobile ? undefined : "Dạng thẻ",
+                },
+                {
+                  value: "table",
+                  icon: <BarsOutlined />,
+                  label: isMobile ? undefined : "Dạng bảng",
+                },
+              ]}
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setSupplierSelected(undefined);
+                setIsVisibleModalAddNew(true);
+              }}
+              style={{
+                borderRadius: 6,
+                fontWeight: 600,
+                height: 32,
+                background: "#1677ff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {isMobile ? "Thêm" : "Thêm nhà cung cấp"}
+            </Button>
+          </Space>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Input
+            placeholder="Tìm theo tên, SĐT, email, danh mục..."
+            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+            value={searchKey}
+            onChange={(e) => setSearchKey(e.target.value)}
+            allowClear
+            style={{ borderRadius: 8, height: 36, flex: 1 }}
+          />
+          </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            overflowX: "auto",
+            paddingTop: 10,
+            scrollbarWidth: "none",
+          }}
+        >
+          {FILTER_OPTIONS.map((f) => {
+            const isSelected = statusFilter === f.key;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setStatusFilter(f.key as any)}
+                style={{
+                  border: isSelected
+                    ? "1px solid #1677ff"
+                    : "1px solid #e2e8f0",
+                  backgroundColor: isSelected ? "#eff6ff" : "#f8fafc",
+                  color: isSelected ? "#1677ff" : "#64748b",
+                  fontWeight: isSelected ? 600 : 400,
+                  borderRadius: 20,
+                  padding: "4px 12px",
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {viewMode === "cards" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {loading ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <Spin size="large" tip="Đang tải dữ liệu nhà cung cấp..." />
+              <Spin size="large" />
+              <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang tải dữ liệu nhà cung cấp...</div>
             </div>
           ) : filteredSuppliers.length === 0 ? (
             <Card
@@ -803,41 +795,20 @@ const Suppliers = () => {
         </div>
       ) : (
         /* GIAO DIỆN DẠNG BẢNG (TABLE VIEW) */
-        <div>
-          {/* Top Switcher Bar */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 10,
-              flexWrap: "wrap",
-              gap: 8,
-            }}
-          >
-            <div style={{ fontSize: 13, color: "#64748b" }}>
-              Đang hiển thị dạng bảng ({total} nhà cung cấp)
-            </div>
-            <Segmented
-              value={viewMode}
-              onChange={(val) => setViewMode(val as "table" | "cards")}
-              options={[
-                {
-                  value: "cards",
-                  icon: <AppstoreOutlined />,
-                  label: isMobile ? undefined : "Dạng thẻ",
-                },
-                {
-                  value: "table",
-                  icon: <BarsOutlined />,
-                  label: isMobile ? undefined : "Dạng bảng",
-                },
-              ]}
-            />
-          </div>
-
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: 12,
+            border: "1px solid #e2e8f0",
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+          }}
+        >
           <TableComponet
             api="supplier"
+            hideTitle
+            page={page}
+            pageSize={pageSize}
             onPageChange={(val: any) => {
               setPage(val.page);
               setPageSize(val.pageSize);
@@ -848,8 +819,8 @@ const Suppliers = () => {
             }}
             loading={loading}
             forms={forms}
-            records={suppliers}
-            total={total}
+            records={filteredSuppliers}
+            total={filteredSuppliers.length !== suppliers.length ? filteredSuppliers.length : total}
             extraColumn={(item: any) => (
               <Space>
                 <Button

@@ -67,6 +67,7 @@ const SupportScreen: React.FC = () => {
   const [filterType, setFilterType] = useState<string>("all");
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -484,7 +485,7 @@ const SupportScreen: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               allowClear
-              style={{ borderRadius: 8, background: "#f8fafc" }}
+              style={{ borderRadius: 8, background: "#f8fafc", height: 36 }}
             />
 
             {/* Phân loại tab */}
@@ -547,7 +548,8 @@ const SupportScreen: React.FC = () => {
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "8px 0" }}>
             {loadingList ? (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
-                <Spin tip="Đang tải hội thoại..." />
+                <Spin />
+                <div style={{ marginTop: 10, color: "#64748b", fontSize: 13 }}>Đang tải hội thoại...</div>
               </div>
             ) : filteredConversations.length === 0 ? (
               <Empty
@@ -700,12 +702,9 @@ const SupportScreen: React.FC = () => {
                 }}
               />
               <Text type="secondary">
-                {socketConnected ? "Realtime Socket kết nối" : "Đang kết nối lại..."}
+                {socketConnected ? "Đang hoạt động" : "Đang kết nối lại..."}
               </Text>
             </div>
-            <Tag color={currentUserRole === "ADMIN" ? "blue" : "purple"} style={{ margin: 0 }}>
-              {currentUserRole}
-            </Tag>
           </div>
         </div>
         )}
@@ -808,7 +807,8 @@ const SupportScreen: React.FC = () => {
               >
                 {loadingMessages ? (
                   <div style={{ textAlign: "center", padding: "60px 0" }}>
-                    <Spin tip="Đang tải tin nhắn..." />
+                    <Spin />
+                    <div style={{ marginTop: 10, color: "#64748b", fontSize: 13 }}>Đang tải tin nhắn...</div>
                   </div>
                 ) : messages.length === 0 ? (
                   <Empty description="Chưa có tin nhắn nào trong cuộc trò chuyện này" style={{ marginTop: 60 }} />
@@ -1023,9 +1023,10 @@ const SupportScreen: React.FC = () => {
               <div
                 style={{
                   padding: isMobileView ? "6px 12px" : "8px 24px",
-                  background: "#fff",
+                  background: "#f8fafc",
                   borderTop: "1px solid #f1f5f9",
                   display: "flex",
+                  alignItems: "center",
                   gap: 8,
                   overflowX: "auto",
                   whiteSpace: "nowrap",
@@ -1038,23 +1039,26 @@ const SupportScreen: React.FC = () => {
                     color: "#64748b",
                     display: "flex",
                     alignItems: "center",
-                    gap: 4,
+                    gap: 5,
                     flexShrink: 0,
+                    fontWeight: 600,
                   }}
                 >
-                  <Flash size={14} color="#f59e0b" /> Mẫu nhanh:
+                  <Flash size={14} color="#f59e0b" variant="Bold" /> Mẫu nhanh:
                 </span>
                 {QUICK_REPLIES.map((reply, i) => (
                   <Button
                     key={i}
                     size="small"
                     style={{
-                      borderRadius: 12,
+                      borderRadius: 14,
                       fontSize: 12,
-                      background: "#f8fafc",
+                      background: "#ffffff",
                       border: "1px solid #e2e8f0",
+                      color: "#334155",
                       flexShrink: 0,
                       whiteSpace: "nowrap",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
                     }}
                     onClick={() => handleSendMessage(reply)}
                   >
@@ -1066,38 +1070,142 @@ const SupportScreen: React.FC = () => {
               {/* Vùng nhập tin nhắn (Input Area) */}
               <div
                 style={{
-                  padding: isMobileView ? "10px 12px" : "14px 24px",
+                  padding: isMobileView ? "10px 12px" : "14px 24px 16px",
                   borderTop: "1px solid #f1f5f9",
-                  background: "#fff",
+                  background: "#ffffff",
                   flexShrink: 0,
                 }}
               >
-                <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+                <div
+                  style={{
+                    background: isInputFocused ? "#ffffff" : "#f8fafc",
+                    border: `1.5px solid ${isInputFocused ? "#1677ff" : "#e2e8f0"}`,
+                    borderRadius: 16,
+                    padding: "10px 14px 10px 16px",
+                    boxShadow: isInputFocused
+                      ? "0 0 0 3px rgba(22, 119, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)"
+                      : "0 1px 2px rgba(0, 0, 0, 0.02)",
+                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                >
                   <TextArea
                     value={inputText}
                     onChange={handleTyping}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();
                       }
                     }}
-                    placeholder="Nhập nội dung tin nhắn phản hồi (Nhấn Enter để gửi, Shift + Enter để xuống dòng)..."
-                    autoSize={{ minRows: 2, maxRows: 4 }}
-                    style={{ borderRadius: 12, padding: "8px 12px" }}
-                  />
-                  <Button
-                    type="primary"
-                    shape="circle"
-                    size="large"
-                    icon={<Send2 size={20} color="#fff" />}
-                    onClick={() => handleSendMessage()}
+                    placeholder="Nhập nội dung tin nhắn phản hồi..."
+                    autoSize={{ minRows: 2, maxRows: 6 }}
+                    variant="borderless"
                     style={{
-                      backgroundColor: colors.primary500,
-                      boxShadow: "0 4px 12px rgba(21, 112, 239, 0.3)",
-                      flexShrink: 0,
+                      padding: 0,
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      resize: "none",
+                      background: "transparent",
+                      color: "#1e293b",
                     }}
                   />
+
+                  {/* Thanh thao tác dưới cùng của hộp nhập */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: "1px solid rgba(226, 232, 240, 0.6)",
+                    }}
+                  >
+                    {!isMobileView ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "#94a3b8",
+                          fontSize: 12,
+                          userSelect: "none",
+                        }}
+                      >
+                        <span>
+                          Nhấn{" "}
+                          <kbd
+                            style={{
+                              padding: "1px 5px",
+                              background: "#f1f5f9",
+                              borderRadius: 4,
+                              border: "1px solid #cbd5e1",
+                              fontSize: 11,
+                              color: "#475569",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            Enter ↵
+                          </kbd>{" "}
+                          để gửi
+                        </span>
+                        <span style={{ color: "#cbd5e1" }}>•</span>
+                        <span>
+                          <kbd
+                            style={{
+                              padding: "1px 5px",
+                              background: "#f1f5f9",
+                              borderRadius: 4,
+                              border: "1px solid #cbd5e1",
+                              fontSize: 11,
+                              color: "#475569",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            Shift + Enter
+                          </kbd>{" "}
+                          xuống dòng
+                        </span>
+                      </div>
+                    ) : (
+                      <div />
+                    )}
+
+                    <Tooltip
+                      title={!inputText.trim() ? "Nhập nội dung để gửi" : "Gửi tin nhắn (Enter)"}
+                      placement="top"
+                    >
+                      <Button
+                        type="primary"
+                        shape="round"
+                        disabled={!inputText.trim()}
+                        icon={<Send2 size={16} color="#fff" />}
+                        onClick={() => handleSendMessage()}
+                        style={{
+                          height: 34,
+                          padding: "0 18px",
+                          fontWeight: 600,
+                          fontSize: 13,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          background: inputText.trim()
+                            ? "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)"
+                            : "#cbd5e1",
+                          border: "none",
+                          boxShadow: inputText.trim()
+                            ? "0 4px 12px rgba(22, 119, 255, 0.3)"
+                            : "none",
+                          cursor: inputText.trim() ? "pointer" : "not-allowed",
+                          transition: "all 0.25s ease",
+                        }}
+                      >
+                        Gửi
+                      </Button>
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
             </>

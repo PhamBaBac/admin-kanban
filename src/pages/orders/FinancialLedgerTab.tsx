@@ -229,7 +229,6 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
     },
   ];
 
-  /** Render thẻ giao dịch cho mobile */
   const renderMobileCard = (tx: PaymentTransactionModel) => {
     const method = tx.paymentType || (tx as any).paymentMethod || "COD";
     const isPayment = tx.transactionType === "PAYMENT";
@@ -237,7 +236,7 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
     return (
       <Card
         key={tx.id || tx.transactionCode}
-        bordered={false}
+        variant="borderless"
         className="app-card"
         style={{
           marginBottom: 10,
@@ -245,7 +244,7 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
           border: "1px solid #e2e8f0",
           boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
         }}
-        bodyStyle={{ padding: "14px 16px" }}
+        styles={{ body: { padding: "14px 16px" } }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div>
@@ -297,16 +296,15 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
 
   return (
     <div>
-      {/* 3 Thẻ thống kê tài chính */}
       <Row gutter={[16, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             className="app-card"
             style={{ borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0" }}
           >
             <Statistic
-              title={<span style={{ color: "#166534", fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>Tổng tiền đã thu (Inflow)</span>}
+              title={<span style={{ color: "#166534", fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>Tổng tiền đã thu</span>}
               value={totalInflow}
               formatter={(val) => VND.format(Number(val))}
               valueStyle={{ color: "#166534", fontWeight: 700, fontSize: isMobile ? 16 : 20 }}
@@ -316,12 +314,12 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
         </Col>
         <Col xs={24} sm={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             className="app-card"
             style={{ borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca" }}
           >
             <Statistic
-              title={<span style={{ color: "#dc2626", fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>Tổng tiền đã hoàn trả (Outflow)</span>}
+              title={<span style={{ color: "#dc2626", fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>Tổng tiền đã hoàn trả</span>}
               value={totalOutflow}
               formatter={(val) => VND.format(Number(val))}
               valueStyle={{ color: "#dc2626", fontWeight: 700, fontSize: isMobile ? 16 : 20 }}
@@ -331,12 +329,12 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
         </Col>
         <Col xs={24} sm={8}>
           <Card
-            bordered={false}
+            variant="borderless"
             className="app-card"
             style={{ borderRadius: 8, background: "#eff6ff", border: "1px solid #bfdbfe" }}
           >
             <Statistic
-              title={<span style={{ color: "#1e40af", fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>Dòng tiền thực thu (Net Cashflow)</span>}
+              title={<span style={{ color: "#1e40af", fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>Dòng tiền thực thu</span>}
               value={netCashflow}
               formatter={(val) => VND.format(Number(val))}
               valueStyle={{ color: "#1e40af", fontWeight: 700, fontSize: isMobile ? 16 : 20 }}
@@ -346,56 +344,75 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
         </Col>
       </Row>
 
-      {/* Bộ lọc và thao tác */}
-      <Card bordered={false} className="app-card" style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle" gutter={[12, 12]}>
-          <Col xs={24} sm="auto">
-            <Space wrap style={isMobile ? { width: "100%" } : undefined}>
-              <Select
-                value={filterType}
-                onChange={setFilterType}
-                style={{ width: isMobile ? "100%" : 180 }}
-                options={[
-                  { value: "ALL", label: "Tất cả loại giao dịch" },
-                  { value: "PAYMENT", label: "Thanh toán (Thu)" },
-                  { value: "REFUND", label: "Hoàn tiền (Chi)" },
-                ]}
-              />
-              <Select
-                value={filterStatus}
-                onChange={setFilterStatus}
-                style={{ width: isMobile ? "100%" : 160 }}
-                options={[
-                  { value: "ALL", label: "Tất cả trạng thái" },
-                  { value: "SUCCESS", label: "Thành công" },
-                  { value: "PENDING", label: "Đang chờ" },
-                  { value: "FAILED", label: "Thất bại" },
-                ]}
-              />
-            </Space>
-          </Col>
-          <Col xs={24} sm="auto">
+      <Card
+        variant="borderless"
+        className="app-card"
+        style={{ marginBottom: 16 }}
+        styles={{ body: { padding: "10px 16px" } }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          <Space wrap size={10} style={{ alignItems: "center" }}>
+            <Select
+              value={filterType}
+              onChange={setFilterType}
+              style={{ minWidth: 160, height: 32 }}
+              options={[
+                { value: "ALL", label: "Tất cả loại giao dịch" },
+                { value: "PAYMENT", label: "Thanh toán (Thu)" },
+                { value: "REFUND", label: "Hoàn tiền (Chi)" },
+              ]}
+            />
+            <Select
+              value={filterStatus}
+              onChange={setFilterStatus}
+              style={{ minWidth: 150, height: 32 }}
+              options={[
+                { value: "ALL", label: "Tất cả trạng thái" },
+                { value: "SUCCESS", label: "Thành công" },
+                { value: "PENDING", label: "Đang chờ" },
+                { value: "FAILED", label: "Thất bại" },
+              ]}
+            />
             <Button
-              icon={<Refresh size={16} />}
+              icon={<Refresh size={15} />}
               onClick={() => fetchTransactions(page, pageSize)}
               loading={loading}
-              style={isMobile ? { width: "100%" } : undefined}
+              style={{
+                height: 32,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                padding: "0 12px",
+                borderRadius: 6,
+              }}
             >
               Làm mới sổ cái
             </Button>
-          </Col>
-        </Row>
+          </Space>
+
+          <span style={{ fontSize: 13, color: "#64748b", whiteSpace: "nowrap" }}>
+            Hiển thị <strong>{filteredData.length}</strong> / <strong>{total}</strong> giao dịch
+          </span>
+        </div>
       </Card>
 
-      {/* Bảng / Thẻ sổ cái */}
       {isMobile ? (
         <div>
           {loading ? (
-            <Card bordered={false} className="app-card" style={{ textAlign: "center", padding: "32px 0" }}>
+            <Card variant="borderless" className="app-card" style={{ textAlign: "center", padding: "32px 0" }}>
               <Typography.Text type="secondary">Đang tải...</Typography.Text>
             </Card>
           ) : filteredData.length === 0 ? (
-            <Card bordered={false} className="app-card" style={{ textAlign: "center", padding: "32px 0" }}>
+            <Card variant="borderless" className="app-card" style={{ textAlign: "center", padding: "32px 0" }}>
               <Typography.Text type="secondary">Không có giao dịch nào</Typography.Text>
             </Card>
           ) : (
@@ -412,7 +429,7 @@ const FinancialLedgerTab: React.FC<Props> = ({ onViewOrderDetail }) => {
           )}
         </div>
       ) : (
-        <Card bordered={false} className="app-card">
+        <Card variant="borderless" className="app-card">
           <Table
             bordered
             rowKey="id"

@@ -45,7 +45,7 @@ const HeaderComponent = ({ collapsed, onToggleCollapse, isMobile }: Props) => {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === "/") return "Tổng quan hệ thống";
-    if (path.startsWith("/inventory/add-product")) return "Sản phẩm / Thêm mới";
+    if (path.startsWith("/inventory/add-product")) return "";
     if (path.startsWith("/inventory")) return "Quản lý sản phẩm";
     if (path.startsWith("/categories")) return "Quản lý danh mục";
     if (path.startsWith("/media")) return "Thư viện hình ảnh";

@@ -365,13 +365,13 @@ const NotificationScreen: React.FC = () => {
       <Row gutter={[16, 16]} className="mb-4">
         <Col xs={12} sm={6}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
               background: "#fff",
             }}
-            bodyStyle={{ padding: "16px 20px" }}
+            styles={{ body: { padding: "16px 20px" } }}
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -399,13 +399,13 @@ const NotificationScreen: React.FC = () => {
 
         <Col xs={12} sm={6}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
               background: "#fff",
             }}
-            bodyStyle={{ padding: "16px 20px" }}
+            styles={{ body: { padding: "16px 20px" } }}
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -433,13 +433,13 @@ const NotificationScreen: React.FC = () => {
 
         <Col xs={12} sm={6}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
               background: "#fff",
             }}
-            bodyStyle={{ padding: "16px 20px" }}
+            styles={{ body: { padding: "16px 20px" } }}
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -467,13 +467,13 @@ const NotificationScreen: React.FC = () => {
 
         <Col xs={12} sm={6}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
               background: "#fff",
             }}
-            bodyStyle={{ padding: "16px 20px" }}
+            styles={{ body: { padding: "16px 20px" } }}
           >
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -502,13 +502,13 @@ const NotificationScreen: React.FC = () => {
 
       {/* Main Container Card: Filters & List */}
       <Card
-        bordered={false}
+        variant="borderless"
         style={{
           borderRadius: 12,
           boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
           background: "#fff",
         }}
-        bodyStyle={{ padding: "20px" }}
+        styles={{ body: { padding: "20px" } }}
       >
         {/* Filter bar */}
         <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
@@ -537,7 +537,7 @@ const NotificationScreen: React.FC = () => {
                 setSelectedType(val);
                 setPage(1);
               }}
-              style={{ minWidth: 210, verticalAlign: "middle" }}
+              style={{ minWidth: 210, verticalAlign: "middle", height: 32 }}
               options={[
                 {
                   value: "ALL",
@@ -624,7 +624,7 @@ const NotificationScreen: React.FC = () => {
               allowClear
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ borderRadius: 8 }}
+              style={{ borderRadius: 8, height: 32 }}
             />
           </div>
         </div>

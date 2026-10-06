@@ -162,7 +162,7 @@ const ToogleSupplier = (props: Props) => {
       loading={isGetting}
       closable={!isLoading}
       open={visible}
-      destroyOnClose
+      destroyOnHidden
       onCancel={handleClose}
       onOk={() => form.submit()}
       okButtonProps={{
@@ -175,11 +175,13 @@ const ToogleSupplier = (props: Props) => {
         margin: "0 auto",
         paddingBottom: isMobile ? 16 : 0,
       }}
-      bodyStyle={{
-        maxHeight: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 200px)",
-        overflowY: "auto",
-        overflowX: "hidden",
-        padding: isMobile ? "12px 14px" : "20px 24px",
+      styles={{
+        body: {
+          maxHeight: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 200px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: isMobile ? "12px 14px" : "20px 24px",
+        },
       }}
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

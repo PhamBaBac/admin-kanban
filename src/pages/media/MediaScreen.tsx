@@ -207,14 +207,16 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
     <div style={{ padding: isModal ? "0" : isMobile ? "8px 8px 24px" : "16px" }}>
       {/* Header bar */}
       <Card
-        bordered={false}
+        variant="borderless"
         className="app-card"
         style={{
           marginBottom: 16,
           borderRadius: 12,
         }}
-        bodyStyle={{
-          padding: isMobile ? "12px 14px" : "20px 24px",
+        styles={{
+          body: {
+            padding: isMobile ? "12px 14px" : "20px 24px",
+          },
         }}
       >
         <div
@@ -256,7 +258,7 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onSearch={handleSearch}
-              style={{ width: isMobile ? "100%" : 260 }}
+              style={{ width: isMobile ? "100%" : 260, height: 32 }}
               prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
             />
 
@@ -271,7 +273,13 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
               <Button
                 icon={<LinkOutlined />}
                 onClick={() => setUrlModalOpen(true)}
-                style={{ flex: isMobile ? 1 : "initial", borderRadius: 8 }}
+                style={{
+                  flex: isMobile ? 1 : "initial",
+                  borderRadius: 8,
+                  height: 32,
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
               >
                 Thêm từ Link
               </Button>
@@ -292,6 +300,9 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
                     borderRadius: 8,
                     background: "#1677ff",
                     fontWeight: 500,
+                    height: 32,
+                    display: "inline-flex",
+                    alignItems: "center",
                   }}
                 >
                   Tải ảnh lên
@@ -321,8 +332,10 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
           maxWidth: isMobile ? "calc(100vw - 16px)" : 520,
           margin: "0 auto",
         }}
-        bodyStyle={{
-          padding: isMobile ? "12px 14px" : "20px 24px",
+        styles={{
+          body: {
+            padding: isMobile ? "12px 14px" : "20px 24px",
+          },
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 10 }}>
@@ -574,10 +587,12 @@ const MediaScreen = ({ onSelect, isModal = false }: MediaScreenProps) => {
           maxWidth: isMobile ? "calc(100vw - 16px)" : 700,
           margin: "0 auto",
         }}
-        bodyStyle={{
-          maxHeight: isMobile ? "calc(100vh - 120px)" : "calc(100vh - 160px)",
-          overflowY: "auto",
-          padding: isMobile ? "12px 14px" : "20px 24px",
+        styles={{
+          body: {
+            maxHeight: isMobile ? "calc(100vh - 120px)" : "calc(100vh - 160px)",
+            overflowY: "auto",
+            padding: isMobile ? "12px 14px" : "20px 24px",
+          },
         }}
         title={previewMedia?.fileName}
       >
