@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { appInfo } from "../../constants/appInfos";
 import { useAuth } from "../../hooks/useAuth";
+import TurnstileWidget from "../../components/TurnstileWidget";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -24,17 +25,23 @@ const Login = () => {
 
   const [isRemember, setIsRemember] = useState(false);
   const [form] = Form.useForm();
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [showCaptcha, setShowCaptcha] = useState<boolean>(false);
 
   const handleLogin = async (values: { email: string; password: string }) => {
     try {
-      const user = await login(values);
-      if (user.role !== "ADMIN") {
-        message.error("Chỉ ADMIN mới được đăng nhập!");
+      const user = await login({
+        ...values,
+        captchaToken: captchaToken || undefined,
+      });
+      if (user.role !== "ADMIN" && user.role !== "MANAGER") {
+        message.error("Chỉ ADMIN hoặc MANAGER mới được đăng nhập!");
         return;
       }
       message.success("Login successful");
       navigate("/");
     } catch (error: any) {
+      setShowCaptcha(true);
       message.error(error.message || "Login failed");
     }
   };
@@ -90,6 +97,18 @@ const Login = () => {
           <Link to="/forgot-password">Forgot password?</Link>
         </div>
       </div>
+
+      {showCaptcha && (
+        <div className="my-3 text-center">
+          <Text type="danger" style={{ fontSize: 13, display: "block", marginBottom: 6 }}>
+            Vui lòng hoàn thành xác thực bảo mật trước khi đăng nhập:
+          </Text>
+          <TurnstileWidget
+            onVerify={(token) => setCaptchaToken(token)}
+            onExpire={() => setCaptchaToken("")}
+          />
+        </div>
+      )}
 
       <div className="mt-4 mb-3">
         <Button

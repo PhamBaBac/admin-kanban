@@ -395,16 +395,15 @@ export const useSubProductForm = ({
       }
 
       if (fileListSafe.length > 0) {
-        const promises = fileListSafe
-          .filter((file) => file.originFileObj)
-          .map(async (file) => uploadFile(file.originFileObj));
+        const uploadPromises = fileListSafe.map(async (file) => {
+          if (file.originFileObj) {
+            return await uploadFile(file.originFileObj);
+          }
+          return file.url;
+        });
 
-        const uploadedUrls = await Promise.all(promises);
-        const oldImageUrls = fileListSafe
-          .filter((file) => !file.originFileObj && file.url)
-          .map((file) => file.url);
-
-        data.images = [...oldImageUrls, ...uploadedUrls];
+        const urls = await Promise.all(uploadPromises);
+        data.images = urls.filter((url) => Boolean(url));
       } else {
         data.images = [];
       }

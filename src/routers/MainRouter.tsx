@@ -32,6 +32,7 @@ import {
   SupportScreen,
   NotificationScreen,
   ServerErrorScreen,
+  NotFoundScreen,
 } from "../pages";
 import AdminRoute from "./AdminRoute";
 
@@ -143,13 +144,14 @@ const MainRouter = () => {
             />
             <Route path="/notifications" element={<NotificationScreen />} />
             <Route path="/500" element={<ServerErrorScreen />} />
+            <Route path="/404" element={<NotFoundScreen />} />
 
             {/* Redirect auth routes if already authenticated */}
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="/sign-up" element={<Navigate to="/" replace />} />
 
             {/* Fallback 404 */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundScreen />} />
           </Routes>
         </Content>
 

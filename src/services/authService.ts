@@ -3,6 +3,7 @@ import handleAPI from "../apis/handleAPI";
 export interface LoginRequest {
   email: string;
   password: string;
+  captchaToken?: string;
 }
 
 export interface SignUpRequest {
@@ -10,6 +11,7 @@ export interface SignUpRequest {
   password: string;
   firstName: string;
   lastName: string;
+  captchaToken?: string;
 }
 
 export interface AuthResponse {

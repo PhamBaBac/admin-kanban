@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import TurnstileWidget from "../../components/TurnstileWidget";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -29,11 +30,13 @@ const SignUp = () => {
   const navigate = useNavigate();
   const { signUp, loading, error } = useAuth();
   const [form] = Form.useForm();
+  const [captchaToken, setCaptchaToken] = useState<string>("");
 
   const handleSignUp = async (values: SignUpFormValues) => {
     const submitData = {
       ...values,
-      role: "ADMIN",
+      role: "ADMIN" as const,
+      captchaToken: captchaToken || undefined,
     };
 
     try {
@@ -153,7 +156,14 @@ const SignUp = () => {
           </Form.Item>
         </Form>
 
-        <div className="mt-5 mb-3">
+        <div className="my-3 text-center">
+          <TurnstileWidget
+            onVerify={(token) => setCaptchaToken(token)}
+            onExpire={() => setCaptchaToken("")}
+          />
+        </div>
+
+        <div className="mt-4 mb-3">
           <Button
             loading={loading}
             onClick={() => form.submit()}

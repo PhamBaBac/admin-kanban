@@ -5,7 +5,7 @@ import { Typography } from "antd";
 
 const { Title, Paragraph } = Typography;
 
-const ServerErrorScreen: React.FC = () => {
+const NotFoundScreen: React.FC = () => {
   return (
     <div
       style={{
@@ -32,7 +32,7 @@ const ServerErrorScreen: React.FC = () => {
           color: "#e2e8f0",
         }}
       >
-        500
+        404
       </div>
 
       <Title
@@ -45,7 +45,7 @@ const ServerErrorScreen: React.FC = () => {
           letterSpacing: "-0.02em",
         }}
       >
-        500 - Máy chủ đang gặp sự cố
+        404 - Không tìm thấy trang
       </Title>
 
       <Paragraph
@@ -57,10 +57,10 @@ const ServerErrorScreen: React.FC = () => {
           lineHeight: 1.6,
         }}
       >
-        Hệ thống tạm thời không thể xử lý yêu cầu do sự cố máy chủ hoặc đang bảo trì. Vui lòng quay lại sau ít phút.
+        Trang bạn đang tìm kiếm không tồn tại, đã bị xóa hoặc đường dẫn không chính xác.
       </Paragraph>
     </div>
   );
 };
 
-export default ServerErrorScreen;
+export default NotFoundScreen;
