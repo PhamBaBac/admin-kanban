@@ -13,6 +13,7 @@ import {
   Tooltip,
   Segmented,
   message,
+  Image,
 } from "antd";
 import {
   Messages1,
@@ -25,6 +26,7 @@ import {
   Bag2,
   Flash,
   ArrowLeft,
+  Gallery,
 } from "iconsax-react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -37,6 +39,11 @@ import {
 import { initSocket } from "../../connect/SocketIO";
 import { colors } from "../../constants/colors";
 import { Socket } from "socket.io-client";
+import {
+  validateChatImages,
+  uploadChatImageToCloudinary,
+  MAX_CHAT_IMAGES,
+} from "../../utils/chatImageHelper";
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -68,6 +75,9 @@ const SupportScreen: React.FC = () => {
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [pendingImages, setPendingImages] = useState<{ file: File; previewUrl: string }[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -279,9 +289,64 @@ const SupportScreen: React.FC = () => {
     };
   }, [selectedConvId]);
 
+  const handleSelectImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const { validFiles, errors } = validateChatImages(files, pendingImages.length);
+
+    if (errors.length > 0) {
+      errors.forEach((err) => message.warning(err));
+    }
+
+    if (validFiles.length > 0) {
+      const newItems = validFiles.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      setPendingImages((prev) => [...prev, ...newItems].slice(0, MAX_CHAT_IMAGES));
+    }
+
+    if (e.target) {
+      e.target.value = "";
+    }
+  };
+
+  const handleRemovePendingImage = (indexToRemove: number) => {
+    setPendingImages((prev) => {
+      const target = prev[indexToRemove];
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, idx) => idx !== indexToRemove);
+    });
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const content = (textToSend || inputText).trim();
-    if (!content || !selectedConvId) return;
+    const hasImages = pendingImages.length > 0;
+
+    if ((!content && !hasImages) || !selectedConvId) return;
+    if (isUploadingImages) return;
+
+    let uploadedUrls: string[] = [];
+
+    if (hasImages) {
+      setIsUploadingImages(true);
+      try {
+        const uploadPromises = pendingImages.map((item) =>
+          uploadChatImageToCloudinary(item.file)
+        );
+        uploadedUrls = await Promise.all(uploadPromises);
+      } catch (err: any) {
+        console.error("Lỗi khi tải ảnh:", err);
+        message.error(err.message || "Tải ảnh thất bại, vui lòng thử lại!");
+        setIsUploadingImages(false);
+        return;
+      } finally {
+        setIsUploadingImages(false);
+      }
+    }
 
     const currentConv = conversations.find((c) => c.conversationId === selectedConvId);
     const receiverId = currentConv?.customerId || selectedConvId.replace("user_", "");
@@ -294,6 +359,8 @@ const SupportScreen: React.FC = () => {
       avatar: auth?.avatar || "",
       role: currentUserRole,
       content: content,
+      type: (uploadedUrls.length > 0 ? "IMAGE" : "TEXT") as "IMAGE" | "TEXT",
+      images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
     };
 
     const optimisticMsg: SupportMessage = {
@@ -303,6 +370,11 @@ const SupportScreen: React.FC = () => {
     };
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputText("");
+
+    pendingImages.forEach((item) => {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    });
+    setPendingImages([]);
 
     if (socketRef.current && socketConnected) {
       socketRef.current.emit("send_message", newMsgPayload);
@@ -314,12 +386,19 @@ const SupportScreen: React.FC = () => {
       }
     }
 
+    const summaryLabel = uploadedUrls.length > 0
+      ? (uploadedUrls.length > 1 ? `[${uploadedUrls.length} hình ảnh]` : "[Hình ảnh]")
+      : "";
+    const displaySnippet = summaryLabel
+      ? (content ? `${summaryLabel} ${content}` : summaryLabel)
+      : content;
+
     setConversations((prev) =>
       prev.map((c) =>
         c.conversationId === selectedConvId
           ? {
               ...c,
-              lastMessage: content,
+              lastMessage: displaySnippet,
               lastMessageTime: new Date().toISOString(),
               lastSenderRole: currentUserRole,
             }
@@ -635,11 +714,18 @@ const SupportScreen: React.FC = () => {
                           gap: 6,
                         }}
                       >
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, display: "inline-flex", alignItems: "center", gap: 4 }}>
                           {conv.lastSenderRole !== "USER" && (
-                            <span style={{ color: colors.primary500, marginRight: 4 }}>Bạn:</span>
+                            <span style={{ color: colors.primary500, marginRight: 2 }}>Bạn:</span>
                           )}
-                          {conv.lastMessage || "Chưa có tin nhắn"}
+                          {conv.lastMessage?.includes("hình ảnh") || conv.lastMessage?.includes("[Hình ảnh]") ? (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#1570ef", fontWeight: 500 }}>
+                              <Gallery size={13} color="#1570ef" />
+                              {conv.lastMessage}
+                            </span>
+                          ) : (
+                            conv.lastMessage || "Chưa có tin nhắn"
+                          )}
                         </span>
                         {isWaitingReply ? (
                           <Tag
@@ -944,7 +1030,7 @@ const SupportScreen: React.FC = () => {
                           {/* Nội dung tin nhắn */}
                           <div
                             style={{
-                              padding: "10px 16px",
+                              padding: (msg.images && msg.images.length > 0) ? "6px" : "10px 16px",
                               borderRadius: bubbleBorderRadius,
                               backgroundColor: isStaff ? colors.primary500 : "#fff",
                               color: isStaff ? "#fff" : "#1e293b",
@@ -957,7 +1043,60 @@ const SupportScreen: React.FC = () => {
                               transition: "border-radius 0.2s ease",
                             }}
                           >
-                            {msg.content}
+                            {msg.images && msg.images.length > 0 && (
+                              <Image.PreviewGroup
+                                preview={{
+                                  maskClosable: true,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                      msg.images.length === 1
+                                        ? "1fr"
+                                        : msg.images.length === 2
+                                        ? "repeat(2, 1fr)"
+                                        : "repeat(3, 1fr)",
+                                    gap: 6,
+                                    maxWidth: msg.images.length === 1 ? 280 : 320,
+                                    borderRadius: 12,
+                                    overflow: "hidden",
+                                    marginBottom: msg.content ? 6 : 0,
+                                  }}
+                                >
+                                  {msg.images.map((imgUrl, imgIdx) => (
+                                    <div
+                                      key={imgIdx}
+                                      style={{
+                                        borderRadius: 8,
+                                        overflow: "hidden",
+                                        background: "rgba(0,0,0,0.06)",
+                                      }}
+                                    >
+                                      <Image
+                                        src={imgUrl}
+                                        alt={`Ảnh ${imgIdx + 1}`}
+                                        style={{
+                                          width: "100%",
+                                          maxHeight: msg.images!.length === 1 ? 240 : 100,
+                                          height: msg.images!.length === 1 ? "auto" : 100,
+                                          objectFit: "cover",
+                                          display: "block",
+                                          borderRadius: 8,
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </Image.PreviewGroup>
+                            )}
+
+                            {msg.content && (
+                              <div style={{ padding: (msg.images && msg.images.length > 0) ? "4px 8px 2px 8px" : 0 }}>
+                                {msg.content}
+                              </div>
+                            )}
                           </div>
 
                           {/* Tên người gửi và thời gian (chỉ hiển thị ở tin nhắn CUỐI CÙNG của chuỗi liên tục) */}
@@ -1121,6 +1260,109 @@ const SupportScreen: React.FC = () => {
                   flexShrink: 0,
                 }}
               >
+                {/* Input chọn ảnh ẩn */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleSelectImages}
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  style={{ display: "none" }}
+                />
+
+                {/* Preview Bar trước khi gửi (Chưa tải lên Cloudinary) */}
+                {pendingImages.length > 0 && (
+                  <div
+                    style={{
+                      marginBottom: 8,
+                      padding: "8px 12px",
+                      borderRadius: 12,
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      overflowX: "auto",
+                      position: "relative",
+                    }}
+                  >
+                    {isUploadingImages && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: "rgba(255,255,255,0.75)",
+                          backdropFilter: "blur(2px)",
+                          borderRadius: 12,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          zIndex: 10,
+                        }}
+                      >
+                        <Spin size="small" />
+                      </div>
+                    )}
+                    {pendingImages.map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          position: "relative",
+                          width: 48,
+                          height: 48,
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          border: "1px solid #cbd5e1",
+                        }}
+                      >
+                        <img
+                          src={item.previewUrl}
+                          alt={`Preview ${idx + 1}`}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        {!isUploadingImages && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePendingImage(idx)}
+                            style={{
+                              position: "absolute",
+                              top: 2,
+                              right: 2,
+                              background: "rgba(0,0,0,0.65)",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: "50%",
+                              width: 16,
+                              height: 16,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              padding: 0,
+                              fontSize: 12,
+                              lineHeight: 1,
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "#64748b",
+                        marginLeft: "auto",
+                        flexShrink: 0,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {pendingImages.length}/{MAX_CHAT_IMAGES} ảnh
+                    </span>
+                  </div>
+                )}
+
                 <div
                   style={{
                     background: isInputFocused ? "#ffffff" : "#f8fafc",
@@ -1218,38 +1460,72 @@ const SupportScreen: React.FC = () => {
                       <div />
                     )}
 
-                    <Tooltip
-                      title={!inputText.trim() ? "Nhập nội dung để gửi" : "Gửi tin nhắn (Enter)"}
-                      placement="top"
-                    >
-                      <Button
-                        type="primary"
-                        shape="round"
-                        disabled={!inputText.trim()}
-                        icon={<Send2 size={16} color="#fff" />}
-                        onClick={() => handleSendMessage()}
-                        style={{
-                          height: 34,
-                          padding: "0 18px",
-                          fontWeight: 600,
-                          fontSize: 13,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          background: inputText.trim()
-                            ? "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)"
-                            : "#cbd5e1",
-                          border: "none",
-                          boxShadow: inputText.trim()
-                            ? "0 4px 12px rgba(22, 119, 255, 0.3)"
-                            : "none",
-                          cursor: inputText.trim() ? "pointer" : "not-allowed",
-                          transition: "all 0.25s ease",
-                        }}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Tooltip title={`Đính kèm ảnh (Tối đa ${MAX_CHAT_IMAGES} ảnh, <= 10MB)`}>
+                        <Button
+                          icon={<Gallery size={16} color="#1570ef" />}
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingImages || pendingImages.length >= MAX_CHAT_IMAGES}
+                          style={{
+                            borderRadius: 8,
+                            border: "1px solid #e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: "#334155",
+                            height: 34,
+                            padding: isMobileView ? "0 8px" : "0 12px",
+                          }}
+                        >
+                          {!isMobileView && "Đính kèm ảnh"}
+                        </Button>
+                      </Tooltip>
+
+                      <Tooltip
+                        title={
+                          (!inputText.trim() && pendingImages.length === 0)
+                            ? "Nhập nội dung hoặc đính kèm ảnh để gửi"
+                            : "Gửi tin nhắn (Enter)"
+                        }
+                        placement="top"
                       >
-                        Gửi
-                      </Button>
-                    </Tooltip>
+                        <Button
+                          type="primary"
+                          shape="round"
+                          disabled={(!inputText.trim() && pendingImages.length === 0) || isUploadingImages}
+                          loading={isUploadingImages}
+                          icon={<Send2 size={16} color="#fff" />}
+                          onClick={() => handleSendMessage()}
+                          style={{
+                            height: 34,
+                            padding: "0 18px",
+                            fontWeight: 600,
+                            fontSize: 13,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            background:
+                              (inputText.trim() || pendingImages.length > 0) && !isUploadingImages
+                                ? "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)"
+                                : "#cbd5e1",
+                            border: "none",
+                            boxShadow:
+                              (inputText.trim() || pendingImages.length > 0) && !isUploadingImages
+                                ? "0 4px 12px rgba(22, 119, 255, 0.3)"
+                                : "none",
+                            cursor:
+                              (inputText.trim() || pendingImages.length > 0) && !isUploadingImages
+                                ? "pointer"
+                                : "not-allowed",
+                            transition: "all 0.25s ease",
+                          }}
+                        >
+                          Gửi
+                        </Button>
+                      </Tooltip>
+                    </div>
                   </div>
                 </div>
               </div>

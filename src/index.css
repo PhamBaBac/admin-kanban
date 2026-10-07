@@ -18,3 +18,88 @@ code {
   align-items: center;
   display: flex;
 }
+
+/* ==========================================================================
+   Ant Design Image Preview Lightbox Styling (Fix nền trong suốt & nút đóng rõ ràng)
+   ========================================================================== */
+.ant-image-preview-mask {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 99998 !important;
+}
+
+.ant-image-preview-wrap {
+  z-index: 99999 !important;
+}
+
+/* Thanh công cụ xem ảnh */
+.ant-image-preview-operations {
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 6px 14px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  top: 20px !important;
+  right: 20px !important;
+}
+
+.ant-image-preview-operations-operation {
+  color: #f1f5f9 !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease !important;
+  margin-left: 0 !important;
+}
+
+.ant-image-preview-operations-operation:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #38bdf8 !important;
+  transform: scale(1.1) !important;
+}
+
+/* Nút Đóng (✕) nổi bật màu đỏ đậm ở góc phải thanh công cụ, cực kỳ dễ nhận diện */
+.ant-image-preview-operations-operation:last-child {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.6) !important;
+}
+
+.ant-image-preview-operations-operation:last-child:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  transform: scale(1.15) !important;
+}
+
+/* Nút chuyển ảnh Trước / Sau (Next / Prev) */
+.ant-image-preview-switch-left,
+.ant-image-preview-switch-right {
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 50% !important;
+  width: 44px !important;
+  height: 44px !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.2s ease !important;
+}
+
+.ant-image-preview-switch-left:hover,
+.ant-image-preview-switch-right:hover {
+  background: #0f172a !important;
+  color: #38bdf8 !important;
+  transform: scale(1.08) !important;
+}
