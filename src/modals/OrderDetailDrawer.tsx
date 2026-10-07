@@ -23,7 +23,7 @@ import {
   Steps,
   Divider,
 } from "antd";
-import { ArrowRightOutlined } from "@ant-design/icons";
+import { ArrowRightOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   BillModel,
   OrderItem,
@@ -56,6 +56,21 @@ interface Props {
   order: BillModel | null;
   onClose: () => void;
 }
+
+const isSystemAttr = (k: string) => {
+  const lower = k.trim().toLowerCase().replace(/[-_]/g, "");
+  return (
+    lower === "discounttype" ||
+    lower === "discountvalue" ||
+    lower === "discountamount" ||
+    lower === "discount" ||
+    lower === "price" ||
+    lower === "cost" ||
+    lower === "stock" ||
+    lower === "qty" ||
+    lower === "reservedstock"
+  );
+};
 
 const getOrderStatusColor = (orderStatus?: string) => {
   switch (orderStatus) {
@@ -193,11 +208,28 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
   const discountAmount = order.discountAmount ?? 0;
   const finalTotal = Math.max(0, subtotal + shippingFee - discountAmount);
 
-  const totalCost = (order.orderResponses || []).reduce(
-    (sum, item) => sum + (item.cost || 0) * (item.qty || 1),
-    0
-  );
-  const grossProfit = Math.max(0, subtotal - totalCost);
+  // Phân tách chiết khấu sản phẩm trực tiếp và voucher
+  const calculatedProductDiscount = (order.orderResponses || []).reduce((sum, item) => {
+    const orig = item.originalPrice || 0;
+    const currentPrice = item.price || 0;
+    const qty = item.qty || 1;
+    if (orig > currentPrice) {
+      return sum + (orig - currentPrice) * qty;
+    }
+    return sum;
+  }, 0);
+
+  const voucherDiscount =
+    order.voucherDiscount !== undefined && order.voucherDiscount !== null
+      ? order.voucherDiscount
+      : (order.promotionCode
+          ? Math.max(0, discountAmount - calculatedProductDiscount)
+          : 0);
+
+  const productDiscount =
+    calculatedProductDiscount > 0
+      ? calculatedProductDiscount
+      : Math.max(0, discountAmount - voucherDiscount);
 
   const totalPaid = transactions
     .filter((tx) => tx.transactionType === "PAYMENT" && tx.status === "SUCCESS")
@@ -264,13 +296,20 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                   Size {item.size}
                 </Tag>
               )}
-              {item.attributesSnapshot && Object.keys(item.attributesSnapshot).length > 0 && (
-                <Tooltip title={JSON.stringify(item.attributesSnapshot)}>
-                  <Tag color="default" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
-                    + {Object.keys(item.attributesSnapshot).length} thuộc tính
-                  </Tag>
-                </Tooltip>
-              )}
+              {item.attributesSnapshot && (() => {
+                const nonSystemAttrs = Object.fromEntries(
+                  Object.entries(item.attributesSnapshot).filter(([k]) => !isSystemAttr(k))
+                );
+                const count = Object.keys(nonSystemAttrs).length;
+                if (count === 0) return null;
+                return (
+                  <Tooltip title={JSON.stringify(nonSystemAttrs)}>
+                    <Tag color="default" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                      + {count} thuộc tính
+                    </Tag>
+                  </Tooltip>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -289,11 +328,6 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
           {item.originalPrice && item.originalPrice > item.price && (
             <div style={{ fontSize: 11, color: "#94a3b8", textDecoration: "line-through" }}>
               {VND.format(item.originalPrice)}
-            </div>
-          )}
-          {item.cost !== undefined && item.cost > 0 && (
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-              Vốn: {VND.format(item.cost)}
             </div>
           )}
         </div>
@@ -480,26 +514,31 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
                 <Descriptions.Item label="Phí vận chuyển">
                   <span style={{ fontWeight: 500 }}>{VND.format(shippingFee)}</span>
                 </Descriptions.Item>
-                <Descriptions.Item label="Voucher giảm giá">
-                  <span style={{ color: "#dc2626", fontWeight: 500 }}>
-                    -{VND.format(discountAmount)}
-                  </span>
-                </Descriptions.Item>
+                {productDiscount > 0 && (
+                  <Descriptions.Item label="Giảm giá sản phẩm">
+                    <span style={{ color: "#dc2626", fontWeight: 500 }}>
+                      -{VND.format(productDiscount)}
+                    </span>
+                  </Descriptions.Item>
+                )}
+                {voucherDiscount > 0 && (
+                  <Descriptions.Item
+                    label={
+                      order.promotionCode
+                        ? `Voucher giảm giá (${order.promotionCode})`
+                        : "Voucher giảm giá"
+                    }
+                  >
+                    <span style={{ color: "#dc2626", fontWeight: 500 }}>
+                      -{VND.format(voucherDiscount)}
+                    </span>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Tổng thanh toán">
                   <strong style={{ fontSize: 16, color: "#166534" }}>
                     {VND.format(finalTotal)}
                   </strong>
                 </Descriptions.Item>
-                {totalCost > 0 && (
-                  <Descriptions.Item label="Lãi gộp ước tính">
-                    <span style={{ color: "#1e40af", fontWeight: 600 }}>
-                      +{VND.format(grossProfit)}
-                    </span>
-                    <span style={{ fontSize: 11, color: "#64748b", marginLeft: 4 }}>
-                      (Vốn: {VND.format(totalCost)})
-                    </span>
-                  </Descriptions.Item>
-                )}
                 {order.cancelReason && (
                   <Descriptions.Item label="Lý do hủy">
                     <span style={{ color: "#dc2626", fontWeight: 600 }}>
@@ -613,6 +652,16 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, order, onClose }) => {
               <span style={{ fontWeight: 600 }}>Sổ cái bút toán thanh toán của đơn</span>
               {transactions.length > 0 && <Badge count={transactions.length} color="#166534" />}
             </Space>
+          }
+          extra={
+            <Tooltip title="Làm mới sổ cái giao dịch">
+              <Button
+                type="text"
+                size="small"
+                icon={<ReloadOutlined spin={loadingTx} />}
+                onClick={() => order?.id && fetchTransactions(order.id)}
+              />
+            </Tooltip>
           }
           style={{ borderRadius: 8 }}
         >

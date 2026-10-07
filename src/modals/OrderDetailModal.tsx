@@ -54,6 +54,21 @@ interface Props {
   onClose: () => void;
 }
 
+const isSystemAttr = (k: string) => {
+  const lower = k.trim().toLowerCase().replace(/[-_]/g, "");
+  return (
+    lower === "discounttype" ||
+    lower === "discountvalue" ||
+    lower === "discountamount" ||
+    lower === "discount" ||
+    lower === "price" ||
+    lower === "cost" ||
+    lower === "stock" ||
+    lower === "qty" ||
+    lower === "reservedstock"
+  );
+};
+
 const getOrderStatusColor = (orderStatus?: string) => {
   switch (orderStatus) {
     case "PENDING":
@@ -139,6 +154,29 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
   const discountAmount = order.discountAmount ?? 0;
   const finalTotal = Math.max(0, subtotal + shippingFee - discountAmount);
 
+  // Phân tách chiết khấu sản phẩm trực tiếp và voucher
+  const calculatedProductDiscount = (order.orderResponses || []).reduce((sum, item) => {
+    const orig = item.originalPrice || 0;
+    const currentPrice = item.price || 0;
+    const qty = item.qty || 1;
+    if (orig > currentPrice) {
+      return sum + (orig - currentPrice) * qty;
+    }
+    return sum;
+  }, 0);
+
+  const voucherDiscount =
+    order.voucherDiscount !== undefined && order.voucherDiscount !== null
+      ? order.voucherDiscount
+      : (order.promotionCode
+          ? Math.max(0, discountAmount - calculatedProductDiscount)
+          : 0);
+
+  const productDiscount =
+    calculatedProductDiscount > 0
+      ? calculatedProductDiscount
+      : Math.max(0, discountAmount - voucherDiscount);
+
   const totalPaid = transactions
     .filter((tx) => tx.transactionType === "PAYMENT" && tx.status === "SUCCESS")
     .reduce((sum, tx) => sum + (tx.amount || 0), 0);
@@ -186,13 +224,20 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
                   Size {item.size}
                 </Tag>
               )}
-              {item.attributesSnapshot && Object.keys(item.attributesSnapshot).length > 0 && (
-                <Tooltip title={JSON.stringify(item.attributesSnapshot)}>
-                  <Tag color="default" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
-                    + {Object.keys(item.attributesSnapshot).length} thuộc tính
-                  </Tag>
-                </Tooltip>
-              )}
+              {item.attributesSnapshot && (() => {
+                const nonSystemAttrs = Object.fromEntries(
+                  Object.entries(item.attributesSnapshot).filter(([k]) => !isSystemAttr(k))
+                );
+                const count = Object.keys(nonSystemAttrs).length;
+                if (count === 0) return null;
+                return (
+                  <Tooltip title={JSON.stringify(nonSystemAttrs)}>
+                    <Tag color="default" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                      + {count} thuộc tính
+                    </Tag>
+                  </Tooltip>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -211,11 +256,6 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
           {item.originalPrice && item.originalPrice > item.price && (
             <div style={{ fontSize: 11, color: "#94a3b8", textDecoration: "line-through" }}>
               {VND.format(item.originalPrice)}
-            </div>
-          )}
-          {item.cost !== undefined && item.cost > 0 && (
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-              Giá vốn: {VND.format(item.cost)}
             </div>
           )}
         </div>
@@ -356,7 +396,24 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
         </Button>,
       ]}
       width={980}
-      style={{ top: 20 }}
+      centered
+      style={{
+        maxWidth: "calc(100vw - 32px)",
+      }}
+      styles={{
+        body: {
+          maxHeight: "calc(85vh - 130px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          paddingRight: 8,
+        },
+      }}
+      bodyStyle={{
+        maxHeight: "calc(85vh - 130px)",
+        overflowY: "auto",
+        overflowX: "hidden",
+        paddingRight: 8,
+      }}
       title={
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingRight: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -401,12 +458,52 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
             <Tag color="blue" style={{ fontSize: 12, padding: "3px 12px", borderRadius: 8, fontWeight: 600 }}>
               {order.paymentType || "COD"}
             </Tag>
-            {order.trackingCode && (
-              <Tag color="cyan" style={{ fontSize: 12, padding: "3px 12px", borderRadius: 8, fontWeight: 600 }}>
-                <TruckFast size={12} style={{ verticalAlign: "middle", marginRight: 4 }} />
-                {order.trackingCode}
-              </Tag>
-            )}
+            {order.trackingCode && (() => {
+              const code = order.trackingCode.trim();
+              const c = (order.carrier || (code.startsWith("SHOP-") ? "SHOP_DELIVERY" : code.startsWith("VT") ? "VIETTEL_POST" : code.startsWith("GHTK-") ? "GHTK" : "GHN")).toUpperCase();
+              const carrierTag = () => {
+                switch (c) {
+                  case "GHN":
+                    return <Tag color="blue" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>GHN</Tag>;
+                  case "SHOP_DELIVERY":
+                    return <Tag color="green" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>Shop ship</Tag>;
+                  case "VIETTEL_POST":
+                    return <Tag color="red" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>ViettelPost</Tag>;
+                  case "GHTK":
+                    return <Tag color="cyan" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>GHTK</Tag>;
+                  default:
+                    return <Tag color="default" style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>{order.carrier || "Khác"}</Tag>;
+                }
+              };
+
+              const handleTrack = () => {
+                if (c === "GHN") {
+                  window.open(`https://tracking.ghn.dev/?order_code=${code}`, "_blank");
+                } else if (c === "VIETTEL_POST") {
+                  window.open(`https://viettelpost.com.vn/tra-cuu-hanh-trinh-don/?code=${code}`, "_blank");
+                } else if (c === "GHTK") {
+                  window.open(`https://giaohangtietkiem.vn/tra-cuu-don-hang/?order_code=${code}`, "_blank");
+                } else {
+                  handleCopyCode(code, "Mã vận đơn");
+                }
+              };
+
+              return (
+                <Space size={4}>
+                  {carrierTag()}
+                  <Tooltip title="Nhấn để tra cứu hoặc sao chép mã">
+                    <Tag
+                      color="orange"
+                      style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+                      onClick={handleTrack}
+                    >
+                      <TruckFast size={12} />
+                      {code}
+                    </Tag>
+                  </Tooltip>
+                </Space>
+              );
+            })()}
           </Space>
         </div>
       }
@@ -499,11 +596,26 @@ const OrderDetailModal: React.FC<Props> = ({ open, order, onClose }) => {
                         <Descriptions.Item label="Phí vận chuyển">
                           <span style={{ fontWeight: 500 }}>{VND.format(shippingFee)}</span>
                         </Descriptions.Item>
-                        <Descriptions.Item label="Giảm giá voucher">
-                          <span style={{ color: "#dc2626", fontWeight: 500 }}>
-                            -{VND.format(discountAmount)}
-                          </span>
-                        </Descriptions.Item>
+                        {productDiscount > 0 && (
+                          <Descriptions.Item label="Giảm giá sản phẩm">
+                            <span style={{ color: "#dc2626", fontWeight: 500 }}>
+                              -{VND.format(productDiscount)}
+                            </span>
+                          </Descriptions.Item>
+                        )}
+                        {voucherDiscount > 0 && (
+                          <Descriptions.Item
+                            label={
+                              order.promotionCode
+                                ? `Voucher giảm giá (${order.promotionCode})`
+                                : "Voucher giảm giá"
+                            }
+                          >
+                            <span style={{ color: "#dc2626", fontWeight: 500 }}>
+                              -{VND.format(voucherDiscount)}
+                            </span>
+                          </Descriptions.Item>
+                        )}
                         <Descriptions.Item label="Tổng thanh toán">
                           <strong style={{ fontSize: 16, color: "#166534" }}>
                             {VND.format(finalTotal)}

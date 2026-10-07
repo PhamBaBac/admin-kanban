@@ -86,8 +86,15 @@ export const ProductVariantsTableSection: React.FC<ProductVariantsTableSectionPr
       key: "attributes",
       width: 220,
       render: (_: any, item: SubProductModel) => {
-        const attrs = item.attributes;
-        const validEntries = attrs
+        let attrs = item.attributes;
+        if (typeof attrs === "string") {
+          try {
+            attrs = JSON.parse(attrs);
+          } catch {
+            attrs = undefined;
+          }
+        }
+        const validEntries = attrs && typeof attrs === "object"
           ? Object.entries(attrs).filter(([key]) => !isSystemAttr(key))
           : [];
 

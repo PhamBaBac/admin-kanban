@@ -13,7 +13,7 @@ import {
   Modal,
 } from "antd";
 import type { TableProps, ColumnProps } from "antd/es/table";
-import { Eye, TruckFast, Box, Edit2, Trash, Call, Sms } from "iconsax-react";
+import { Eye, TruckFast, Box, Edit2, Trash, Call, Sms, ExportSquare } from "iconsax-react";
 import { BillModel } from "../../../models/BillModel";
 import { colors } from "../../../constants/colors";
 import { ColorBadge } from "../../../utils/colorHelper";
@@ -389,19 +389,20 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
           </Tag>
           {record.trackingCode && (
             <div style={{ marginTop: 4 }}>
-              <Tooltip title="Nhấp xem chi tiết lộ trình GHN">
+              <Tooltip title="Tra cứu trực tiếp trên GHN (Mở tab mới)">
                 <Tag
-                  color="cyan"
+                  color="orange"
                   style={{
                     cursor: "pointer",
                     fontSize: 11,
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 3,
+                    gap: 4,
+                    fontWeight: 600,
                   }}
                   onClick={() => onOpenTracking(record)}
                 >
-                  <TruckFast size={12} />
+                  <ExportSquare size={12} color="#ea580c" />
                   {record.trackingCode}
                 </Tag>
               </Tooltip>
@@ -440,9 +441,9 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
           )}
 
           {item.trackingCode && (
-            <Tooltip title="Xem hành trình vận chuyển GHN">
+            <Tooltip title="Tra cứu trực tiếp trên GHN (Mở tab mới)">
               <Button
-                icon={<TruckFast color="#13c2c2" size={16} />}
+                icon={<ExportSquare color="#ea580c" size={16} />}
                 type="text"
                 size="small"
                 onClick={() => onOpenTracking(item)}
@@ -475,22 +476,38 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
             />
           </Tooltip>
 
-          <Tooltip title="Xóa đơn hàng">
-            <Button
-              icon={<Trash className="text-danger" size={16} />}
-              type="text"
-              size="small"
-              onClick={() =>
-                confirm({
-                  title: "Xác nhận xóa",
-                  content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
-                  okText: "Xóa",
-                  okType: "danger",
-                  cancelText: "Hủy",
-                  onOk: () => onRemoveBill(item.id),
-                })
-              }
-            />
+          <Tooltip
+            title={
+              item.orderStatus !== "CANCELLED"
+                ? "Không thể xóa đơn hàng khi chưa hủy. Vui lòng hủy đơn và gửi thông báo cho khách hàng trước khi xóa!"
+                : "Xóa đơn hàng"
+            }
+          >
+            <span>
+              <Button
+                icon={
+                  <Trash
+                    size={16}
+                    color={
+                      item.orderStatus === "CANCELLED" ? "#ef4444" : "#94a3b8"
+                    }
+                  />
+                }
+                type="text"
+                size="small"
+                disabled={item.orderStatus !== "CANCELLED"}
+                onClick={() =>
+                  confirm({
+                    title: "Xác nhận xóa",
+                    content: "Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng đã hủy này?",
+                    okText: "Xóa",
+                    okType: "danger",
+                    cancelText: "Hủy",
+                    onOk: () => onRemoveBill(item.id),
+                  })
+                }
+              />
+            </span>
           </Tooltip>
         </Space>
       ),

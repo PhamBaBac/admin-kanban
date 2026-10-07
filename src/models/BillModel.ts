@@ -14,10 +14,13 @@ export interface BillModel {
   orderResponses: OrderItem[];
   cancelReason?: string;
   trackingCode?: string;
+  carrier?: string;
   shippingStatus?: string;
   subtotal?: number;
   shippingFee?: number;
   discountAmount?: number;
+  promotionCode?: string;
+  voucherDiscount?: number;
   total?: number;
   shippingProvince?: string;
   shippingDistrict?: string;

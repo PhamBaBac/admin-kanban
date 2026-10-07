@@ -174,8 +174,15 @@ const ProductDetail = () => {
           );
         };
 
-        const attrs = item.attributes;
-        const validEntries = attrs
+        let attrs = item.attributes;
+        if (typeof attrs === "string") {
+          try {
+            attrs = JSON.parse(attrs);
+          } catch {
+            attrs = undefined;
+          }
+        }
+        const validEntries = attrs && typeof attrs === "object"
           ? Object.entries(attrs).filter(([key]) => !isSystemAttr(key))
           : [];
 
@@ -340,10 +347,18 @@ const ProductDetail = () => {
                 setProductSelected(productDetail);
                 setSubProductSelected(undefined);
                 const { id: _, ...rest } = item;
+                let parsedAttrs = item.attributes;
+                if (typeof parsedAttrs === "string") {
+                  try {
+                    parsedAttrs = JSON.parse(parsedAttrs);
+                  } catch {
+                    parsedAttrs = undefined;
+                  }
+                }
                 setCloneVariant({
                   ...rest,
                   images: item.images ? [...item.images] : [],
-                  attributes: item.attributes ? { ...item.attributes } : undefined,
+                  attributes: parsedAttrs ? { ...parsedAttrs } : undefined,
                 });
                 setIsVisibleAddSubProduct(true);
               }}
@@ -488,8 +503,15 @@ const ProductDetail = () => {
               const profit = actualPrice - cost;
               const margin = actualPrice > 0 ? (profit / actualPrice) * 100 : 0;
 
-              const attrs = item.attributes;
-              const validEntries = attrs
+              let attrs = item.attributes;
+              if (typeof attrs === "string") {
+                try {
+                  attrs = JSON.parse(attrs);
+                } catch {
+                  attrs = undefined;
+                }
+              }
+              const validEntries = attrs && typeof attrs === "object"
                 ? Object.entries(attrs).filter(([key]) => !isSystemAttr(key))
                 : [];
 
@@ -665,10 +687,18 @@ const ProductDetail = () => {
                         setProductSelected(productDetail);
                         setSubProductSelected(undefined);
                         const { id: _, ...rest } = item;
+                        let parsedAttrs = item.attributes;
+                        if (typeof parsedAttrs === "string") {
+                          try {
+                            parsedAttrs = JSON.parse(parsedAttrs);
+                          } catch {
+                            parsedAttrs = undefined;
+                          }
+                        }
                         setCloneVariant({
                           ...rest,
                           images: item.images ? [...item.images] : [],
-                          attributes: item.attributes ? { ...item.attributes } : undefined,
+                          attributes: parsedAttrs ? { ...parsedAttrs } : undefined,
                         });
                         setIsVisibleAddSubProduct(true);
                       }}

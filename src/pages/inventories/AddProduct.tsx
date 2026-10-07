@@ -112,11 +112,19 @@ const AddProduct: React.FC = () => {
                   }}
                   onCloneVariant={(item) => {
                     const { id: _, ...rest } = item;
+                    let parsedAttrs = item.attributes;
+                    if (typeof parsedAttrs === "string") {
+                      try {
+                        parsedAttrs = JSON.parse(parsedAttrs);
+                      } catch {
+                        parsedAttrs = undefined;
+                      }
+                    }
                     setCloneVariant({
                       ...rest,
                       images: item.images ? [...item.images] : [],
-                      attributes: item.attributes
-                        ? { ...item.attributes }
+                      attributes: parsedAttrs
+                        ? { ...parsedAttrs }
                         : undefined,
                     });
                     setSelectedSubProduct(undefined);

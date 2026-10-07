@@ -44,6 +44,7 @@ export const useOrdersManager = () => {
   const [cancelReason, setCancelReason] = useState<string>("");
   const [customReason, setCustomReason] = useState<string>("");
   const [trackingCode, setTrackingCode] = useState<string>("");
+  const [carrier, setCarrier] = useState<string>("GHN");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // GHN Tracking Modal
@@ -281,6 +282,17 @@ export const useOrdersManager = () => {
     }
   }, [page, limit, filterStatus, dateRange, searchFromUrl]);
 
+  useEffect(() => {
+    const handleNewNoti = () => {
+      fetchBills(page, limit, filterStatus, searchKey, dateRange);
+      fetchStatusCounts();
+    };
+    window.addEventListener("new_admin_notification", handleNewNoti);
+    return () => {
+      window.removeEventListener("new_admin_notification", handleNewNoti);
+    };
+  }, [page, limit, filterStatus, searchKey, dateRange, fetchBills, fetchStatusCounts]);
+
   const handleOpenDetailModal = (order: BillModel) => {
     setSelectedDetailOrder(order);
     setIsDetailModalOpen(true);
@@ -336,27 +348,28 @@ export const useOrdersManager = () => {
     setSelectedOrder(order);
     setSelectedStatus("");
     setTrackingCode(order.trackingCode || "");
+    setCarrier(order.carrier || "GHN");
     setCancelReason("");
     setCustomReason("");
     setIsModalStatusOpen(true);
   };
 
-  const handleOpenTracking = async (order: BillModel) => {
-    if (!order.trackingCode) {
-      message.info("Đơn hàng này chưa có mã vận đơn GHN");
+  const handleOpenTracking = (order: BillModel) => {
+    const code = order.trackingCode?.trim();
+    const currentCarrier = (order.carrier || "GHN").toUpperCase();
+    if (!code) {
+      message.info("Đơn hàng này chưa có mã vận đơn");
       return;
     }
-    setTrackingOrder(order);
-    setIsTrackingModalOpen(true);
-    setTrackingLoading(true);
-    setTrackingData(null);
-    try {
-      const data = await orderService.getTrackingByCode(order.trackingCode);
-      setTrackingData(data);
-    } catch (err: any) {
-      message.error(err.message || "Không thể lấy thông tin hành trình GHN");
-    } finally {
-      setTrackingLoading(false);
+    if (currentCarrier === "GHN") {
+      window.open(`https://tracking.ghn.dev/?order_code=${code}`, "_blank");
+    } else if (currentCarrier === "VIETTEL_POST") {
+      window.open(`https://viettelpost.com.vn/tra-cuu-hanh-trinh-don/?code=${code}`, "_blank");
+    } else if (currentCarrier === "GHTK") {
+      window.open(`https://giaohangtietkiem.vn/tra-cuu-don-hang/?order_code=${code}`, "_blank");
+    } else {
+      navigator.clipboard.writeText(code);
+      message.info(`Đã sao chép mã vận đơn: ${code}`);
     }
   };
 
@@ -366,13 +379,24 @@ export const useOrdersManager = () => {
   };
 
   const handleRemoveBill = async (id: string) => {
+    const targetOrder = bills.find((bill) => bill.id === id);
+    if (targetOrder && targetOrder.orderStatus !== "CANCELLED") {
+      message.error(
+        "Không thể xóa đơn hàng khi chưa hủy. Vui lòng hủy đơn và gửi thông báo cho khách hàng trước khi xóa!"
+      );
+      return;
+    }
+
     try {
       await deleteOrder(id);
       setBills((prev) => prev.filter((bill) => bill.id !== id));
-      message.success("Bill removed successfully");
+      message.success("Đã xóa đơn hàng thành công");
       fetchStatusCounts();
     } catch (error: any) {
-      message.error(error.message || "Failed to remove bill");
+      const errorMsg =
+        error?.message ||
+        (typeof error === "string" ? error : "Không thể xóa đơn hàng");
+      message.error(errorMsg);
     }
   };
 
@@ -391,22 +415,29 @@ export const useOrdersManager = () => {
         selectedOrder.id,
         statusToSend,
         selectedStatus === "CANCELLED" ? finalReason : undefined,
-        trackingCode.trim() ? trackingCode.trim() : undefined
+        trackingCode.trim() ? trackingCode.trim() : undefined,
+        carrier || undefined
       );
       if (selectedStatus === "PROCESSING" && !trackingCode.trim()) {
         message.success(
-          "Đơn hàng đã chuyển sang PROCESSING & tự động tạo vận đơn GHN thành công!"
+          "Đơn hàng đã chuyển sang PROCESSING & tự động gán mã vận đơn thành công!"
         );
       } else {
         message.success("Cập nhật đơn hàng thành công");
       }
+      const nextStatus = selectedStatus;
       setIsModalStatusOpen(false);
       setSelectedOrder(null);
       setSelectedStatus("");
       setTrackingCode("");
+      setCarrier("GHN");
       setCancelReason("");
       setCustomReason("");
-      fetchBills(page, limit, filterStatus, searchKey, dateRange);
+      if (nextStatus && filterStatus !== "ALL" && nextStatus !== filterStatus) {
+        handleStatusFilterChange(nextStatus);
+      } else {
+        fetchBills(page, limit, filterStatus, searchKey, dateRange);
+      }
       fetchStatusCounts();
     } catch (error: any) {
       message.error(error.message || "Failed to update order status");
@@ -478,6 +509,7 @@ export const useOrdersManager = () => {
     selectedOrder,
     selectedStatus,
     trackingCode,
+    carrier,
     cancelReason,
     customReason,
     isUpdatingStatus,
@@ -499,6 +531,7 @@ export const useOrdersManager = () => {
     setSelectedOrder,
     setSelectedStatus,
     setTrackingCode,
+    setCarrier,
     setCancelReason,
     setCustomReason,
     setIsTrackingModalOpen,

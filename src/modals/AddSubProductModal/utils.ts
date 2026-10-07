@@ -6,14 +6,10 @@ export interface ParsedAttribute {
 }
 
 const SYSTEM_KEYS = new Set([
-  "color",
-  "màu sắc",
-  "mau sac",
-  "màu",
-  "mau",
   "discounttype",
   "discountvalue",
   "discountamount",
+  "discount",
   "price",
   "cost",
   "stock",
@@ -22,9 +18,13 @@ const SYSTEM_KEYS = new Set([
 
 /**
  * Parse and normalize custom attributes from rawAttrs (JSON string or object/array).
- * Filter out system keys (color, price, discountType, etc.)
+ * Filter out system financial keys (price, discountType, etc.) while preserving all product attributes.
  */
-export const parseVariantAttributes = (rawAttrs: any): ParsedAttribute[] => {
+export const parseVariantAttributes = (
+  rawAttrs: any,
+  fallbackColor?: string,
+  fallbackSize?: string
+): ParsedAttribute[] => {
   if (typeof rawAttrs === "string") {
     try {
       rawAttrs = JSON.parse(rawAttrs);
@@ -32,25 +32,63 @@ export const parseVariantAttributes = (rawAttrs: any): ParsedAttribute[] => {
       rawAttrs = {};
     }
   }
-  if (!rawAttrs || typeof rawAttrs !== "object") {
-    return [];
-  }
+
+  let list: ParsedAttribute[] = [];
 
   if (Array.isArray(rawAttrs)) {
-    return rawAttrs
+    list = rawAttrs
       .map((item: any) => ({
         name: String(item.name || item.key || "").trim(),
         value: String(item.value ?? "").trim(),
       }))
       .filter((item) => item.name);
+  } else if (rawAttrs && typeof rawAttrs === "object") {
+    list = Object.entries(rawAttrs)
+      .filter(([k]) => !SYSTEM_KEYS.has(k.trim().toLowerCase()))
+      .map(([name, value]) => ({
+        name: name.trim(),
+        value: String(value ?? "").trim(),
+      }))
+      .filter((item) => item.name);
   }
 
-  return Object.entries(rawAttrs)
-    .filter(([k]) => !SYSTEM_KEYS.has(k.trim().toLowerCase()))
-    .map(([name, value]) => ({
-      name: name.trim(),
-      value: String(value ?? "").trim(),
-    }));
+  // Ensure fallback color is included if not already present
+  const hasColorAttr = list.some((item) => {
+    const lower = item.name.toLowerCase();
+    return (
+      lower === "màu sắc" ||
+      lower === "mau sac" ||
+      lower === "màu" ||
+      lower === "mau" ||
+      lower === "color"
+    );
+  });
+  if (!hasColorAttr && fallbackColor && String(fallbackColor).trim()) {
+    list.unshift({
+      name: "Màu sắc",
+      value: String(fallbackColor).trim(),
+    });
+  }
+
+  // Ensure fallback size is included if not already present
+  const hasSizeAttr = list.some((item) => {
+    const lower = item.name.toLowerCase();
+    return (
+      lower === "size" ||
+      lower === "kích thước" ||
+      lower === "kich thuoc" ||
+      lower === "kích cỡ" ||
+      lower === "kich co"
+    );
+  });
+  if (!hasSizeAttr && fallbackSize && String(fallbackSize).trim()) {
+    list.push({
+      name: "Size",
+      value: String(fallbackSize).trim(),
+    });
+  }
+
+  return list;
 };
 
 /**
@@ -137,4 +175,30 @@ export const parseRawImages = (rawImages: any, singleImageFallback?: string) => 
   }
 
   return [];
+};
+
+/**
+ * Sinh mã SKU mới khi sao chép / nhân bản biến thể:
+ * Thay đổi 4 số cuối của mã SKU gốc thay vì thêm hậu tố "-COPY".
+ */
+export const generateClonedSku = (originalSku?: string): string => {
+  if (!originalSku || !originalSku.trim()) return "";
+
+  const cleanSku = originalSku.trim().replace(/[-_]?(COPY|copy)$/i, "");
+
+  const random4Digits = Math.floor(1000 + Math.random() * 9000).toString();
+
+  if (/\d{4}$/.test(cleanSku)) {
+    return cleanSku.replace(/\d{4}$/, random4Digits);
+  }
+
+  if (/[-_][a-zA-Z0-9]{4}$/.test(cleanSku)) {
+    return cleanSku.replace(/([-_])[a-zA-Z0-9]{4}$/, `$1${random4Digits}`);
+  }
+
+  if (/[-_]\d+$/.test(cleanSku)) {
+    return cleanSku.replace(/([-_])\d+$/, `$1${random4Digits}`);
+  }
+
+  return `${cleanSku}-${random4Digits}`;
 };

@@ -1,8 +1,8 @@
 /** @format */
 
 import React from "react";
-import { Checkbox, Pagination, Tag, Button, Empty, Modal } from "antd";
-import { Eye, TruckFast, Box, Edit2, Trash, Call, Sms } from "iconsax-react";
+import { Checkbox, Pagination, Tag, Button, Empty, Modal, Tooltip } from "antd";
+import { Eye, TruckFast, Box, Edit2, Trash, Call, Sms, ExportSquare } from "iconsax-react";
 import { BillModel } from "../../../models/BillModel";
 import { colors } from "../../../constants/colors";
 
@@ -329,20 +329,23 @@ export const OrdersMobileCards: React.FC<OrdersMobileCardsProps> = ({
                     {item.paymentType || "COD"}
                   </Tag>
                   {item.trackingCode && (
-                    <Tag
-                      color="cyan"
-                      style={{
-                        margin: 0,
-                        fontSize: 11,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 3,
-                      }}
-                      onClick={() => onOpenTracking(item)}
-                    >
-                      <TruckFast size={12} /> {item.trackingCode}
-                    </Tag>
+                    <Tooltip title="Tra cứu trực tiếp trên GHN (Mở tab mới)">
+                      <Tag
+                        color="orange"
+                        style={{
+                          margin: 0,
+                          fontSize: 11,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontWeight: 600,
+                        }}
+                        onClick={() => onOpenTracking(item)}
+                      >
+                        <ExportSquare size={12} color="#ea580c" /> {item.trackingCode}
+                      </Tag>
+                    </Tooltip>
                   )}
                 </div>
                 <div>
@@ -441,31 +444,52 @@ export const OrdersMobileCards: React.FC<OrdersMobileCardsProps> = ({
                   </Button>
                 )}
 
-                <Button
-                  size="middle"
-                  danger
-                  icon={<Trash color="#ef4444" size={16} />}
-                  onClick={() =>
-                    confirm({
-                      title: "Xác nhận xóa",
-                      content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
-                      okText: "Xóa",
-                      okType: "danger",
-                      cancelText: "Hủy",
-                      onOk: () => onRemoveBill(item.id),
-                    })
+                <Tooltip
+                  title={
+                    item.orderStatus !== "CANCELLED"
+                      ? "Không thể xóa đơn hàng khi chưa hủy. Vui lòng hủy đơn và gửi thông báo cho khách hàng trước khi xóa!"
+                      : "Xóa đơn hàng"
                   }
-                  style={{
-                    width: 44,
-                    padding: 0,
-                    borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderColor: "#fecaca",
-                    background: "#fef2f2",
-                  }}
-                />
+                >
+                  <span>
+                    <Button
+                      size="middle"
+                      danger={item.orderStatus === "CANCELLED"}
+                      disabled={item.orderStatus !== "CANCELLED"}
+                      icon={
+                        <Trash
+                          color={
+                            item.orderStatus === "CANCELLED" ? "#ef4444" : "#94a3b8"
+                          }
+                          size={16}
+                        />
+                      }
+                      onClick={() =>
+                        confirm({
+                          title: "Xác nhận xóa",
+                          content:
+                            "Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng đã hủy này?",
+                          okText: "Xóa",
+                          okType: "danger",
+                          cancelText: "Hủy",
+                          onOk: () => onRemoveBill(item.id),
+                        })
+                      }
+                      style={{
+                        width: 44,
+                        padding: 0,
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderColor:
+                          item.orderStatus === "CANCELLED" ? "#fecaca" : "#e2e8f0",
+                        background:
+                          item.orderStatus === "CANCELLED" ? "#fef2f2" : "#f1f5f9",
+                      }}
+                    />
+                  </span>
+                </Tooltip>
               </div>
             </div>
           );

@@ -13,6 +13,7 @@ import {
   extractVariantColor,
   extractDiscountInfo,
   parseRawImages,
+  generateClonedSku,
 } from "../utils";
 
 interface UseSubProductFormParams {
@@ -77,7 +78,11 @@ export const useSubProductForm = ({
     form.resetFields();
 
     if (subProduct) {
-      const customAttributes = parseVariantAttributes(subProduct.attributes);
+      const customAttributes = parseVariantAttributes(
+        subProduct.attributes || (subProduct as any).customAttributes,
+        subProduct.color,
+        subProduct.size
+      );
       const existingColor = extractVariantColor(subProduct, subProduct.attributes);
       const { discountType, discountValue } = extractDiscountInfo(
         Number(subProduct.price ?? 0),
@@ -111,7 +116,11 @@ export const useSubProductForm = ({
 
       setFileList(parseRawImages(subProduct.images, (subProduct as any).image));
     } else if (initialValues) {
-      const customAttributes = parseVariantAttributes(initialValues.attributes);
+      const customAttributes = parseVariantAttributes(
+        initialValues.attributes || initialValues.customAttributes,
+        initialValues.color,
+        initialValues.size
+      );
       const existingCloneColor = extractVariantColor(initialValues, initialValues.attributes);
       const { discountType, discountValue } = extractDiscountInfo(
         Number(initialValues.price ?? 0),
@@ -124,7 +133,7 @@ export const useSubProductForm = ({
       form.setFieldsValue({
         ...cleanInitialValues,
         productId: initialValues.productId || product?.id || id || undefined,
-        sku: initialValues.sku ? `${initialValues.sku}-COPY` : "",
+        sku: generateClonedSku(initialValues.sku),
         color: existingCloneColor,
         price: Number(initialValues.price ?? 0),
         qty:
@@ -165,7 +174,22 @@ export const useSubProductForm = ({
     const values = form.getFieldsValue();
     let variantPart = "";
 
-    if (values.color && typeof values.color === "string" && values.color.trim()) {
+    if (values.customAttributes && Array.isArray(values.customAttributes)) {
+      const attrParts = values.customAttributes
+        .filter((a: any) => a && a.value && String(a.value).trim())
+        .map((a: any) =>
+          String(a.value)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]/g, "")
+            .toUpperCase()
+            .substring(0, 6)
+        )
+        .filter(Boolean);
+      if (attrParts.length > 0) {
+        variantPart += `-${attrParts.slice(0, 2).join("-")}`;
+      }
+    } else if (values.color && typeof values.color === "string" && values.color.trim()) {
       const cleanColor = values.color
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -174,13 +198,6 @@ export const useSubProductForm = ({
         .substring(0, 6);
       if (cleanColor) {
         variantPart += `-${cleanColor}`;
-      }
-    }
-
-    if (values.customAttributes && Array.isArray(values.customAttributes)) {
-      const firstAttr = values.customAttributes.find((a: any) => a?.value);
-      if (firstAttr) {
-        variantPart += `-${firstAttr.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()}`;
       }
     }
 
@@ -278,6 +295,7 @@ export const useSubProductForm = ({
       data.color = data.color ? String(data.color).trim() : "";
 
       let explicitSize = "";
+      let explicitColor = "";
       const attributesObj: Record<string, string> = {};
       if (values.customAttributes && Array.isArray(values.customAttributes)) {
         values.customAttributes.forEach((attr: any) => {
@@ -287,19 +305,33 @@ export const useSubProductForm = ({
             if (attrName && attrVal) {
               attributesObj[attrName] = attrVal;
               const lowerName = attrName.toLowerCase();
-              if (lowerName === "size" || lowerName === "kích thước" || lowerName === "kich thuoc") {
+              if (
+                lowerName === "size" ||
+                lowerName === "kích thước" ||
+                lowerName === "kich thuoc" ||
+                lowerName === "kích cỡ" ||
+                lowerName === "kich co"
+              ) {
                 explicitSize = attrVal;
+              }
+              if (
+                lowerName === "màu sắc" ||
+                lowerName === "mau sac" ||
+                lowerName === "màu" ||
+                lowerName === "mau" ||
+                lowerName === "color"
+              ) {
+                explicitColor = attrVal;
               }
             }
           }
         });
       }
-      data.size = explicitSize;
+      data.size = explicitSize || (values.size ? String(values.size).trim() : "");
+      data.color = explicitColor || (data.color ? String(data.color).trim() : "");
 
-      if (data.color) {
+      if (data.color && !explicitColor) {
         attributesObj["Màu sắc"] = data.color;
-      } else if (attributesObj["Màu sắc"]) {
-        data.color = attributesObj["Màu sắc"];
       }
 
       const basePrice = Number(values.price ?? 0);

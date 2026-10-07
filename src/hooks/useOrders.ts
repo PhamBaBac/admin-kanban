@@ -38,7 +38,8 @@ export const useOrders = () => {
       id: string,
       status: string,
       cancelReason?: string,
-      trackingCode?: string
+      trackingCode?: string,
+      carrier?: string
     ): Promise<Order> => {
       setLoading(true);
       setError(null);
@@ -47,7 +48,8 @@ export const useOrders = () => {
           id,
           status,
           cancelReason,
-          trackingCode
+          trackingCode,
+          carrier
         );
         return response;
       } catch (err: any) {

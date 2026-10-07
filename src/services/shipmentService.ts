@@ -3,6 +3,9 @@ import { ShipmentModel } from "../models/BillModel";
 
 export interface CreateShipmentPayload {
   orderId: string;
+  carrier?: string;
+  trackingCode?: string;
+  shippingFee?: number;
   weight: number;
   length: number;
   width: number;
@@ -38,17 +41,18 @@ export const shipmentService = {
     return res?.data?.data || res?.data || [];
   },
 
-  getShipmentsPage: async (params: { page?: number; pageSize?: number; status?: string; search?: string }) => {
+  getShipmentsPage: async (params: { page?: number; pageSize?: number; status?: string; carrier?: string; search?: string }) => {
     const res: any = await handleAPI("/shipments/page", params, "get");
     const pageData = res?.data !== undefined ? res.data : res;
     return pageData;
   },
 
-  getShipments: async (params?: { page?: number; pageSize?: number; size?: number; status?: string; search?: string }) => {
+  getShipments: async (params?: { page?: number; pageSize?: number; size?: number; status?: string; carrier?: string; search?: string }) => {
     const queryParams = {
       page: params?.page ?? 1,
       pageSize: params?.pageSize ?? params?.size ?? 20,
       status: params?.status,
+      carrier: params?.carrier,
       search: params?.search,
     };
     const res: any = await handleAPI("/shipments/page", queryParams, "get");

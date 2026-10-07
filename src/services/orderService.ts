@@ -35,11 +35,12 @@ export const orderService = {
     id: string,
     status: string,
     cancelReason?: string,
-    trackingCode?: string
+    trackingCode?: string,
+    carrier?: string
   ): Promise<BillModel> => {
     const response = await handleAPI(
       `/orders/${id}/status`,
-      { orderStatus: status, cancelReason, trackingCode },
+      { orderStatus: status, cancelReason, trackingCode, carrier },
       "patch"
     );
     return response.data;

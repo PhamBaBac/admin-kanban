@@ -818,44 +818,87 @@ const SupportScreen: React.FC = () => {
                     const isMe = msg.senderId === currentUserId;
 
                     const prevMsg = index > 0 ? messages[index - 1] : null;
+                    const prevIsStaff = Boolean(prevMsg && (prevMsg.role === "ADMIN" || prevMsg.role === "MANAGER"));
                     const isSameSender = Boolean(
                       prevMsg &&
-                      (prevMsg.senderId && msg.senderId
-                        ? prevMsg.senderId === msg.senderId
-                        : prevMsg.role === msg.role)
+                        (isStaff
+                          ? prevIsStaff &&
+                            (prevMsg.senderId && msg.senderId
+                              ? String(prevMsg.senderId) === String(msg.senderId)
+                              : true)
+                          : !prevIsStaff)
                     );
 
                     let isWithinTimeThreshold = false;
-                    if (isSameSender && prevMsg?.createdAt && msg.createdAt) {
-                      const prevTime = new Date(prevMsg.createdAt).getTime();
-                      const currTime = new Date(msg.createdAt).getTime();
-                      if (!isNaN(prevTime) && !isNaN(currTime)) {
-                        const diffMinutes = Math.abs(currTime - prevTime) / (1000 * 60);
-                        isWithinTimeThreshold = diffMinutes <= MESSAGE_GROUP_TIME_WINDOW_MINUTES;
+                    if (isSameSender) {
+                      if (prevMsg?.createdAt && msg.createdAt) {
+                        const prevTime = new Date(prevMsg.createdAt).getTime();
+                        const currTime = new Date(msg.createdAt).getTime();
+                        if (!isNaN(prevTime) && !isNaN(currTime)) {
+                          const diffMinutes = Math.abs(currTime - prevTime) / (1000 * 60);
+                          isWithinTimeThreshold = diffMinutes <= MESSAGE_GROUP_TIME_WINDOW_MINUTES;
+                        } else {
+                          isWithinTimeThreshold = true;
+                        }
+                      } else {
+                        isWithinTimeThreshold = true;
                       }
                     }
 
                     const isFirstInChain = !isSameSender || !isWithinTimeThreshold;
 
                     const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+                    const nextIsStaff = Boolean(nextMsg && (nextMsg.role === "ADMIN" || nextMsg.role === "MANAGER"));
                     const isSameNextSender = Boolean(
                       nextMsg &&
-                      (nextMsg.senderId && msg.senderId
-                        ? nextMsg.senderId === msg.senderId
-                        : nextMsg.role === msg.role)
+                        (isStaff
+                          ? nextIsStaff &&
+                            (nextMsg.senderId && msg.senderId
+                              ? String(nextMsg.senderId) === String(msg.senderId)
+                              : true)
+                          : !nextIsStaff)
                     );
 
                     let isNextWithinTimeThreshold = false;
-                    if (isSameNextSender && nextMsg?.createdAt && msg.createdAt) {
-                      const currTime = new Date(msg.createdAt).getTime();
-                      const nextTime = new Date(nextMsg.createdAt).getTime();
-                      if (!isNaN(currTime) && !isNaN(nextTime)) {
-                        const diffMinutes = Math.abs(nextTime - currTime) / (1000 * 60);
-                        isNextWithinTimeThreshold = diffMinutes <= MESSAGE_GROUP_TIME_WINDOW_MINUTES;
+                    if (isSameNextSender) {
+                      if (nextMsg?.createdAt && msg.createdAt) {
+                        const currTime = new Date(msg.createdAt).getTime();
+                        const nextTime = new Date(nextMsg.createdAt).getTime();
+                        if (!isNaN(currTime) && !isNaN(nextTime)) {
+                          const diffMinutes = Math.abs(nextTime - currTime) / (1000 * 60);
+                          isNextWithinTimeThreshold = diffMinutes <= MESSAGE_GROUP_TIME_WINDOW_MINUTES;
+                        } else {
+                          isNextWithinTimeThreshold = true;
+                        }
+                      } else {
+                        isNextWithinTimeThreshold = true;
                       }
                     }
 
                     const isLastInChain = !isSameNextSender || !isNextWithinTimeThreshold;
+
+                    let bubbleBorderRadius: string;
+                    if (isStaff) {
+                      if (isFirstInChain && isLastInChain) {
+                        bubbleBorderRadius = "18px 18px 4px 18px";
+                      } else if (isFirstInChain) {
+                        bubbleBorderRadius = "18px 18px 4px 18px";
+                      } else if (isLastInChain) {
+                        bubbleBorderRadius = "18px 4px 18px 18px";
+                      } else {
+                        bubbleBorderRadius = "18px 4px 4px 18px";
+                      }
+                    } else {
+                      if (isFirstInChain && isLastInChain) {
+                        bubbleBorderRadius = "18px 18px 18px 4px";
+                      } else if (isFirstInChain) {
+                        bubbleBorderRadius = "18px 18px 18px 4px";
+                      } else if (isLastInChain) {
+                        bubbleBorderRadius = "4px 18px 18px 18px";
+                      } else {
+                        bubbleBorderRadius = "4px 18px 18px 4px";
+                      }
+                    }
 
                     return (
                       <div
@@ -865,7 +908,7 @@ const SupportScreen: React.FC = () => {
                           flexDirection: isStaff ? "row-reverse" : "row",
                           alignItems: "flex-end",
                           gap: 10,
-                          marginTop: isFirstInChain ? (index === 0 ? 0 : 6) : -8,
+                          marginTop: isFirstInChain ? (index === 0 ? 0 : 12) : 3,
                         }}
                       >
                         {/* Avatar: chỉ hiển thị cho khách hàng ở tin nhắn CUỐI CÙNG của chuỗi liên tục */}
@@ -879,6 +922,7 @@ const SupportScreen: React.FC = () => {
                                 color: "#fff",
                                 fontWeight: 600,
                                 flexShrink: 0,
+                                marginBottom: isLastInChain ? 18 : 0,
                               }}
                             >
                               {msg.username ? msg.username[0].toUpperCase() : "U"}
@@ -901,7 +945,7 @@ const SupportScreen: React.FC = () => {
                           <div
                             style={{
                               padding: "10px 16px",
-                              borderRadius: isStaff ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                              borderRadius: bubbleBorderRadius,
                               backgroundColor: isStaff ? colors.primary500 : "#fff",
                               color: isStaff ? "#fff" : "#1e293b",
                               border: isStaff ? "none" : "1px solid #e2e8f0",
@@ -910,6 +954,7 @@ const SupportScreen: React.FC = () => {
                               lineHeight: 1.5,
                               whiteSpace: "pre-wrap",
                               wordBreak: "break-word",
+                              transition: "border-radius 0.2s ease",
                             }}
                           >
                             {msg.content}

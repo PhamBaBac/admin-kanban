@@ -10,7 +10,6 @@ import { OrdersFilterSection } from "./components/OrdersFilterSection";
 import { OrdersTable } from "./components/OrdersTable";
 import { OrdersMobileCards } from "./components/OrdersMobileCards";
 import { OrderStatusModal } from "./components/OrderStatusModal";
-import { GHNTrackingModal } from "./components/GHNTrackingModal";
 
 const { confirm } = Modal;
 
@@ -34,6 +33,7 @@ const OrdersScreen: React.FC = () => {
     selectedOrder,
     selectedStatus,
     trackingCode,
+    carrier,
     cancelReason,
     customReason,
     isUpdatingStatus,
@@ -55,6 +55,7 @@ const OrdersScreen: React.FC = () => {
     setSelectedOrder,
     setSelectedStatus,
     setTrackingCode,
+    setCarrier,
     setCancelReason,
     setCustomReason,
     setIsTrackingModalOpen,
@@ -80,9 +81,22 @@ const OrdersScreen: React.FC = () => {
   } = useOrdersManager();
 
   const handleBatchDelete = () => {
+    const uncancelledOrders = bills.filter(
+      (b) => selectedRowKeys.includes(b.id) && b.orderStatus !== "CANCELLED"
+    );
+
+    if (uncancelledOrders.length > 0) {
+      Modal.warning({
+        title: "Không thể xóa đơn hàng",
+        content: `Có ${uncancelledOrders.length} đơn hàng chưa được hủy trong các đơn đã chọn. Bạn chỉ có thể xóa các đơn hàng đã ở trạng thái "Đã hủy". Vui lòng hủy đơn và gửi thông báo cho khách hàng trước khi xóa!`,
+        okText: "Đã hiểu",
+      });
+      return;
+    }
+
     confirm({
       title: "Xác nhận xóa hàng loạt",
-      content: `Bạn có chắc muốn xóa ${selectedRowKeys.length} đơn hàng đã chọn?`,
+      content: `Bạn có chắc muốn xóa vĩnh viễn ${selectedRowKeys.length} đơn hàng đã hủy được chọn?`,
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
@@ -224,6 +238,7 @@ const OrdersScreen: React.FC = () => {
         selectedOrder={selectedOrder}
         selectedStatus={selectedStatus}
         trackingCode={trackingCode}
+        carrier={carrier}
         cancelReason={cancelReason}
         customReason={customReason}
         isUpdatingStatus={isUpdatingStatus}
@@ -232,27 +247,16 @@ const OrdersScreen: React.FC = () => {
           setSelectedOrder(null);
           setSelectedStatus("");
           setTrackingCode("");
+          setCarrier("GHN");
           setCancelReason("");
           setCustomReason("");
         }}
         onStatusChange={setSelectedStatus}
         onTrackingCodeChange={setTrackingCode}
+        onCarrierChange={setCarrier}
         onCancelReasonChange={setCancelReason}
         onCustomReasonChange={setCustomReason}
         onSubmit={handleUpdateStatusOrder}
-      />
-
-      {/* Modal xem lộ trình vận chuyển GHN */}
-      <GHNTrackingModal
-        open={isTrackingModalOpen}
-        trackingOrder={trackingOrder}
-        trackingData={trackingData}
-        trackingLoading={trackingLoading}
-        onClose={() => {
-          setIsTrackingModalOpen(false);
-          setTrackingData(null);
-          setTrackingOrder(null);
-        }}
       />
 
       {/* Modal Kê khai cân nặng, kích thước & Tạo vận đơn GHN */}
@@ -264,7 +268,8 @@ const OrdersScreen: React.FC = () => {
           setShipmentOrder(null);
         }}
         onSuccess={() => {
-          fetchBills();
+          handleStatusFilterChange("PROCESSING");
+          fetchStatusCounts();
         }}
       />
 

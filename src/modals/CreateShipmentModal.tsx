@@ -16,8 +16,9 @@ import {
   Row,
   Col,
   Tag,
+  Radio,
 } from "antd";
-import { Box, TruckFast, Calculator } from "iconsax-react";
+import { Box, TruckFast, Calculator, Shop, Buildings, Routing } from "iconsax-react";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { BillModel } from "../models/BillModel";
 import { shipmentService } from "../services/shipmentService";
@@ -43,9 +44,15 @@ const CreateShipmentModal: React.FC<Props> = ({
   const [calculatingFee, setCalculatingFee] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [packQuantities, setPackQuantities] = useState<Record<string, number>>({});
+  const [selectedCarrier, setSelectedCarrier] = useState<string>("GHN");
+  const [customCarrierName, setCustomCarrierName] = useState<string>("VIETTEL_POST");
+  const [customTrackingCode, setCustomTrackingCode] = useState<string>("");
 
   useEffect(() => {
     if (visible && order) {
+      setSelectedCarrier("GHN");
+      setCustomCarrierName("VIETTEL_POST");
+      setCustomTrackingCode("");
       const initialQtys: Record<string, number> = {};
       let calculatedWeight = 0;
 
@@ -142,9 +149,18 @@ const CreateShipmentModal: React.FC<Props> = ({
         return;
       }
 
+      if (selectedCarrier === "OTHER" && !customTrackingCode.trim()) {
+        message.warning("Vui lòng nhập mã vận đơn của đối tác vận chuyển!");
+        return;
+      }
+
       setLoading(true);
+      const carrierToSend = selectedCarrier === "OTHER" ? customCarrierName : selectedCarrier;
       await shipmentService.createShipment({
         orderId: order.id,
+        carrier: carrierToSend,
+        trackingCode: customTrackingCode.trim() || undefined,
+        shippingFee: estimatedFee !== null ? estimatedFee : undefined,
         weight: values.weight,
         length: values.length,
         width: values.width,
@@ -155,7 +171,13 @@ const CreateShipmentModal: React.FC<Props> = ({
         items: itemsToPack,
       });
 
-      message.success("Tạo vận đơn và xuất kho thành công! Đã gửi thông tin sang GHN.");
+      message.success(
+        selectedCarrier === "GHN"
+          ? "Tạo vận đơn và xuất kho thành công! Đã gửi thông tin sang GHN."
+          : selectedCarrier === "SHOP_DELIVERY"
+          ? "Xuất kho thành công! Đơn hàng được giao bởi cửa hàng."
+          : "Xuất kho và lưu thông tin vận đơn đối tác thành công!"
+      );
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -336,18 +358,178 @@ const CreateShipmentModal: React.FC<Props> = ({
           onClick={handleSubmit}
           style={{ background: "#1677ff", fontWeight: 600 }}
         >
-          Xác nhận xuất kho & Tạo đơn GHN
+          {selectedCarrier === "GHN"
+            ? "Xác nhận xuất kho & Bắn đơn GHN"
+            : selectedCarrier === "SHOP_DELIVERY"
+            ? "Xác nhận xuất kho & Tự giao hàng"
+            : "Xác nhận xuất kho & Lưu vận đơn"}
         </Button>,
       ]}
     >
-      <Alert
-        message="Kê khai thông số vận chuyển"
-        description="Thông số cân nặng & kích thước sẽ được gửi trực tiếp đến đơn vị vận chuyển Giao Hàng Nhanh (GHN) để tính cước phí và in phiếu gửi hàng."
-        type="info"
-        showIcon
-        icon={<InfoCircleOutlined style={{ fontSize: 20 }} />}
-        style={{ marginBottom: 16, borderRadius: 6 }}
-      />
+      {/* Carrier Selection Mode */}
+      <Card
+        size="small"
+        style={{ marginBottom: 16, borderRadius: 8, border: "1px solid #e2e8f0" }}
+        styles={{ header: { backgroundColor: "#f8fafc", padding: "8px 16px" } }}
+        title={
+          <Space size={8}>
+            <Routing size={16} color="#1677ff" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+              Phương thức / Chế độ vận chuyển
+            </span>
+          </Space>
+        }
+      >
+        <Radio.Group
+          value={selectedCarrier}
+          onChange={(e) => {
+            const nextCarrier = e.target.value;
+            setSelectedCarrier(nextCarrier);
+            if (nextCarrier === "GHN") {
+              handleCalculateFee();
+            } else if (order?.shippingFee !== undefined && order?.shippingFee !== null) {
+              setEstimatedFee(order.shippingFee);
+            } else {
+              setEstimatedFee(0);
+            }
+          }}
+          style={{ width: "100%" }}
+        >
+          <Row gutter={[12, 12]}>
+            <Col xs={24} sm={8}>
+              <Radio.Button
+                value="GHN"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  textAlign: "left",
+                  borderColor: selectedCarrier === "GHN" ? "#1677ff" : "#e2e8f0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#1677ff" }}>
+                  <TruckFast size={18} color="#1677ff" />
+                  <span>Giao Hàng Nhanh (GHN)</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  Tự động đẩy đơn qua API GHN
+                </div>
+              </Radio.Button>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Radio.Button
+                value="SHOP_DELIVERY"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  textAlign: "left",
+                  borderColor: selectedCarrier === "SHOP_DELIVERY" ? "#16a34a" : "#e2e8f0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#16a34a" }}>
+                  <Shop size={18} color="#16a34a" />
+                  <span>Cửa hàng tự giao</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  Shipper nội bộ / Tự vận chuyển
+                </div>
+              </Radio.Button>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Radio.Button
+                value="OTHER"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  textAlign: "left",
+                  borderColor: selectedCarrier === "OTHER" ? "#d97706" : "#e2e8f0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#d97706" }}>
+                  <Buildings size={18} color="#d97706" />
+                  <span>Đơn vị ngoài</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  ViettelPost, GHTK, VNPost...
+                </div>
+              </Radio.Button>
+            </Col>
+          </Row>
+        </Radio.Group>
+
+        {selectedCarrier === "OTHER" && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: "12px 14px",
+              backgroundColor: "#fffbeb",
+              borderRadius: 6,
+              border: "1px solid #fde68a",
+            }}
+          >
+            <Row gutter={12} align="middle">
+              <Col xs={24} sm={10}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: "#92400e" }}>
+                  Chọn hãng vận chuyển:
+                </div>
+                <Select
+                  value={customCarrierName}
+                  onChange={setCustomCarrierName}
+                  style={{ width: "100%" }}
+                >
+                  <Select.Option value="VIETTEL_POST">Viettel Post</Select.Option>
+                  <Select.Option value="GHTK">Giao Hàng Tiết Kiệm (GHTK)</Select.Option>
+                  <Select.Option value="J_AND_T">J&T Express</Select.Option>
+                  <Select.Option value="VNPOST">VNPost Bưu điện</Select.Option>
+                  <Select.Option value="OTHER">Đối tác khác</Select.Option>
+                </Select>
+              </Col>
+              <Col xs={24} sm={14}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: "#92400e" }}>
+                  Mã vận đơn thực tế: <span style={{ color: "#dc2626" }}>*</span>
+                </div>
+                <Input
+                  placeholder="Ví dụ: VT123456789, S59123..."
+                  value={customTrackingCode}
+                  onChange={(e) => setCustomTrackingCode(e.target.value)}
+                />
+              </Col>
+            </Row>
+          </div>
+        )}
+
+        {selectedCarrier === "SHOP_DELIVERY" && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: "10px 14px",
+              backgroundColor: "#f0fdf4",
+              borderRadius: 6,
+              border: "1px solid #bbf7d0",
+            }}
+          >
+            <Row gutter={12} align="middle">
+              <Col xs={24} sm={14}>
+                <div style={{ fontSize: 12, color: "#166534" }}>
+                  Mã vận đơn nội bộ sẽ tự động sinh dạng <strong>SHOP-[MãĐơn]</strong> (hoặc bạn có thể tự nhập mã shipper bên dưới):
+                </div>
+              </Col>
+              <Col xs={24} sm={10}>
+                <Input
+                  placeholder="Mã shipper / SĐT shipper (tùy chọn)"
+                  value={customTrackingCode}
+                  onChange={(e) => setCustomTrackingCode(e.target.value)}
+                />
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Card>
 
       <Card
         size="small"
@@ -411,24 +593,31 @@ const CreateShipmentModal: React.FC<Props> = ({
           <Space wrap size={8}>
             <Button
               size="small"
-              onClick={() => applyPresetSize(500, 20, 15, 10)}
+              onClick={() => applyPresetSize(200, 25, 17, 3)}
               style={{ borderRadius: 6, fontSize: 12 }}
             >
-              📦 Hộp S (500g • 20x15x10cm)
+              Túi S (1 áo • 200g • 25x17x3cm)
             </Button>
             <Button
               size="small"
-              onClick={() => applyPresetSize(1000, 30, 20, 15)}
+              onClick={() => applyPresetSize(450, 30, 20, 5)}
               style={{ borderRadius: 6, fontSize: 12 }}
             >
-              📦 Hộp M (1kg • 30x20x15cm)
+              Túi M (2-3 áo/quần • 450g • 30x20x5cm)
             </Button>
             <Button
               size="small"
-              onClick={() => applyPresetSize(2000, 40, 30, 20)}
+              onClick={() => applyPresetSize(700, 35, 25, 8)}
               style={{ borderRadius: 6, fontSize: 12 }}
             >
-              📦 Hộp L (2kg • 40x30x20cm)
+              Túi L (Áo khoác/combo • 700g • 35x25x8cm)
+            </Button>
+            <Button
+              size="small"
+              onClick={() => applyPresetSize(1000, 30, 20, 10)}
+              style={{ borderRadius: 6, fontSize: 12 }}
+            >
+              Hộp Carton (Đơn lớn • 1kg • 30x20x10cm)
             </Button>
           </Space>
         </div>
