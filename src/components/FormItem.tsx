@@ -69,6 +69,7 @@ const FormItem = (props: Props) => {
     <Form.Item
       key={item.key}
       name={item.key}
+      valuePropName={item.type === "checkbox" ? "checked" : undefined}
       rules={[{ required: item.required, message: item.message || `Vui lòng nhập ${displayLabel.toLowerCase()}` }]}
       label={displayLabel}
     >

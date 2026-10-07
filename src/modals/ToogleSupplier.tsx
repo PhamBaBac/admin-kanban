@@ -73,12 +73,19 @@ const ToogleSupplier = (props: Props) => {
         })
         .filter(Boolean);
 
+      const takingBoolean =
+        supplier.isTaking === 1 ||
+        supplier.isTaking === true ||
+        supplier.isTaking === "1";
+
       form.setFieldsValue({
         ...supplier,
         categories: categoryIds,
+        isTaking: takingBoolean,
+        type: takingBoolean,
       });
 
-      setIsTaking(supplier.isTaking === 1);
+      setIsTaking(takingBoolean);
     }
   }, [supplier, flatCategories]);
 
@@ -92,7 +99,29 @@ const ToogleSupplier = (props: Props) => {
     }
 
     data.price = values.price ? parseInt(values.price) : 0;
-    data.isTaking = isTaking ? 1 : 0;
+    const isTakingVal =
+      values.isTaking !== undefined
+        ? values.isTaking
+        : values.type !== undefined
+        ? values.type
+        : isTaking;
+    data.isTaking =
+      isTakingVal === 1 || isTakingVal === true || isTakingVal === "1"
+        ? 1
+        : 0;
+
+    if (values.active !== undefined && values.active !== "") {
+      data.active = Number(values.active);
+    } else if (supplier && supplier.active !== undefined) {
+      data.active =
+        supplier.active === 1 ||
+        supplier.active === true ||
+        supplier.active === "1"
+          ? 1
+          : 0;
+    } else {
+      data.active = 1;
+    }
 
     if (file) {
       data.photoUrl = await uploadFile(file);

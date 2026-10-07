@@ -31,9 +31,21 @@ export interface SupplierListResponse {
   currentPage: number;
 }
 
+export interface SupplierQueryParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  search?: string;
+}
+
 export const supplierService = {
-  getSuppliers: async (params?: any): Promise<SupplierListResponse> => {
+  getSuppliers: async (params?: SupplierQueryParams): Promise<SupplierListResponse> => {
     const response = await handleAPI("/suppliers/page", params);
+    return response.data;
+  },
+
+  filterSuppliers: async (params?: SupplierQueryParams): Promise<SupplierListResponse> => {
+    const response = await handleAPI("/suppliers/filter", params);
     return response.data;
   },
 

@@ -5,6 +5,7 @@ import {
   SupplierCreateRequest,
   SupplierUpdateRequest,
   SupplierListResponse,
+  SupplierQueryParams,
 } from "../services/supplierService";
 import handleAPI from "../apis/handleAPI";
 
@@ -13,7 +14,7 @@ export const useSuppliers = () => {
   const [error, setError] = useState<string | null>(null);
 
   const getSuppliers = useCallback(
-    async (params?: any): Promise<SupplierListResponse> => {
+    async (params?: SupplierQueryParams): Promise<SupplierListResponse> => {
       setLoading(true);
       setError(null);
       try {
@@ -21,6 +22,23 @@ export const useSuppliers = () => {
         return response;
       } catch (err: any) {
         setError(err.message || "Failed to fetch suppliers");
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const filterSuppliers = useCallback(
+    async (params?: SupplierQueryParams): Promise<SupplierListResponse> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await supplierService.filterSuppliers(params);
+        return response;
+      } catch (err: any) {
+        setError(err.message || "Failed to filter suppliers");
         throw err;
       } finally {
         setLoading(false);
@@ -107,6 +125,7 @@ export const useSuppliers = () => {
 
   return {
     getSuppliers,
+    filterSuppliers,
     createSupplier,
     updateSupplier,
     deleteSupplier,

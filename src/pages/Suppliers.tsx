@@ -50,6 +50,7 @@ const Suppliers = () => {
   const {
     getSuppliers: fetchSuppliers,
     deleteSupplier,
+    updateSupplier,
     loading,
     error,
     getSupplierForm,
@@ -88,8 +89,11 @@ const Suppliers = () => {
   }, []);
 
   useEffect(() => {
-    fetchSuppliersData();
-  }, [page, pageSize]);
+    const handler = setTimeout(() => {
+      fetchSuppliersData();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [page, pageSize, statusFilter, searchKey]);
 
   const getData = async () => {
     try {
@@ -106,19 +110,34 @@ const Suppliers = () => {
 
   const fetchSuppliersData = async () => {
     try {
-      const res = await fetchSuppliers({ page, pageSize });
+      const res = await fetchSuppliers({
+        page,
+        pageSize,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: searchKey.trim() || undefined,
+      });
 
-      if (res.data) {
+      if (res && res.data) {
         const updatedSuppliers = res.data.map((item: any, index: number) => ({
           index: (page - 1) * pageSize + (index + 1),
           ...item,
         }));
         setSuppliers(updatedSuppliers);
-        setTotal(res.totalElements);
+        setTotal(res.totalElements ?? 0);
       }
     } catch (error: any) {
       message.error(error.message);
     }
+  };
+
+  const handleStatusFilterChange = (key: any) => {
+    setStatusFilter(key);
+    setPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchKey(val);
+    setPage(1);
   };
 
   const removeSuppiler = async (id: string) => {
@@ -130,52 +149,39 @@ const Suppliers = () => {
     }
   };
 
-  const filteredSuppliers = suppliers.filter((item) => {
-    if (searchKey.trim()) {
-      const q = searchKey.trim().toLowerCase();
-      const matchName = item.name?.toLowerCase().includes(q);
-      const matchContact = item.contact?.toLowerCase().includes(q);
-      const matchEmail = item.email?.toLowerCase().includes(q);
-      const prodData = item.product || (item as any).products;
-      const matchProduct =
-        (typeof prodData === "string" && prodData.toLowerCase().includes(q)) ||
-        (Array.isArray(prodData) &&
-          prodData.some((p: any) => {
-            const text = typeof p === "string" ? p : p?.title || p?.name || "";
-            return text.toLowerCase().includes(q);
-          }));
-      const matchCategories =
-        Array.isArray(item.categories) &&
-        item.categories.some((cat: any) => {
-          const text =
-            typeof cat === "string" ? cat : cat?.title || cat?.name || "";
-          return text.toLowerCase().includes(q);
-        });
-      if (
-        !matchName &&
-        !matchContact &&
-        !matchEmail &&
-        !matchProduct &&
-        !matchCategories
-      ) {
-        return false;
-      }
+  const handleToggleTaking = async (item: SupplierModel) => {
+    try {
+      const currentTaking = isSupplierTaking(item.isTaking);
+      const newTaking = currentTaking ? 0 : 1;
+      await updateSupplier({
+        ...item,
+        isTaking: newTaking,
+      } as any);
+      message.success(
+        `Đã chuyển sang "${newTaking === 1 ? "Đang lấy hàng" : "Ngừng lấy"}"`
+      );
+      await fetchSuppliersData();
+    } catch (err: any) {
+      message.error(err.message || "Không thể cập nhật trạng thái");
     }
+  };
 
-    if (statusFilter === "active") {
-      return isSupplierActive(item.active);
+  const handleToggleActive = async (item: SupplierModel) => {
+    try {
+      const currentActive = isSupplierActive(item.active);
+      const newActive = currentActive ? 0 : 1;
+      await updateSupplier({
+        ...item,
+        active: newActive,
+      } as any);
+      message.success(
+        `Đã chuyển sang "${newActive === 1 ? "Hoạt động" : "Khóa"}"`
+      );
+      await fetchSuppliersData();
+    } catch (err: any) {
+      message.error(err.message || "Không thể cập nhật trạng thái");
     }
-    if (statusFilter === "inactive") {
-      return !isSupplierActive(item.active);
-    }
-    if (statusFilter === "taking") {
-      return isSupplierTaking(item.isTaking);
-    }
-    if (statusFilter === "stopped") {
-      return !isSupplierTaking(item.isTaking);
-    }
-    return true;
-  });
+  };
 
   const renderSupplierCard = (item: SupplierModel, index: number) => {
     const isActive = isSupplierActive(item.active);
@@ -273,57 +279,35 @@ const Suppliers = () => {
                 marginTop: 6,
               }}
             >
-              {isActive ? (
-                <Tag
-                  color="processing"
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    borderRadius: 4,
-                    fontWeight: 500,
-                  }}
-                >
-                  Hoạt động
-                </Tag>
-              ) : (
-                <Tag
-                  color="error"
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    borderRadius: 4,
-                    fontWeight: 500,
-                  }}
-                >
-                  Khóa
-                </Tag>
-              )}
+              <Tag
+                color={isActive ? "processing" : "error"}
+                style={{
+                  margin: 0,
+                  fontSize: 11,
+                  borderRadius: 4,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+                title="Bấm để đổi Hoạt động / Khóa"
+                onClick={() => handleToggleActive(item)}
+              >
+                {isActive ? "Hoạt động" : "Khóa"}
+              </Tag>
 
-              {isTaking ? (
-                <Tag
-                  color="success"
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    borderRadius: 4,
-                    fontWeight: 500,
-                  }}
-                >
-                  Đang lấy hàng
-                </Tag>
-              ) : (
-                <Tag
-                  color="default"
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    borderRadius: 4,
-                    fontWeight: 500,
-                  }}
-                >
-                  Ngừng lấy
-                </Tag>
-              )}
+              <Tag
+                color={isTaking ? "success" : "default"}
+                style={{
+                  margin: 0,
+                  fontSize: 11,
+                  borderRadius: 4,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+                title="Bấm để đổi Đang lấy hàng / Ngừng lấy"
+                onClick={() => handleToggleTaking(item)}
+              >
+                {isTaking ? "Đang lấy hàng" : "Ngừng lấy"}
+              </Tag>
             </div>
           </div>
         </div>
@@ -668,7 +652,7 @@ const Suppliers = () => {
             placeholder="Tìm theo tên, SĐT, email, danh mục..."
             prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
             value={searchKey}
-            onChange={(e) => setSearchKey(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             allowClear
             style={{ borderRadius: 8, height: 36, flex: 1 }}
           />
@@ -689,7 +673,7 @@ const Suppliers = () => {
               <button
                 key={f.key}
                 type="button"
-                onClick={() => setStatusFilter(f.key as any)}
+                onClick={() => handleStatusFilterChange(f.key as any)}
                 style={{
                   border: isSelected
                     ? "1px solid #1677ff"
@@ -719,7 +703,7 @@ const Suppliers = () => {
               <Spin size="large" />
               <div style={{ marginTop: 12, color: "#64748b", fontSize: 13 }}>Đang tải dữ liệu nhà cung cấp...</div>
             </div>
-          ) : filteredSuppliers.length === 0 ? (
+          ) : suppliers.length === 0 ? (
             <Card
               style={{
                 borderRadius: 12,
@@ -745,7 +729,7 @@ const Suppliers = () => {
                 gap: 14,
               }}
             >
-              {filteredSuppliers.map((item, index) =>
+              {suppliers.map((item, index) =>
                 renderSupplierCard(item, index)
               )}
             </div>
@@ -819,8 +803,8 @@ const Suppliers = () => {
             }}
             loading={loading}
             forms={forms}
-            records={filteredSuppliers}
-            total={filteredSuppliers.length !== suppliers.length ? filteredSuppliers.length : total}
+            records={suppliers}
+            total={total}
             extraColumn={(item: any) => (
               <Space>
                 <Button
